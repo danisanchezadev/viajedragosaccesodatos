@@ -1,5 +1,7 @@
 package org.viajedragos.habilidad.implementacion;
 
+import org.viajedragos.habilidad.EstadoHabilidad;
+
 import org.junit.jupiter.api.Test;
 import org.viajedragos.modelo.Combatiente;
 import org.viajedragos.modelo.Enemigo;
@@ -17,7 +19,7 @@ public class RabiaTest {
         Combatiente enemigo = new Enemigo();
         Rabia rabia = new Rabia();
 
-        rabia.alInicioCombate(jugador, enemigo);
+        rabia.alInicioCombate(jugador, enemigo, new EstadoHabilidad(true, 0, 1));
 
         assertAll(()-> assertEquals(12, jugador.getFuerza()),
                 ()-> assertEquals(11, jugador.getAgilidad()),

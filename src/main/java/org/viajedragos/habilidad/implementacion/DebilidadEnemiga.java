@@ -1,13 +1,17 @@
 package org.viajedragos.habilidad.implementacion;
 
 import org.viajedragos.habilidad.EstadoHabilidad;
-import org.viajedragos.habilidad.EventosHabilidad;
+import org.viajedragos.habilidad.Habilidad;
 import org.viajedragos.modelo.Combatiente;
 
 import java.util.IntSummaryStatistics;
 import java.util.List;
 
-public class DebilidadEnemiga implements EventosHabilidad {
+public class DebilidadEnemiga extends Habilidad {
+
+    public DebilidadEnemiga() {
+        super("Debilidad enemiga");
+    }
 
     private double calcularMedia(Combatiente combatiente) {
 

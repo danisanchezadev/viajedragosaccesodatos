@@ -1,5 +1,7 @@
 package org.viajedragos.habilidad.implementacion;
 
+import org.viajedragos.habilidad.EstadoHabilidad;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -27,7 +29,7 @@ public class SegundoAlientoTest {
 
         SegundoAliento sa = new SegundoAliento(2);
 
-        sa.alInicioTurno(personaje, new Enemigo());
+        sa.alInicioTurno(personaje, new Enemigo(), new EstadoHabilidad(true, 0, 2));
 
         assertEquals(3, personaje.getVida());
 
@@ -40,7 +42,7 @@ public class SegundoAlientoTest {
 
         SegundoAliento sa = new SegundoAliento(2);
 
-        sa.alInicioTurno(personaje, new Enemigo());
+        sa.alInicioTurno(personaje, new Enemigo(), new EstadoHabilidad(true, 0, 2));
 
         assertEquals(15, personaje.getVida());
 
@@ -53,7 +55,7 @@ public class SegundoAlientoTest {
 
         SegundoAliento sa = new SegundoAliento(2);
 
-        sa.alInicioTurno(personaje, new Enemigo());
+        sa.alInicioTurno(personaje, new Enemigo(), new EstadoHabilidad(true, 0, 2));
 
         assertEquals(17, personaje.getVida());
 
@@ -81,7 +83,7 @@ public class SegundoAlientoTest {
 
         SegundoAliento sa = new SegundoAliento(nivel);
 
-        sa.alInicioTurno(personaje, new Enemigo());
+        sa.alInicioTurno(personaje, new Enemigo(), new EstadoHabilidad(true, 0, nivel));
 
         assertEquals(vidaEsperada, personaje.getVida());
     }

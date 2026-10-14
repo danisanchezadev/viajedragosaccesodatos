@@ -2,9 +2,13 @@ package org.viajedragos.habilidad.implementacion;
 
 import org.viajedragos.combate.ContextoAtaque;
 import org.viajedragos.habilidad.EstadoHabilidad;
-import org.viajedragos.habilidad.EventosHabilidad;
+import org.viajedragos.habilidad.Habilidad;
 
-public class DefensaPerfecta implements EventosHabilidad {
+public class DefensaPerfecta extends Habilidad {
+
+    public DefensaPerfecta() {
+        super("Defensa perfecta");
+    }
 
     @Override
     public void antesDeAplicarDanio(ContextoAtaque contexto, EstadoHabilidad estado) {

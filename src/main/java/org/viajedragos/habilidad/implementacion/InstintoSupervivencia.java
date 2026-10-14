@@ -1,11 +1,16 @@
 package org.viajedragos.habilidad.implementacion;
 
 import org.viajedragos.combate.ContextoAtaque;
+import org.viajedragos.arma.Atributo;
 import org.viajedragos.habilidad.EstadoHabilidad;
-import org.viajedragos.habilidad.EventosHabilidad;
+import org.viajedragos.habilidad.Habilidad;
 import org.viajedragos.modelo.Combatiente;
 
-public class InstintoSupervivencia implements EventosHabilidad {
+public class InstintoSupervivencia extends Habilidad {
+
+    public InstintoSupervivencia() {
+        super("Instinto de supervivencia");
+    }
 
     private boolean activo = false;
 
@@ -22,10 +27,10 @@ public class InstintoSupervivencia implements EventosHabilidad {
         double porcentaje = obtenerPorcentajeVida(combatiente);
 
         if (porcentaje <= 30 && !activo) {
-            combatiente.setFuerza(combatiente.getFuerza() + 3);
+            combatiente.setFuerza(combatiente.getAtributoBase(Atributo.FUERZA) + 3);
             activo = true;
         } else if (porcentaje > 30 && activo) {
-            combatiente.setFuerza(combatiente.getFuerza() - 3);
+            combatiente.setFuerza(combatiente.getAtributoBase(Atributo.FUERZA) - 3);
             activo = false;
         }
     }
@@ -41,7 +46,7 @@ public class InstintoSupervivencia implements EventosHabilidad {
 
         if (activo) {
             activo = false;
-            portador.setFuerza(portador.getFuerza() - 3);
+            portador.setFuerza(portador.getAtributoBase(Atributo.FUERZA) - 3);
         }
     }
 

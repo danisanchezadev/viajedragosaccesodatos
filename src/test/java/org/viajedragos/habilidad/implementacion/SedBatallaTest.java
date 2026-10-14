@@ -1,5 +1,7 @@
 package org.viajedragos.habilidad.implementacion;
 
+import org.viajedragos.habilidad.EstadoHabilidad;
+
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.viajedragos.combate.ContextoAtaque;
@@ -25,7 +27,7 @@ public class SedBatallaTest {
 
         SedDeBatalla sdb = new SedDeBatalla();
 
-        sdb.alHacerDanio(contexto);
+        sdb.alHacerDanio(contexto, new EstadoHabilidad(true, 0, 2));
 
         assertEquals(esperada, jugador.getVida());
     }

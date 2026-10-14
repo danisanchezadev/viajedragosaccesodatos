@@ -1,5 +1,7 @@
 package org.viajedragos.habilidad.implementacion;
 
+import org.viajedragos.habilidad.EstadoHabilidad;
+
 import org.junit.jupiter.api.Test;
 import org.viajedragos.modelo.Combatiente;
 import org.viajedragos.modelo.Enemigo;
@@ -21,7 +23,7 @@ public class DebilidadEnemigaTest {
 
         DebilidadEnemiga deb = new DebilidadEnemiga();
 
-        deb.alInicioCombate(combatiente, enemigo);
+        deb.alInicioCombate(combatiente, enemigo, new EstadoHabilidad(true, 0, 1));
 
         assertEquals(0, enemigo.getVida());
 
@@ -38,7 +40,7 @@ public class DebilidadEnemigaTest {
         // Act
         DebilidadEnemiga deb = new DebilidadEnemiga();
 
-        deb.alInicioCombate(combatiente, enemigo);
+        deb.alInicioCombate(combatiente, enemigo, new EstadoHabilidad(true, 0, 1));
 
         // Assert
         assertNotEquals(20, enemigo.getVida());

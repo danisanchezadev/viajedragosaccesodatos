@@ -2,13 +2,14 @@ package org.viajedragos.habilidad.implementacion;
 
 import org.viajedragos.combate.ContextoAtaque;
 import org.viajedragos.habilidad.EstadoHabilidad;
-import org.viajedragos.habilidad.EventosHabilidad;
+import org.viajedragos.habilidad.Habilidad;
 
-public class GuardiaFerrea implements EventosHabilidad {
+public class GuardiaFerrea extends Habilidad {
 
     private int nivelGuardia;
 
     public GuardiaFerrea(){
+        super("Guardia férrea");
         this.nivelGuardia = 2;
     }
 

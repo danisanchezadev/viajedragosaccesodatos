@@ -1,5 +1,7 @@
 package org.viajedragos.habilidad.implementacion;
 
+import org.viajedragos.habilidad.EstadoHabilidad;
+
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.viajedragos.combate.ContextoAtaque;
@@ -28,7 +30,7 @@ public class GuardiaFerreaTest {
 
         GuardiaFerrea gf = new GuardiaFerrea();
 
-        gf.antesDeAplicarDanio(contexto);
+        gf.antesDeAplicarDanio(contexto, new EstadoHabilidad(true, 0, 2));
 
         assertEquals(danioReducido, contexto.getDanioFinal());
 

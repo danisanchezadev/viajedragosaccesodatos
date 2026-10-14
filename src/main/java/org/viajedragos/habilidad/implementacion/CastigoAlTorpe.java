@@ -2,13 +2,14 @@ package org.viajedragos.habilidad.implementacion;
 
 import org.viajedragos.combate.ContextoAtaque;
 import org.viajedragos.habilidad.EstadoHabilidad;
-import org.viajedragos.habilidad.EventosHabilidad;
+import org.viajedragos.habilidad.Habilidad;
 
-public class CastigoAlTorpe implements EventosHabilidad {
+public class CastigoAlTorpe extends Habilidad {
 
     private int nivel;
 
     public CastigoAlTorpe(){
+        super("Castigo al torpe");
         this.nivel = 4;
     }
 

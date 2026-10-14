@@ -4,12 +4,13 @@ import org.viajedragos.arma.Atributo;
 import org.viajedragos.arma.Equipo;
 import org.viajedragos.arma.TipoEquipo;
 import org.viajedragos.habilidad.EstadoHabilidad;
-import org.viajedragos.habilidad.EventosHabilidad;
 import org.viajedragos.habilidad.Habilidad;
 
 import java.util.EnumMap;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public abstract class Combatiente {
 
@@ -26,7 +27,7 @@ public abstract class Combatiente {
     public int vidaMaxima;
 
     private Map<Habilidad, EstadoHabilidad> habilidades = new HashMap<>();
-    private Map<TipoEquipo, Equipo> equipoEquipado = new EnumMap<>(TipoEquipo.class);
+    private final Map<TipoEquipo, Equipo> equipoEquipado = new EnumMap<>(TipoEquipo.class);
 
     public Combatiente() {
         inicializarAtributos();
@@ -62,7 +63,7 @@ public abstract class Combatiente {
     }
 
     public int getAtributo(Atributo atributo) {
-
+        validarAtributo(atributo);
         int base = atributosBase.get(atributo);
         int modificador = modificadoresEquipo.get(atributo);
 
@@ -70,11 +71,19 @@ public abstract class Combatiente {
     }
 
     public int getAtributoBase(Atributo atributo) {
+        validarAtributo(atributo);
         return atributosBase.get(atributo);
     }
 
+    private void validarAtributo(Atributo atributo) {
+        Objects.requireNonNull(atributo, "El atributo no puede ser null");
+        if (atributo == Atributo.VIDA) {
+            throw new IllegalArgumentException("La vida se gestiona con vida y vidaMaxima, no con modificadores de atributos");
+        }
+    }
+
     public Map<Atributo, Integer> getModificadoresEquipo() {
-        return modificadoresEquipo;
+        return Collections.unmodifiableMap(modificadoresEquipo);
     }
 
     public String getNombre() {
@@ -151,18 +160,35 @@ public abstract class Combatiente {
     }
 
     public Map<TipoEquipo, Equipo> getEquipoEquipado() {
-        return equipoEquipado;
+        return Collections.unmodifiableMap(equipoEquipado);
     }
 
     public void setEquipo(Equipo equipo) {
-
-        TipoEquipo tipo = equipo.getTipoEquipo();
-
-        if (equipoEquipado.containsKey(tipo)) {
+        if (!equipar(equipo)) {
             System.out.println("No se puede equipar");
-        } else {
-            equipoEquipado.put(tipo, equipo);
         }
+    }
+
+    public boolean equipar(Equipo equipo) {
+        Objects.requireNonNull(equipo, "El equipo no puede ser null");
+        TipoEquipo tipo = equipo.getTipoEquipo();
+        if (equipoEquipado.containsKey(tipo)) {
+            return false;
+        }
+        equipo.aplicarEfectos(this);
+        equipoEquipado.put(tipo, equipo);
+        return true;
+    }
+
+    public boolean desequipar(TipoEquipo tipo) {
+        Objects.requireNonNull(tipo, "El tipo de equipo no puede ser null");
+        Equipo equipo = equipoEquipado.get(tipo);
+        if (equipo == null) {
+            return false;
+        }
+        equipo.retirarEfectos(this);
+        equipoEquipado.remove(tipo);
+        return true;
     }
 
     public Map<Habilidad, EstadoHabilidad> getHabilidades() {
@@ -170,7 +196,7 @@ public abstract class Combatiente {
     }
 
     public void setHabilidades(Map<Habilidad, EstadoHabilidad> setHabilidades) {
-        this.habilidades = habilidades;
+        this.habilidades = setHabilidades;
     }
 
     public void recibirDanio(int danio) {
@@ -200,11 +226,12 @@ public abstract class Combatiente {
     }
 
     public void aumentarAtributo(Atributo atributo, int aumento){
+        validarAtributo(atributo);
         atributosBase.merge(atributo, aumento, Integer::sum);
     }
 
     public void disminuirAtributo(Atributo atributo, int decremento){
-
+        validarAtributo(atributo);
         atributosBase.merge(atributo, decremento,(valorAntes, dism) -> Math.max(0, valorAntes - dism));
     }
 
@@ -229,6 +256,11 @@ public abstract class Combatiente {
     // Equipar arma
     public void agregarHabilidadEquipo(Habilidad habilidad, int niveles) {
 
+        Objects.requireNonNull(habilidad, "La habilidad no puede ser null");
+        if (niveles < 0) {
+            throw new IllegalArgumentException("Los niveles otorgados no pueden ser negativos");
+        }
+
         EstadoHabilidad estado = habilidades.get(habilidad);
 
         if (estado == null) {
@@ -251,6 +283,13 @@ public abstract class Combatiente {
 
         EstadoHabilidad estado = habilidades.get(habilidad);
 
+        if (niveles < 0) {
+            throw new IllegalArgumentException("Los niveles a retirar no pueden ser negativos");
+        }
+        if (estado == null || estado.getVecesEquipada() <= 0 || estado.getNivel() < niveles) {
+            throw new IllegalStateException("La habilidad no tiene esa contribución de equipo para retirar");
+        }
+
         estado.setNivel(estado.getNivel() - niveles);
         estado.setVecesEquipada(estado.getVecesEquipada() - 1);
 
@@ -268,6 +307,7 @@ public abstract class Combatiente {
     }
 
     public void modificarAtributo(Atributo atributo, int cantidad) {
+        validarAtributo(atributo);
         modificadoresEquipo.merge(atributo, cantidad, Integer::sum);
     }
 }

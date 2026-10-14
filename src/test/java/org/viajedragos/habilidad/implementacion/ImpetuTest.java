@@ -1,5 +1,7 @@
 package org.viajedragos.habilidad.implementacion;
 
+import org.viajedragos.habilidad.EstadoHabilidad;
+
 import org.junit.jupiter.api.Test;
 import org.viajedragos.combate.ContextoAtaque;
 import org.viajedragos.modelo.Combatiente;
@@ -40,7 +42,7 @@ public class ImpetuTest {
 
             contexto.setDanioFinal(1);
 
-            impetu.alHacerDanio(contexto);
+            impetu.alHacerDanio(contexto, new EstadoHabilidad(true, 0, 1));
 
             int aumetnoEsperado = Math.min(i,3);
 
@@ -50,7 +52,7 @@ public class ImpetuTest {
 
         //Agilidad debe volver a su valor de inicio del combate al finalizarlo.
 
-        impetu.alFinalCombate(jugador,enemigo);
+        impetu.alFinalCombate(jugador,enemigo, new EstadoHabilidad(true, 0, 1));
 
         System.out.println("Ahora evalumos si la agilidad vuelve a su estado inicial: " + jugador.getAgilidad() + ".");
 
@@ -71,7 +73,7 @@ public class ImpetuTest {
 
         contexto.setDanioFinal(0);
 
-        impetu.alHacerDanio(contexto);
+        impetu.alHacerDanio(contexto, new EstadoHabilidad(true, 0, 1));
 
         assertEquals(10, jugador.getAgilidad());
 

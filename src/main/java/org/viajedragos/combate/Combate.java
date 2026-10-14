@@ -144,9 +144,9 @@ public class Combate {
         ResultadoCombate resultado = ResultadoCombate.CONTINUA;
 
         Combatiente primero = ordenHabilidades();
-        Combatiente segundo = determinarOponente(jugador);
+        Combatiente segundo = determinarOponente(primero);
 
-        dispararHabilidades(primero, h -> h.alInicioCombate(primero, segundo, estado));
+        dispararHabilidades(primero, (h, estado) -> h.alInicioCombate(primero, segundo, estado));
 
         if(algunoMuerto()){
             ResultadoCombate resultadoMuertes = resolverMuertes(primero);
@@ -239,7 +239,7 @@ public class Combate {
 
             //Disparamos las habilidades que tengan alguna acción al morir.
             //Esto podría generar que resucitara, que matara al personaje, etc, etc...
-            dispararHabilidades(enemigo, h -> h.alMorir(enemigo, jugador));
+            dispararHabilidades(enemigo, (h, estado) -> h.alMorir(enemigo, jugador, estado));
 
             //Por eso hay que volver a comprobar si está vivo o muerto
 
@@ -265,7 +265,7 @@ public class Combate {
             //Comprobamos si es el jugador es el que está muerto.
         } else if (!jugador.estaVivo() && enemigo.estaVivo()) {
 
-            dispararHabilidades(jugador, h -> h.alMorir(jugador, enemigo));
+            dispararHabilidades(jugador, (h, estado) -> h.alMorir(jugador, enemigo, estado));
 
             //Hay que volver a comprobar si está vivo o muerto
 
@@ -284,7 +284,7 @@ public class Combate {
 
             Combatiente noPrioridad = determinarOponente(prioridad);
 
-            dispararHabilidades(prioridad, h -> h.alMorir(prioridad, noPrioridad));
+            dispararHabilidades(prioridad, (h, estado) -> h.alMorir(prioridad, noPrioridad, estado));
 
             //Si ambos están vivos tras la primera habilidad, el combate continúa.
             if (ambosVivos()) return ResultadoCombate.CONTINUA;
@@ -317,7 +317,7 @@ public class Combate {
     // "sobrevive" ya ha ejecutado alMorir() en esta resolución.
     private ResultadoCombate personajeMuere(Combatiente muerto, Combatiente sobrevive) {
 
-        dispararHabilidades(muerto, h -> h.alMorir(muerto, sobrevive));
+        dispararHabilidades(muerto, (h, estado) -> h.alMorir(muerto, sobrevive, estado));
 
         if (ambosVivos()) {
             return ResultadoCombate.CONTINUA;
@@ -353,7 +353,7 @@ public class Combate {
 //Como atributos o vida, se reestablezcan en sus valores normales.
     private ResultadoCombate finalDelCombate(ResultadoCombate resultado) {
 
-        dispararHabilidades(jugador, h -> h.alFinalCombate(jugador, enemigo));
+        dispararHabilidades(jugador, (h, estado) -> h.alFinalCombate(jugador, enemigo, estado));
 
         return resultado;
     }

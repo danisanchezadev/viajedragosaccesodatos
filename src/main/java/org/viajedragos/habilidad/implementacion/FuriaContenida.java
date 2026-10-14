@@ -3,10 +3,14 @@ package org.viajedragos.habilidad.implementacion;
 import org.viajedragos.arma.Atributo;
 import org.viajedragos.combate.ContextoAtaque;
 import org.viajedragos.habilidad.EstadoHabilidad;
-import org.viajedragos.habilidad.EventosHabilidad;
+import org.viajedragos.habilidad.Habilidad;
 import org.viajedragos.modelo.Combatiente;
 
-public class FuriaContenida implements EventosHabilidad {
+public class FuriaContenida extends Habilidad {
+
+    public FuriaContenida() {
+        super("Furia contenida");
+    }
 
     private boolean activo = false;
     private int nivel = 2;
@@ -29,7 +33,7 @@ public class FuriaContenida implements EventosHabilidad {
 
         if (activo) {
 
-            portador.disminuirAtributo(Atributo.FUERZA, nivel);
+            portador.setFuerza(portador.getAtributoBase(Atributo.FUERZA) - nivel);
             activo = false;
         }
     }

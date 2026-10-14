@@ -1,5 +1,7 @@
 package org.viajedragos.habilidad.implementacion;
 
+import org.viajedragos.habilidad.EstadoHabilidad;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -36,7 +38,7 @@ public class DefensaPerfectaTest {
         contexto.setDadoDefensa(tiradaDadoDefensa);
         contexto.setDanioFinal(danio);
 
-        df.antesDeAplicarDanio(contexto);
+        df.antesDeAplicarDanio(contexto, new EstadoHabilidad(true, 0, 1));
 
         assertEquals(danioFinalEsperado, contexto.getDanioFinal());
 

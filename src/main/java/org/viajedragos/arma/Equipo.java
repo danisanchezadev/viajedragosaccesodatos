@@ -10,30 +10,59 @@ import java.util.*;
 public abstract class Equipo extends Objeto implements Equipable {
 
     private final TipoEquipo tipoEquipo;
-    private Map<Atributo, Integer> bonificaciones = new EnumMap<>(Atributo.class);
-    private Map<Habilidad, Integer> habilidadesOtorgadas = new LinkedHashMap<>();
+    private final Map<Atributo, Integer> bonificaciones;
+    private final Map<Habilidad, Integer> habilidadesOtorgadas;
 
     public Equipo(String nombre, TipoEquipo tipoEquipo,
                   Map<Atributo, Integer> bonificaciones,
                   Map<Habilidad, Integer> habilidadesOtorgadas) {
 
         super(nombre);
-        this.tipoEquipo = tipoEquipo;
-        this.bonificaciones = bonificaciones;
-        this.habilidadesOtorgadas = habilidadesOtorgadas;
+        this.tipoEquipo = Objects.requireNonNull(tipoEquipo, "El tipo de equipo no puede ser null");
+        Map<Atributo, Integer> copiaBonificaciones = new EnumMap<>(Atributo.class);
+        bonificaciones.forEach((atributo, cantidad) -> {
+            Objects.requireNonNull(atributo, "El atributo no puede ser null");
+            Objects.requireNonNull(cantidad, "La bonificación no puede ser null");
+            if (atributo == Atributo.VIDA) {
+                throw new IllegalArgumentException("Las bonificaciones de vida necesitan una regla específica");
+            }
+            copiaBonificaciones.put(atributo, cantidad);
+        });
+        Map<Habilidad, Integer> copiaHabilidades = new LinkedHashMap<>();
+        habilidadesOtorgadas.forEach((habilidad, niveles) -> {
+            Objects.requireNonNull(habilidad, "La habilidad no puede ser null");
+            Objects.requireNonNull(niveles, "Los niveles no pueden ser null");
+            if (niveles < 0) {
+                throw new IllegalArgumentException("Los niveles otorgados no pueden ser negativos");
+            }
+            copiaHabilidades.put(habilidad, niveles);
+        });
+        this.bonificaciones = Collections.unmodifiableMap(copiaBonificaciones);
+        this.habilidadesOtorgadas = Collections.unmodifiableMap(copiaHabilidades);
     }
 
     @Override
+    // Operación de efectos: cada aplicación debe emparejarse con una retirada.
+    // Para gestionar ranuras se utilizan Combatiente.equipar/desequipar.
     public void aplicarEfectos(Combatiente combatiente) {
 
-        //bonificaciones.forEach(combatiente::modificarAtributoEquipo);
-
+        Objects.requireNonNull(combatiente, "El combatiente no puede ser null");
+        bonificaciones.forEach(combatiente::modificarAtributo);
         habilidadesOtorgadas.forEach(combatiente::agregarHabilidadEquipo);
     }
 
     @Override
     public void retirarEfectos(Combatiente combatiente) {
-
+        Objects.requireNonNull(combatiente, "El combatiente no puede ser null");
+        // Validar todas las habilidades antes de retirar ningún efecto.
+        habilidadesOtorgadas.forEach((habilidad, niveles) -> {
+            var estado = combatiente.getHabilidades().get(habilidad);
+            if (estado == null || estado.getVecesEquipada() <= 0 || estado.getNivel() < niveles) {
+                throw new IllegalStateException("No se pueden retirar las habilidades de este equipo");
+            }
+        });
+        bonificaciones.forEach((atributo, cantidad) -> combatiente.modificarAtributo(atributo, -cantidad));
+        habilidadesOtorgadas.forEach(combatiente::quitarHabilidadEquipo);
     }
 
     public TipoEquipo getTipoEquipo() {

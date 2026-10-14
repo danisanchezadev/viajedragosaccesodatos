@@ -2,9 +2,13 @@ package org.viajedragos.habilidad.implementacion;
 
 import org.viajedragos.combate.ContextoAtaque;
 import org.viajedragos.habilidad.EstadoHabilidad;
-import org.viajedragos.habilidad.EventosHabilidad;
+import org.viajedragos.habilidad.Habilidad;
 
-public class Caparazon implements EventosHabilidad {
+public class Caparazon extends Habilidad {
+
+    public Caparazon() {
+        super("Caparazón");
+    }
 
 
     @Override

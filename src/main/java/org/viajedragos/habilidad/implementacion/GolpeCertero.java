@@ -2,9 +2,9 @@ package org.viajedragos.habilidad.implementacion;
 
 import org.viajedragos.combate.ContextoAtaque;
 import org.viajedragos.habilidad.EstadoHabilidad;
-import org.viajedragos.habilidad.EventosHabilidad;
+import org.viajedragos.habilidad.Habilidad;
 
-public class GolpeCertero implements EventosHabilidad {
+public class GolpeCertero extends Habilidad {
 
 
     //Si el ataque no es un ataque fallido, siempre aumenta en dos,
@@ -14,6 +14,7 @@ public class GolpeCertero implements EventosHabilidad {
     private int nivel;
 
     public GolpeCertero(){
+        super("Golpe certero");
         this.nivel = 2;
     }
 

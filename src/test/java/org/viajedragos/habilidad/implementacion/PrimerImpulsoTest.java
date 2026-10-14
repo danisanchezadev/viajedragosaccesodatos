@@ -1,5 +1,7 @@
 package org.viajedragos.habilidad.implementacion;
 
+import org.viajedragos.habilidad.EstadoHabilidad;
+
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.viajedragos.modelo.Combatiente;
@@ -18,7 +20,7 @@ public class PrimerImpulsoTest {
 
         PrimerImpulso pi = new PrimerImpulso(nivel);
 
-        pi.alInicioCombate(jugador, new Enemigo());
+        pi.alInicioCombate(jugador, new Enemigo(), new EstadoHabilidad(true, 0, nivel));
 
         assertEquals(iniciativaEsperada, jugador.getIniciativa());
     }
@@ -33,11 +35,11 @@ public class PrimerImpulsoTest {
 
         PrimerImpulso pi = new PrimerImpulso(nivel);
 
-        pi.alInicioCombate(jugador, new Enemigo());
+        pi.alInicioCombate(jugador, new Enemigo(), new EstadoHabilidad(true, 0, nivel));
 
         assertEquals(iniciativaAumentada, jugador.getIniciativa());
 
-        pi.alFinalCombate(jugador, new Enemigo());
+        pi.alFinalCombate(jugador, new Enemigo(), new EstadoHabilidad(true, 0, nivel));
 
         assertEquals(6, jugador.getIniciativa());
     }

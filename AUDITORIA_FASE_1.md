@@ -2,6 +2,8 @@
 
 Fecha: 14 de octubre de 2026.
 
+> **Estado actual:** la tarea de atributos/equipamiento está completada y `mvn clean test` pasa: 93 pruebas, sin fallos ni errores. Los apartados siguientes conservan los hallazgos históricos; el último apartado registra los cambios y limitaciones actuales.
+
 ## Alcance y resultado
 
 Se han leído los 33 archivos Java de `src/main/java`, el `pom.xml` y los 14 archivos Java de `src/test/java`. Se han buscado referencias a atributos, habilidades, eventos y equipo. La lectura de los archivos de pruebas se limita a localizar dependencias de las firmas actuales: no se han creado, modificado, compilado ni ejecutado pruebas.
@@ -134,3 +136,76 @@ Por ello, la compilación principal con `javac` no permite afirmar que el proyec
 13. Adaptar las referencias antiguas de las pruebas, tarea reservada al autor.
 
 No se encontró acceso a datos ni persistencia en el código principal. No se han iniciado las fases posteriores ni actualizado el documento de Downloads: esta auditoría registra el estado comprobado dentro del repositorio.
+
+## Revalidación tras autorizar la comprobación de las pruebas
+
+Se ha vuelto a leer el contexto y a inspeccionar los 33 archivos principales, los 14 de pruebas y sus referencias. El código fuente sigue siendo el del commit `9a9f274`; no se han modificado Java, POM ni pruebas.
+
+- `mvn test` compiló las 33 fuentes principales y se detuvo en `testCompile`. Las llamadas incompatibles identificadas en la primera auditoría son ahora errores confirmados por el compilador: falta `determinarDefensor` y falta el argumento `EstadoHabilidad` en diez archivos de habilidades. Ninguna prueba llegó a ejecutarse.
+- `mvn compile`, ejecutado con acceso fuera del aislamiento tras un fallo de resolución dentro de él, terminó con **BUILD SUCCESS**. La comprobación de compilación con Maven ya no queda pendiente.
+- `java -cp target/classes org.viajedragos.app` terminó con código 0. La comparación imprimió RESISTENCIA 3 → -4 (diferencia -7), AGILIDAD ausente → 3 (+3), FUERZA 5 → 8 (+3) e INICIATIVA 2 → ausente (-2). No existe una partida que ejecutar desde ese punto de entrada.
+- Se actualizó `CONTEXTO_CODEX_VIAJE_A_DRAGOS.md` en el repositorio y, con permiso de escritura fuera del espacio de trabajo, también el original en Downloads. La checklist distingue revisión completada, implementación incompleta y comprobaciones bloqueadas.
+
+Orden recomendado para futuras correcciones, sujeto a autorización del autor y sin realizarlo en esta auditoría:
+
+1. Recuperar la compatibilidad de las pruebas con las firmas actuales: actualizar llamadas a oponente y proporcionar el estado de cada habilidad, sin añadir sobrecargas que oculten la migración. Afecta a `CombateTest` y los diez tests de habilidades enumerados arriba. Conservar las reglas esperadas y revisar cualquier discrepancia que aparezca al ejecutar.
+2. Corregir los fallos aislados de `Combatiente`: `setHabilidades`; decidir el estado inicial de `agregarHabilidad` y las precondiciones de retirada/VIDA antes de tocar esos comportamientos.
+3. Resolver la compatibilidad del modelo de habilidades: herencia de `Habilidad`, constructores existentes, uso de `EstadoHabilidad.nivel` y estado mutable por combatiente. Impacto en las implementaciones, mapas de `Combatiente` y `Equipo` y sus llamadas/pruebas.
+4. Corregir la mezcla de atributos base y efectivos en las habilidades afectadas, tras decidir cómo representar sus efectos temporales. No cambiar de forma global el significado de getters/setters, pues afectaría a constructores, combate y otras habilidades.
+5. Completar la contabilidad de efectos de `Equipo` y las operaciones de equipar/retirar cuando se autorice ese alcance. Revisar alias de mapas y referencias a `modificarAtributo`, `agregarHabilidadEquipo` y `quitarHabilidadEquipo`.
+6. Corregir firmas y participantes del borrador de `Combate`; después integrar daño, eventos, muerte, turnos y final en peticiones específicas. Activarlo tal cual no compilaría. Confirmar antes el +2 de turno, los empates con iniciativa cero y los destinatarios de los eventos finales.
+7. Solo después, y con autorización separada, conectar un flujo jugable de consola y catálogos en memoria. Las reglas de huida, objetos y comercio siguen pendientes de decisión.
+
+La alternativa menos invasiva ahora es conservar el código y usar esta lista como base para autorizar una corrección concreta cada vez. Ninguna corrección se ha aplicado, ni se ha realizado un nuevo commit o push.
+
+## Primer bloque de correcciones autorizado
+
+Cambios realizados después de la respuesta «procede» del autor:
+
+- `Combatiente.setHabilidades` asigna el mapa recibido.
+- Las 13 habilidades con efectos extienden `Habilidad` y llaman a su constructor con un nombre. Se conservan todos los constructores públicos preexistentes, campos de nivel y fórmulas. Ahora son compatibles con los mapas y APIs que exigen Habilidad; FuriaMaximaBerserker sigue sin implementar.
+- `CombateTest` llama a `determinarOponente`; los diez tests de habilidades añaden el argumento `EstadoHabilidad`, con el nivel correspondiente al escenario. No se han cambiado aserciones ni añadido tests o sobrecargas.
+- Las seis llamadas a `dispararHabilidades` del borrador de Combate reciben ambos parámetros y pasan el estado al evento. `segundo` se obtiene a partir de `primero`. El bloque permanece comentado, por lo que estas correcciones no se han validado ejecutando ese flujo.
+
+Comprobación ejecutada: `mvn test`, **BUILD SUCCESS**, 51 pruebas, 0 fallos, 0 errores, 0 omitidas. Los informes están en `target/surefire-reports`. La suite compila el código principal y las pruebas. No valida una partida completa ni cubre específicamente el setter corregido o toda la contabilidad de equipo.
+
+Quedan pendientes las demás correcciones de la auditoría. Antes de cambiar los efectos temporales o el combate se han solicitado decisiones sobre el +2 del turno, los destinatarios de eventos de inicio/final y la representación de modificadores temporales. No se han elegido reglas por defecto. También sigue pendiente decidir el estado inicial de `agregarHabilidad` y la relación entre los niveles de los constructores y EstadoHabilidad.
+
+No se han añadido funcionalidades de equipo, catálogos, menús o combates, ni dependencias o patrones. No se ha realizado commit o push. La checklist se actualiza solo para los cambios y comprobaciones descritos.
+
+## Tarea de atributos y equipamiento completada
+
+Se ha trabajado sobre los cambios locales del primer bloque, sin recuperar ni sobrescribir con GitHub. Esta tarea no modifica `Combate`, su borrador ni la secuencia de sus eventos.
+
+### Impacto y archivos modificados en esta tarea
+
+| Archivo | Métodos afectados y resultado |
+| --- | --- |
+| `modelo/Combatiente.java` | `getAtributo`, `getAtributoBase`, `aumentarAtributo`, `disminuirAtributo`, `modificarAtributo`: validar atributos y rechazar VIDA sin tocar los campos de vida. Getters de modificadores/ranuras: solo lectura. `setEquipo`: delegar en la nueva operación `equipar(Equipo)`; nueva `desequipar(TipoEquipo)`. `agregarHabilidadEquipo` y `quitarHabilidadEquipo`: proteger contribuciones inválidas. |
+| `arma/Equipo.java` | Constructor: copiar los mapas, validar sus entradas y hacerlos de solo lectura. `aplicarEfectos`: sumar atributos y habilidades. `retirarEfectos`: validar todas las habilidades primero y descontar solo sus contribuciones. El comparador conserva su implementación. |
+| `habilidad/implementacion/Impetu.java` | `alHacerDanio` y `alFinalCombate` usan agilidad base, evitando duplicar o perder modificadores de equipo. |
+| `habilidad/implementacion/InstintoSupervivencia.java` | `modificarFuerza` y `alFinalCombate` usan fuerza base. Sus eventos y umbral no cambian. |
+| `habilidad/implementacion/PrimerImpulso.java` | Inicio/final suman y restan su nivel sobre iniciativa base. |
+| `habilidad/implementacion/FuriaContenida.java` | Final resta exactamente su contribución de fuerza desde la base sin truncarla. |
+| `habilidad/implementacion/Rabia.java` | Inicio usa base; nuevo efecto de final revierte fuerza +2, agilidad +1 y resistencia -1. Un indicador evita retirar efectos que no se activaron o retirarlos dos veces. |
+| `src/test/java/org/viajedragos/modelo/EquipamientoTest.java` | Archivo nuevo: 34 escenarios de equipo/atributos/habilidades, incluidos casos parametrizados. |
+| `src/test/java/org/viajedragos/habilidad/implementacion/HabilidadesConEquipoTest.java` | Archivo nuevo: 8 escenarios de efectos de habilidades con equipo positivo/negativo y cambio de pieza mientras el efecto está activo. |
+
+Las búsquedas previas no encontraron llamadas existentes a `setEquipo` ni escritura en los getters de equipo/modificadores. Se conservan las firmas públicas existentes. `setEquipo` ahora aplica los efectos de la pieza aceptada y sigue mostrando un mensaje si la ranura está ocupada. Las nuevas operaciones booleanas permiten comprobar si se equipó/desequipó; no hay sustitución automática. Los getters de mapas mantienen su tipo, pero ya no permiten escritura, cambio deliberado para proteger las contribuciones. No se modifican `Habilidad`, `EstadoHabilidad`, `Arma`, `Equipable`, los enums ni el POM en esta tarea.
+
+### Decisiones expresas y límites
+
+- El autor ha pedido conservar el sistema que sube y baja los atributos desde las habilidades, sin un nuevo mapa temporal. Los eventos leen/escriben la base sin incluir equipo y revierten las diferencias con signo; provisionalmente, la base incluye el efecto mientras está activo. Los aumentos permanentes que se hagan durante ese efecto no se pierden al retirarlo.
+- El autor ha confirmado que Rabia debe restaurarse al final. Se añade el evento, pero conectarlo al combate seguirá siendo tarea de `Combate`.
+- VIDA sigue separada. No se inventa la relación entre vida actual/máxima y bonificaciones: los equipos con VIDA y los métodos genéricos con VIDA producen un error explícito. Si se quieren esos equipos, falta definir su regla.
+- `aplicarEfectos` y `retirarEfectos` son operaciones de efectos que deben emparejarse. Para equipar objetos se usan las operaciones de Combatiente; no se llama manualmente a aplicar además de equipar la misma pieza. Las repeticiones de equipar/desequipar se rechazan sin duplicar efectos.
+- Se conserva el funcionamiento existente de niveles internos de habilidades y el estado mutable de sus instancias; esta tarea verifica nivel/contador de EstadoHabilidad y contribuciones del equipo. Unificar cómo los eventos consumen ese nivel y evitar compartir instancias de habilidades con estado entre combatientes sigue siendo trabajo de integración de habilidades.
+- `agregarHabilidad` y sus reglas de estado inicial permanecen pendientes; equipamiento usa los métodos existentes de aprender/agregar/quitar habilidades de equipo, que están probados.
+
+### Comprobación final
+
+`mvn clean test`: **BUILD SUCCESS**. Recompilación de 33 fuentes principales y 16 archivos de pruebas. **93 pruebas ejecutadas, 0 fallos, 0 errores y 0 omitidas**: 51 anteriores y 42 nuevas.
+
+Se probaron todos los atributos ordinarios y todas las ranuras; rechazo de ranura ocupada; sustitución tras retirar la pieza; aplicación/retirada directas emparejadas; penalizaciones que superan la base; contribuciones de otras piezas; cambios permanentes durante el equipamiento; setters; habilidades comunes a varias piezas y a aprendizaje; aprendizaje mientras se equipa; operaciones repetidas; niveles inválidos; mapas externos mutados; retirada inválida sin descontar efectos parciales; vida conservada; comparador con ausencias y diferencias positivas/negativas; recuperación de atributos en las cinco habilidades corregidas.
+
+La base de atributos/equipamiento permite pasar a completar Combate. Antes de integrarlo siguen pendientes sus reglas: +2 del turno, empate con iniciativa cero, destinatarios de eventos finales y resolución de muertes. No se ha ejecutado una partida ni implementado el bucle de combate. No se han añadido dependencias, persistencia, frameworks o patrones. No se ha hecho commit ni push.

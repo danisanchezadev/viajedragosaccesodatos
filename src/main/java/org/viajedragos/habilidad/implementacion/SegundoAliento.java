@@ -1,14 +1,15 @@
 package org.viajedragos.habilidad.implementacion;
 
 import org.viajedragos.habilidad.EstadoHabilidad;
-import org.viajedragos.habilidad.EventosHabilidad;
+import org.viajedragos.habilidad.Habilidad;
 import org.viajedragos.modelo.Combatiente;
 
-public class SegundoAliento implements EventosHabilidad {
+public class SegundoAliento extends Habilidad {
 
     private int nivelHabilidad = 2;
 
     public SegundoAliento(int nivelHabilidad) {
+        super("Segundo aliento");
         this.nivelHabilidad = nivelHabilidad;
     }
 

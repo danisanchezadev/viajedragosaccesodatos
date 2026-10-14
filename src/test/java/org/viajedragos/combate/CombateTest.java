@@ -153,7 +153,7 @@ public class CombateTest {
 
         Combate combate = new Combate(jugador, enemigo, tirador);
 
-        Combatiente c = combate.determinarDefensor(jugador);
+        Combatiente c = combate.determinarOponente(jugador);
 
         assertEquals(enemigo, c);
 
@@ -170,7 +170,7 @@ public class CombateTest {
 
         Combate combate = new Combate(jugador, enemigo, tirador);
 
-        Combatiente c = combate.determinarDefensor(enemigo);
+        Combatiente c = combate.determinarOponente(enemigo);
 
         assertEquals(jugador, c);
 
