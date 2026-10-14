@@ -2,7 +2,7 @@
 
 Fecha: 14 de octubre de 2026.
 
-> **Estado actual:** la tarea de atributos/equipamiento está completada y `mvn clean test` pasa: 93 pruebas, sin fallos ni errores. Los apartados siguientes conservan los hallazgos históricos; el último apartado registra los cambios y limitaciones actuales.
+> **Estado actual:** atributos/equipamiento publicados en `fc7754c`; ataque individual con eventos integrado después en local. `mvn clean test` pasa con 158 pruebas. `combatir` sigue comentado. Los apartados siguientes conservan los hallazgos históricos; el último apartado registra los cambios y limitaciones actuales.
 
 ## Alcance y resultado
 
@@ -209,3 +209,53 @@ Las búsquedas previas no encontraron llamadas existentes a `setEquipo` ni escri
 Se probaron todos los atributos ordinarios y todas las ranuras; rechazo de ranura ocupada; sustitución tras retirar la pieza; aplicación/retirada directas emparejadas; penalizaciones que superan la base; contribuciones de otras piezas; cambios permanentes durante el equipamiento; setters; habilidades comunes a varias piezas y a aprendizaje; aprendizaje mientras se equipa; operaciones repetidas; niveles inválidos; mapas externos mutados; retirada inválida sin descontar efectos parciales; vida conservada; comparador con ausencias y diferencias positivas/negativas; recuperación de atributos en las cinco habilidades corregidas.
 
 La base de atributos/equipamiento permite pasar a completar Combate. Antes de integrarlo siguen pendientes sus reglas: +2 del turno, empate con iniciativa cero, destinatarios de eventos finales y resolución de muertes. No se ha ejecutado una partida ni implementado el bucle de combate. No se han añadido dependencias, persistencia, frameworks o patrones. No se ha hecho commit ni push.
+
+## Comparación con fc7754c y ataque individual: integración parcial
+
+Antes de modificar nada, HEAD local y `git ls-remote origin refs/heads/main` devolvieron `fc7754c438080b835358f9a64c871b2fbb7595db`; el árbol local estaba limpio y `git diff fc7754c` no mostró diferencias. Se ejecutó `mvn clean test`: 93 pruebas pasaron.
+
+El ataque individual no estaba integrado en ese commit. `ataque` solo calculaba bruto, las habilidades no se invocaban y solo el contraataque restaba vida directamente. Las 42 pruebas incorporadas al commit eran de equipo/atributos, no de la integración del ataque.
+
+Impacto confirmado antes del cambio: `Combate.ataque` mantiene su firma pública void y no tiene llamadas existentes en el código del juego. `danioBruto`, `resolverContraataque`, `ContextoAtaque`, los contratos de eventos y las implementaciones se inspeccionaron. Los cálculos existentes son la referencia para esta integración; no se han cambiado las reglas ni activado el borrador de `combatir`.
+
+Cambios locales de esta tarea:
+
+- `Combate.ataque`: copia bruto a final y aplica una sola vez ese daño al defensor si el ataque no es fallido. Los contraataques mantienen su ruta directa existente, sin volver a aplicar daño al defensor.
+- Nuevo `src/test/java/org/viajedragos/combate/AtaqueTest.java`: 46 escenarios. Matriz de las 36 combinaciones 1D6/1D6, los seis valores del dado extra de crítico, daño mínimo cero sin curación, daño letal limitado a cero vida, enemigo como atacante y validación de dado. También se comprueba que solo el crítico 6/1 solicita la tercera tirada.
+- Documentación actualizada para distinguir daño probado de eventos todavía pendientes.
+
+Reglas existentes conservadas: ataque 1/defensa menor que 6 falla; 1/6 provoca contraataque de fuerza del defensor sin tirada extra; ataque 2–5/defensa 1 aplica todo el valor de ataque; 6/1 añade 1D6 crítico sin restar defensa; resto aplica ataque menos defensa con mínimo cero.
+
+Resultado final de este bloque: `mvn clean test`, BUILD SUCCESS, 33 fuentes principales y 17 archivos de pruebas recompilados, **139 pruebas, 0 fallos, 0 errores, 0 omitidas**. No se han conectado los eventos de habilidades, así que esas pruebas no acreditan una integración completa ni el paso de EstadoHabilidad durante el ataque.
+
+Se han solicitado tres decisiones antes de continuar esa parte: secuencia y destinatarios de eventos; orden entre modificadores del atacante y defensor y dentro de cada mapa; si el contraataque directo debe conservarse o pasar por eventos con identidades invertidas. Hasta recibirlas no se elige una regla por defecto. No se cambian niveles internos de habilidades, iniciativa, orden de turnos ni resolución de muertes. `combatir` sigue comentado. No hay commit ni push de este bloque.
+
+## Ataque individual con eventos integrado tras confirmar las reglas
+
+El autor confirmó las fases, atacante antes de defensor en eventos previos, paso del estado de cada entrada y contraataque directo sin nuevos contextos ni una segunda secuencia. No se descartaron los cambios locales ni las 139 pruebas anteriores.
+
+### Revisión previa de habilidades
+
+Se inspeccionaron todos los overrides de eventos del ataque: Caparazon, CastigoAlTorpe, DefensaPerfecta, GolpeCertero y GuardiaFerrea modifican final antes de aplicarlo; Impetu y SedDeBatalla actúan al hacer daño; FuriaContenida e InstintoSupervivencia al recibirlo. No hay implementaciones existentes de antesDeAtacar/antesDeCalcularDanio ni modificaciones existentes de bruto, dados o indicadores desde esas habilidades.
+
+La secuencia confirmada permite ejecutar esos efectos sin cambiar sus fórmulas ni sustituir niveles internos. No se detectó un requisito de orden distinto que impidiese integrarlas. Se conservó una particularidad existente y se informó antes de editar: los modificadores de daño no comprueban el propietario. Por ejemplo, GuardiaFerrea en el atacante también reduciría el final, y GolpeCertero en el defensor podría aumentarlo. No se inventaron filtros de rol ni se modificaron habilidades; cualquier cambio de esa semántica requiere decisión del autor.
+
+### Impacto y cambios de esta tarea
+
+- `src/main/java/org/viajedragos/combate/Combate.java`: `ataque` conecta las fases confirmadas. `dispararHabilidades`, antes situado dentro del bloque comentado, pasa a código activo con su misma firma y recorrido de entradas. Se eliminan dos imports no usados. Se conservan la firma pública void, ContextoAtaque, contratos de eventos, implementaciones, mapas, niveles, fórmulas, `danioBruto` y `resolverContraataque`.
+- Nuevo `src/test/java/org/viajedragos/combate/EventosAtaqueTest.java`: 19 escenarios de integración. La habilidad de registro existe únicamente en pruebas; no se añade un patrón ni abstracción productiva.
+- Checklist y este informe actualizados. `AtaqueTest` conserva sus 46 escenarios anteriores sin modificación en esta tarea.
+
+Los eventos previos ocurren para el ataque original incluso si su cálculo determina fallo/contraataque. Tras ellos, si el ataque está fallido, se deja final en cero y no se aplica daño normal ni eventos posteriores. En un ataque no fallido se aplica final una vez y se comprueba la pérdida real de vida antes de ejecutar alHacerDanio y alRecibirDanio. Un daño nominal positivo sobre vida ya cero no dispara esos eventos; el daño letal con pérdida real sí los dispara una vez, sin resolver muertes.
+
+El contraataque permanece en su ruta original: fuerza del defensor directamente contra el atacante durante el cálculo, sin contexto adicional, inversión, tiradas nuevas ni efectos posteriores por ese daño. Los modificadores de final del ataque original no alteran ese daño directo.
+
+Atacante y defensor se procesan por separado y por fases; cada callback recibe exactamente el estado de su propia entrada. El orden interno entre habilidades de un mismo mapa sigue siendo el existente, no se convierte HashMap a otra colección ni se establece un criterio nuevo. La secuencia usa un único ContextoAtaque y conserva sus límites de daño mínimo cero.
+
+### Resultado y límites
+
+`mvn clean test`: **BUILD SUCCESS**. Recompilados 33 archivos principales y 18 de pruebas. **158 pruebas, 0 fallos, 0 errores, 0 omitidas**: las 139 anteriores y 19 nuevas.
+
+Las pruebas verifican orden de fases/dados, orden atacante-defensor, contexto único, estados diferentes en varios participantes/habilidades, atributos previos al cálculo, modificación de bruto/final, GolpeCertero/DefensaPerfecta, GuardiaFerrea, Caparazon, CastigoAlTorpe, crítico con modificadores, fallos, final cero, daño creado desde bruto cero, curación y cambios de atributos posteriores, letal, defensor sin vida y contraataque sin duplicación o efectos indirectos.
+
+Esta tarea termina la integración del ataque individual. No activa `combatir`, no decide orden de turnos o iniciativa, no ejecuta eventos de inicio/final del combate ni alMorir y no resuelve muertes. Sigue pendiente definir el +2 del turno, empate con iniciativa cero, destinatarios iniciales/finales y reglas de resolución de muertes antes de activar el flujo completo. Tampoco se modifica la semántica de niveles internos ni el estado mutable compartido de instancias de habilidades. No se añadieron dependencias, persistencia, frameworks o patrones, ni se hizo commit o push.

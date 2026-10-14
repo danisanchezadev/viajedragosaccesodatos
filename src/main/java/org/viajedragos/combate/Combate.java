@@ -1,13 +1,11 @@
 package org.viajedragos.combate;
 
 import org.viajedragos.habilidad.EstadoHabilidad;
-import org.viajedragos.habilidad.EventosHabilidad;
 import org.viajedragos.habilidad.Habilidad;
 import org.viajedragos.modelo.Combatiente;
 
 import java.util.Map;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 public class Combate {
 
@@ -67,6 +65,8 @@ public class Combate {
         //creo el contexto para este ataque en específico
         ContextoAtaque ca = new ContextoAtaque(atacante, defensor);
 
+        dispararHabilidades(atacante, (h, estado) -> h.antesDeAtacar(ca, estado));
+
         //Las tiradas de ataque y defensa deben ser accesibles para el resto de métodos, así que salen aquí.
         int tiradaAtacante = tirador.tirarDado();
         int tiradaDefensor = tirador.tirarDado();
@@ -75,9 +75,29 @@ public class Combate {
         ca.setDadoAtaque(tiradaAtacante);
         ca.setDadoDefensa(tiradaDefensor);
 
+        dispararHabilidades(atacante, (h, estado) -> h.antesDeCalcularDanio(ca, estado));
+        dispararHabilidades(defensor, (h, estado) -> h.antesDeCalcularDanio(ca, estado));
+
         //Determinamos el daño bruto que consigue realizar el ataque.
         //Este daño nunca puede ser menor que 0.
         danioBruto(ca);
+
+        ca.setDanioFinal(ca.getDanioBruto());
+        dispararHabilidades(atacante, (h, estado) -> h.antesDeAplicarDanio(ca, estado));
+        dispararHabilidades(defensor, (h, estado) -> h.antesDeAplicarDanio(ca, estado));
+
+        if (ca.isAtaqueFallido()) {
+            ca.setDanioFinal(0);
+            return;
+        }
+
+        int vidaAntes = defensor.getVida();
+        defensor.recibirDanio(ca.getDanioFinal());
+        boolean huboDanioEfectivo = defensor.getVida() < vidaAntes;
+        if (huboDanioEfectivo) {
+            dispararHabilidades(atacante, (h, estado) -> h.alHacerDanio(ca, estado));
+            dispararHabilidades(defensor, (h, estado) -> h.alRecibirDanio(ca, estado));
+        }
 
     }
 
@@ -135,6 +155,17 @@ public class Combate {
     //Contraataque
     private void resolverContraataque(ContextoAtaque ca) {
         ca.getAtacante().recibirDanio(ca.getDefensor().getFuerza());
+    }
+
+    private void dispararHabilidades(
+            Combatiente combatiente,
+            BiConsumer<Habilidad, EstadoHabilidad> accion) {
+
+        for (Map.Entry<Habilidad, EstadoHabilidad> entrada
+                : combatiente.getHabilidades().entrySet()) {
+
+            accion.accept(entrada.getKey(), entrada.getValue());
+        }
     }
 
 /*
@@ -195,21 +226,6 @@ public class Combate {
             }
         }
     }
-
-    //Bucle que recorre todas las habilidades del combatiente con el consumer
-    //Al consumer le tendremos que decir que parte de la habilidad tiene que disparar
-    //Que se corresponde con el momento del combate en el que lo hace.
-    private void dispararHabilidades(
-            Combatiente combatiente,
-            BiConsumer<Habilidad, EstadoHabilidad> accion) {
-
-        for (Map.Entry<Habilidad, EstadoHabilidad> entrada
-                : combatiente.getHabilidades().entrySet()) {
-
-            accion.accept(entrada.getKey(), entrada.getValue());
-        }
-    }
-
 
     //================================================
     //------------- COMPROBAR MUERTES ----------------

@@ -54,6 +54,10 @@ Estas reglas proceden del diseño de combate previamente discutido; **Codex debe
 - También se discutieron casos especiales asociados a resultados naturales del dado: una tirada de agilidad de `1` provoca fallo; una tirada defensiva de `1` permite recibir el daño completo; la combinación de ataque `1` y defensa `6` puede producir contraataque. **La interacción exacta de estas excepciones con la fórmula debe contrastarse con el código y las decisiones posteriores** antes de completar la mecánica.
 - Hay una abstracción de dado (`TiradorDado`) para que la tirada pueda controlarse en pruebas.
 
+**Secuencia del ataque individual confirmada por el autor e integrada:** crear ContextoAtaque; antesDeAtacar solo del atacante; tirar ataque/defensa; antesDeCalcularDanio del atacante y después del defensor; calcular bruto con las reglas existentes; copiar bruto a final; antesDeAplicarDanio del atacante y después del defensor; aplicar el final una vez si el ataque no falló; alHacerDanio del atacante y alRecibirDanio del defensor solo si hubo pérdida real de vida. Cada evento recibe el EstadoHabilidad de su entrada. Las fases se completan en orden; dentro de cada combatiente se conserva la iteración del mapa actual, sin imponer un orden nuevo.
+
+**Contraataque confirmado:** 1 de ataque y 6 de defensa mantienen el ataque original fallido. El defensor resta directamente su fuerza a la vida del atacante. No se crea otro contexto ni se invierten participantes; no se dispara otra secuencia ni eventos posteriores por ese daño. Los eventos previos del ataque original sí conservan sus fases.
+
 **Importante:** no mezclar estas fórmulas con reglas de otros reglamentos de rol discutidos en conversaciones distintas. Este documento describe el videojuego Java, no otro sistema de mesa.
 
 ### 3.3 Secuencia de combate conocida
@@ -145,9 +149,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 14 de octubre de 2026. Auditoría sobre el commit `9a9f274`, primer bloque de correcciones y tarea de atributos/equipamiento completados en local. Sin commit ni push de estas correcciones.
+> **Estado:** 14 de octubre de 2026. Atributos/equipo y correcciones iniciales publicados en `fc7754c`. El ataque individual y sus eventos están integrados en local tras confirmar las reglas; `combatir` sigue comentado. Sin commit ni push de estos últimos cambios.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 33 archivos principales y 16 archivos de pruebas recompilados; 93 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas. Son las 51 pruebas anteriores y 42 escenarios nuevos de atributos, equipo y habilidades con equipo. `java -cp target/classes org.viajedragos.app` se comprobó durante la auditoría: compara armas, no ejecuta una partida. Inventario, impacto y resultados en `AUDITORIA_FASE_1.md`.
+> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 33 archivos principales y 18 archivos de pruebas recompilados; 158 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan las 139 anteriores y se añaden 19 escenarios de eventos. `app` sigue siendo una demostración de comparación de armas; no se ha probado una partida completa.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -161,20 +165,23 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 93 pruebas ejecutadas sin fallos ni errores, incluidas 42 nuevas de esta tarea.
+- [x] Suite JUnit: 158 pruebas ejecutadas sin fallos ni errores; 51 iniciales, 42 de atributos/equipo, 46 de reglas de ataque y 19 de integración de eventos.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
 - [x] Auditar clases, paquetes, firmas, dependencias y referencias del repositorio.
 - [x] Comprobar compilación del código principal: `mvn compile` termina correctamente.
 - [x] Ejecutar las pruebas existentes con `mvn test`.
-- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 93 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
+- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 158 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
 - [x] Revisar `EventosHabilidad`: todas sus firmas actuales y overrides implementados reciben `EstadoHabilidad` y compilan en el código principal.
 - [x] Revisar y corregir las seis llamadas del borrador a `dispararHabilidades`: las lambdas reciben habilidad y estado y pasan ese estado al evento.
-- [ ] Activar e integrar el flujo cuando se autorice; comprobar entonces los eventos en combate. El bloque sigue comentado y sus cambios no se ejecutan en la suite.
+- [x] Activar el auxiliar existente `dispararHabilidades` para usarlo desde ataque, recorriendo habilidad y estado juntos.
+- [ ] Activar e integrar el flujo completo cuando se autorice; sus eventos de inicio/final y muerte no están ejecutados en un combate completo. El borrador de `combatir` sigue comentado.
 - [x] Corregir la selección del segundo participante en el borrador: `determinarOponente(primero)`.
 - [ ] Completar el bucle de turnos y sustituir el retorno provisional AMBOS_MUEREN. Todo el flujo está comentado.
-- [ ] Integrar ataques: `ataque` calcula daño bruto pero no aplica daño normal, no calcula daño final ni dispara eventos; el contraataque sí resta vida directamente.
+- [x] Aplicar el daño de ataque sin habilidades: copiar bruto a final y restar vida una vez si no falla. Conservar las reglas existentes de fallo, defensa fallida, crítico 6/1 y contraataque 1/6. Probadas las 36 combinaciones de dados y seis valores del dado crítico extra.
+- [x] Integrar eventos del ataque según la secuencia confirmada, atacante antes que defensor, con el EstadoHabilidad propio de cada entrada. Probar daño final aplicado una vez, efectos posteriores solo con daño efectivo y contraataque directo sin segunda secuencia.
+- [ ] Integrar ataques con el bucle de turnos; `combatir` permanece comentado.
 - [x] Revisar por lectura `resolverMuertes` / `personajeMuere`: algunas ramas omiten los efectos del segundo muerto; no hay validación ejecutada de esa lógica comentada.
 - [ ] Confirmar y corregir la resolución de muertes según las reglas del autor; comprobar activaciones únicas cuando exista código operativo.
 - [x] Revisar `finalDelCombate`: el borrador solo dispara eventos para el jugador.
@@ -203,6 +210,8 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [ ] Definir e implementar comercio mínimo si lo requiere el MVP.
 - [ ] Definir el final del encuentro, recompensas y transición al siguiente.
 - [x] Añadir y ejecutar 34 escenarios de EquipamientoTest y 8 de HabilidadesConEquipoTest por autorización expresa del autor.
+- [x] Añadir y ejecutar 46 escenarios de AtaqueTest: combinaciones, críticos, daño cero/letal, atacante enemigo y dado inválido. Estos escenarios no añaden habilidades; su integración se prueba en EventosAtaqueTest.
+- [x] Conservar los 46 escenarios de AtaqueTest y añadir 19 de EventosAtaqueTest: fases, destinatarios, contexto único, estados diferentes, bruto/final, habilidades reales, cero/fallo/letal y contraataques sin duplicación.
 - [ ] Añadir pruebas del flujo completo de combate cuando se implemente; no está validado por la suite actual.
 - [ ] Preparar README con instrucciones de ejecución local.
 - [x] Publicar el estado inicial en GitHub: commit `9a9f274`, rama main, repositorio `danisanchezadev/viajedragosaccesodatos`, por petición expresa del autor. Esa publicación no acredita una demo jugable ni una suite pasando.
@@ -247,7 +256,7 @@ Después de programar, informa de:
 
 ## 11. Preguntas que Codex no debe resolver por su cuenta
 
-- ¿Cuál es la secuencia definitiva de ataques, defensas y casos especiales cuando concurren tiradas naturales de `1` o `6`?
+- La secuencia del ataque individual y el contraataque ya están confirmados y probados, según el apartado 3.2; falta conectar esa operación al futuro bucle de combate.
 - ¿Qué duración exacta tiene el modificador de agilidad del turno?
 - ¿Qué reglas concretas rigen huida, uso de objetos, inventario y comercio?
 - ¿Qué habilidades se ejecutan al final del combate y para quién?
