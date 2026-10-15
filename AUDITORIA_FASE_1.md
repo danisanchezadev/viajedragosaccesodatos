@@ -2,7 +2,7 @@
 
 Fecha: 14 de octubre de 2026.
 
-> **Estado actual:** atributos/equipamiento publicados en `fc7754c`; ataque individual con eventos integrado después en local. `mvn clean test` pasa con 158 pruebas. `combatir` sigue comentado. Los apartados siguientes conservan los hallazgos históricos; el último apartado registra los cambios y limitaciones actuales.
+> **Estado actual:** base publicada `79d15c7`. Combate completo A/B/C e invariantes de habilidades terminados en local. `mvn clean test`: 202 pruebas pasan, sin fallos ni errores. Solo el jugador ejecuta la limpieza final, incluso muerto. Sin commit ni push. Los apartados anteriores conservan los hallazgos históricos.
 
 ## Alcance y resultado
 
@@ -259,3 +259,72 @@ Atacante y defensor se procesan por separado y por fases; cada callback recibe e
 Las pruebas verifican orden de fases/dados, orden atacante-defensor, contexto único, estados diferentes en varios participantes/habilidades, atributos previos al cálculo, modificación de bruto/final, GolpeCertero/DefensaPerfecta, GuardiaFerrea, Caparazon, CastigoAlTorpe, crítico con modificadores, fallos, final cero, daño creado desde bruto cero, curación y cambios de atributos posteriores, letal, defensor sin vida y contraataque sin duplicación o efectos indirectos.
 
 Esta tarea termina la integración del ataque individual. No activa `combatir`, no decide orden de turnos o iniciativa, no ejecuta eventos de inicio/final del combate ni alMorir y no resuelve muertes. Sigue pendiente definir el +2 del turno, empate con iniciativa cero, destinatarios iniciales/finales y reglas de resolución de muertes antes de activar el flujo completo. Tampoco se modifica la semántica de niveles internos ni el estado mutable compartido de instancias de habilidades. No se añadieron dependencias, persistencia, frameworks o patrones, ni se hizo commit o push.
+
+## Preparación de combatir: reglas aclaradas e invariantes de habilidades
+
+Se inspeccionó `79d15c7` con árbol local limpio y se comprobó `mvn clean test`: 158 pruebas. Se revisaron combatir, primerTurno, atacante, ordenHabilidades, resolverMuertes, personajeMuere y finalDelCombate, sus llamadas y overrides. El autor aclaró participación de ambos en eventos, prioridad por iniciativa actual/poseedor/tirada, transición de muerte al inicio y exigencia de niveles positivos. El +2 del poseedor se confirma exclusivamente para el cálculo del atacante.
+
+La etapa A sigue detenida en un punto concreto: iniciativa × 1D6 da siempre empate si ambas iniciativas son cero. Se ha preguntado si se confirma la comparación directa de dados como excepción. No se aplica una respuesta por defecto y el flujo comentado sigue sin activarse.
+
+Se avanzó únicamente en el bloque independiente de habilidades:
+
+- `EstadoHabilidad`: constructor con parámetros y setters rechazan nivel <= 0 y contador de equipo negativo. Constructor vacío conserva su firma y crea nivel 1, inactivo. `isActiva()` refleja aprendizaje o equipo.
+- `Combatiente.aprenderHabilidad`, `agregarHabilidadEquipo` y `quitarHabilidadEquipo`: aportaciones positivas; retirada final elimina la entrada sin asignar nivel cero; se rechaza dejar una habilidad que permanezca activa sin nivel positivo. `curarse` solo dispara habilidades activas.
+- `Equipo`: otorgar niveles exige valores positivos y la retirada valida que las habilidades restantes conserven nivel positivo antes de descontar efectos.
+- `Combate.dispararHabilidades`: filtra entradas inactivas, conservando estado, fases, fórmulas y firmas. No se modifica ataque ni se activa el bucle.
+- Nuevo `EstadoHabilidadTest`: 14 escenarios de construcción/setters, actividad, aportaciones inválidas, retirada final, preservación de habilidad aprendida y filtrado en ataque/curación.
+
+Resultado: `mvn clean test`, BUILD SUCCESS; 33 fuentes principales y 19 archivos de pruebas recompilados; **172 pruebas, 0 fallos, 0 errores, 0 omitidas**. Las 158 pruebas previas se conservan y pasan. Los niveles internos de las implementaciones no se cambian.
+
+Pendientes de integración: inicio y final para ambos en prioridad actual, seguimiento de los efectos iniciales realmente aplicados (PrimerImpulso no debe restarse si no se ejecutó), alternancia, eventos de turno, muerte sin duplicados y restauración. No se añade huida ahora ni un límite/resultado arbitrario para combates sin progreso; esa decisión queda fuera de las reglas confirmadas. No se han hecho commit ni push.
+
+## Etapa A de combatir y auxiliares activados
+
+El autor confirmó la comparación directa de dados cuando ambas iniciativas efectivas son cero. Se avanzó de forma incremental sin activar todavía el bucle de la etapa B: está pendiente confirmar si una muerte definitiva tras un ataque omite alFinalTurno o lo ejecuta antes de cerrar.
+
+Cambios:
+
+- `Combate.primerTurno`: repetición iterativa; mantiene iniciativa × 1D6, con comparación directa de dados solo cuando ambas iniciativas son cero.
+- `Combate.combatir`: método activo. Ordena inicio por iniciativa actual, ejecuta el inicio del primer participante vivo, resuelve las muertes y ejecuta el del segundo si no murió antes de su momento. Si una habilidad inicial produce un resultado definitivo, procesa final para ambos; de momento devuelve CONTINUA si ambos sobreviven, sin simular una victoria ni ejecutar ataques.
+- `ordenHabilidades`: mayor iniciativa efectiva; empate usa poseedor de turno si lo hay, o tiradas directas si no. El poseedor se prepara para la etapa B; por ahora se reinicia a null al comienzo.
+- `resolverMuertes` y `personajeMuere`: se conservan sus firmas privadas y se simplifican las ramas asimétricas. El primer muerto ejecuta sus efectos; si después el otro está muerto, ejecuta los suyos una vez. Se devuelve CONTINUA solo si ambos sobreviven, o el resultado de muerte correspondiente. Como máximo se invoca alMorir una vez por participante en esa resolución.
+- `finalDelCombate`: prioridad actual y eventos finales de ambos, incluido el muerto, para restaurar efectos.
+- `PrimerImpulso`: indicador de aplicación para no restar su aumento si nunca ejecutó el inicio, ni hacerlo dos veces. No cambia magnitud, fórmula ni nivel interno.
+- `InicioCombateTest`: 8 escenarios de inicio, finales iniciales, prioridad actual, muerte antes del inicio, protección de PrimerImpulso, muerte simultánea, cadena de resurrección/muerte sin duplicados, iniciativas cero y 10.000 empates iterativos.
+
+La suite pasa con **180 pruebas**, 0 fallos y 0 errores. Las 158 pruebas del ataque/equipo y los 14 invariantes de habilidades se conservan. Aún no se han probado victoria/muerte mediante turnos completos, alternancia ni resurrección con reanudación de ataques; esos escenarios pertenecen a la etapa B pendiente.
+
+No se añade un límite de turnos, interfaz, huida, objetos o menús. La ausencia de recursión evita agotar la pila por empates; no garantiza que dados que siempre empaten, o un combate matemáticamente sin progreso, puedan terminar. El autor mantiene esas reglas y deja huida/rediseño para su fase correspondiente. No se ha hecho commit ni push.
+
+## Combate automático completo: etapas A/B/C finalizadas
+
+El autor aclaró que una muerte definitiva cierra inmediatamente el enfrentamiento: el muerto no ejecuta más eventos ordinarios y no hay final de turno posterior. Confirmó expresamente una excepción: **el jugador siempre ejecuta alFinalCombate**, incluso muerto, para restaurar atributos y contingencias. El enemigo no ejecuta finales de combate. Se corrigieron las expectativas de cuatro pruebas de inicio que antes suponían finales de ambos; las 158 pruebas previas a esta tarea se conservan sin cambiar.
+
+### Archivos productivos modificados desde 79d15c7
+
+- `Combate.java`: método público combatir activo y completo, campo de poseedor del turno, primerTurno iterativo con excepción confirmada de cero, prioridad actual/fallback, auxiliar privado eventosTurno, resolución de muertes sin duplicados y final solo del jugador. La firma pública, atacante, ataque y sus fórmulas/reglas especiales se conservan. No se añaden valores a ResultadoCombate ni clases productivas.
+- `PrimerImpulso.java`: indicador de aplicación para que la limpieza no reste un efecto que no comenzó ni lo retire dos veces. La magnitud y el nivel interno no cambian.
+- `EstadoHabilidad.java`, `Combatiente.java` y `Equipo.java`: validaciones de nivel positivo y actividad de habilidades, documentadas en el bloque anterior. Se mantienen las firmas existentes y no se cambian fórmulas de habilidades.
+
+### Flujo implementado
+
+1. Inicio por prioridad de iniciativa actual, desempate por dados cuando no hay poseedor. Muertes comprobadas entre los participantes. Quien muere antes de su inicio pasa a muerte, no a ese inicio.
+2. Primer poseedor mediante iniciativa × 1D6; ambas iniciativas cero comparan dados directamente; repetición iterativa de empates.
+3. Inicio de turno de ambos vivos por prioridad, con resolución de muertes entre participantes.
+4. Selección con atacante existente y ataque existente. Resolver muertes antes de decidir el final. Una resurrección que deje ambos vivos permite continuar.
+5. Si continúa, final de turno de ambos vivos por prioridad actual, comprobando muertes; después alternar poseedor, aunque el atacante efectivo fuese el oponente.
+6. Al morir definitivamente alguien, cierre sin eventos ordinarios posteriores y limpieza alFinalCombate del jugador exclusivamente. Resultado coherente con la resolución, conservando todos los valores existentes del enum.
+
+Cada resolución de muerte puede ejecutar hasta dos participantes, una vez cada uno. No se reejecuta el primero si el segundo lo mata otra vez. Una muerte posterior a una resurrección, en otro momento del combate, tiene una resolución nueva. Todos los eventos reciben el EstadoHabilidad de su entrada activa.
+
+### Pruebas y resultados
+
+- `EstadoHabilidadTest.java`: 14 escenarios de invariantes, aportaciones, retirada y actividad.
+- `InicioCombateTest.java`: 9 escenarios de inicio y muertes iniciales, prioridad, ambos, protección de PrimerImpulso no iniciado y desempates iterativos.
+- `CombateCompletoTest.java`: 21 escenarios con secuencias exactas de dados y protección de tiempo en pruebas: victoria, derrota, alternancia, atacante distinto del poseedor, muerte simultánea, resurrección del jugador/enemigo, cadena sin duplicados, prioridad empatada y cambiante, muertes en inicio/final del turno, SegundoAliento de ambos, restauración de Rabia/PrimerImpulso/Impetu/InstintoSupervivencia/FuriaContenida, equipo conservado, limpieza del jugador muerto, contraataque letal, estados inactivos, iniciativas cero y reutilización del jugador en otro combate.
+
+Comprobación final ejecutada: **mvn clean test, BUILD SUCCESS, 202 pruebas, 0 fallos, 0 errores y 0 omitidas**. Se recompilaron 33 fuentes principales y 21 archivos de pruebas. Son las 158 anteriores y 44 nuevas. Los dados de pruebas fallan ante cualquier tirada adicional inesperada, por lo que detectan continuaciones indebidas y resultados no reproducibles.
+
+La operación combatir permite ejecutar un enfrentamiento automático completo desde Java y está probada con habilidades reales y controladas. No se crea una interfaz ni se modifica app. No se introducen patrones, frameworks, dependencias o persistencia. No se han hecho commit ni push; HEAD permanece 79d15c7.
+
+Pendientes fuera de este alcance: decisión interactiva atacar/huir/objeto, huida, inventario, encuentros, comercio y catálogos. Las reglas no garantizan terminar un combate matemáticamente sin progreso o un dado que nunca desempate; no se inventó un límite o resultado para esos casos, tal como decidió el autor. Los casos límite reproducibles de iniciativa cero, cadenas de muerte y muchos empates sí terminan en las pruebas. La semántica de niveles internos y el uso de instancias mutables compartidas entre combatientes siguen sin reformularse.

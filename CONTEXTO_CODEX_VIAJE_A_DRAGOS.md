@@ -48,8 +48,8 @@ La primera versión utilizará **únicamente datos preparados dentro del propio 
 
 Estas reglas proceden del diseño de combate previamente discutido; **Codex debe comprobar cómo están implementadas antes de asumir que están operativas**:
 
-- La iniciativa inicial se decide comparando `INICIATIVA × tirada de 1D6` de cada combatiente. Si empatan, se repite la tirada hasta obtener un orden.
-- El sistema discutido contempla que el personaje al que corresponde el turno reciba `+2` de agilidad durante ese turno. **Verificar alcance y retirada del modificador**, pues no hay aquí una implementación final confirmada.
+- La iniciativa inicial se decide comparando `INICIATIVA × tirada de 1D6` de cada combatiente. Si empatan, se repite la tirada hasta obtener un orden. Excepción confirmada: si ambas iniciativas efectivas son cero, se comparan directamente los dados y se repiten solo los empates. La repetición es iterativa, sin recursión.
+- Regla confirmada para el turno: `atacante()` compara iniciativa + 1D6 y añade +2 únicamente al cálculo del poseedor del turno, con desempate a su favor. No aumenta agilidad ni modifica permanentemente iniciativa.
 - Para un ataque físico se discutió: `daño = (FUERZA + AGILIDAD + 1D6 del atacante) - (RESISTENCIA + AGILIDAD + 1D6 del defensor)`, con daño mínimo de cero.
 - También se discutieron casos especiales asociados a resultados naturales del dado: una tirada de agilidad de `1` provoca fallo; una tirada defensiva de `1` permite recibir el daño completo; la combinación de ataque `1` y defensa `6` puede producir contraataque. **La interacción exacta de estas excepciones con la fórmula debe contrastarse con el código y las decisiones posteriores** antes de completar la mecánica.
 - Hay una abstracción de dado (`TiradorDado`) para que la tirada pueda controlarse en pruebas.
@@ -67,8 +67,12 @@ Estas reglas proceden del diseño de combate previamente discutido; **Codex debe
 3. Se comprueba si alguien ha muerto como consecuencia de esos efectos.
 4. Si hay muertos, se ejecuta la resolución de muertes, que puede activar habilidades `alMorir` y cambiar el desenlace.
 5. Si ambos siguen vivos, se determina el primer turno (`primerTurno()`).
-6. Durante los turnos, las acciones previstas del jugador son **atacar, huir y usar objeto**. El bucle completo de turnos y las reglas precisas de huida/objetos siguen pendientes de integración o definición.
-7. Al finalizar, pueden ejecutarse habilidades `alFinalCombate`, según el comportamiento que defina el código. Debe verificarse si deben dispararse para uno o ambos participantes; no asumirlo.
+6. El bucle automático ejecuta inicio de turno para ambos vivos por prioridad, resuelve muertes, selecciona atacante con `atacante()` y ejecuta `ataque()`, resuelve muertes y, si el combate continúa, ejecuta final de turno para ambos y alterna el poseedor. Las futuras elecciones de atacar/huir/usar objeto no se implementan en esta tarea.
+7. Regla final confirmada: una muerte definitiva cierra el combate sin eventos normales posteriores ni alFinalTurno. Solo el jugador ejecuta alFinalCombate, siempre, incluso muerto, como excepción de limpieza y contingencias. El enemigo no ejecuta alFinalCombate.
+
+Decisiones expresas del autor para completar combatir: ambos pueden ejecutar habilidades en las fases correspondientes; la prioridad se determina por la iniciativa en ese momento, en ausencia de prioridad se usa el poseedor del turno, y si no lo hay se tira para determinar quién empieza. Si alguien muere antes de ejecutar su inicio, ejecuta alMorir en vez de ese inicio. El límite de una activación de muerte por participante y resolución se conserva. PrimerTurno mantiene iniciativa × 1D6 y el autor confirmó la excepción de comparación directa de dados si ambas iniciativas son cero. La huida queda para otra tarea y no se inventa un resultado o límite para combates sin progreso.
+
+Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a morir en otro momento, comienza otra resolución y puede ejecutar de nuevo alMorir una vez en esa resolución. Las fases de turno comprueban muertes después de cada participante; el muerto definitivo no ejecuta el siguiente evento ordinario. La operación ataque conserva toda su secuencia ya validada antes de resolver sus muertes.
 
 ### 3.4 Muerte y resultados
 
@@ -86,6 +90,7 @@ Estas reglas proceden del diseño de combate previamente discutido; **Codex debe
 - Cada `Combatiente` posee un `Map<Habilidad, EstadoHabilidad>`.
 - `EstadoHabilidad` incluye al menos `aprendida`, `vecesEquipada` y `nivel`.
 - Una habilidad puede ser aprendida o concedida por el equipo. El nivel se ha concebido como un valor combinado, no como dos niveles independientes.
+- Regla confirmada por el autor: una habilidad aprendida o equipada debe tener nivel estrictamente positivo. EstadoHabilidad valida nivel > 0 y contadores no negativos; `isActiva()` devuelve aprendida o vecesEquipada > 0. Los eventos de ataque y curación ignoran entradas inactivas. Aprender/otorgar/retirar niveles exige aportaciones positivas; la retirada de la última pieza elimina la entrada antes de asignar cero. El constructor vacío conserva su firma y crea un estado inactivo de nivel 1.
 - Hay métodos para aprender habilidades y para sumar o retirar habilidades otorgadas por equipo (`aprenderHabilidad`, `agregarHabilidadEquipo`, `quitarHabilidadEquipo`). La retirada debe respetar que una habilidad aprendida pueda seguir existiendo aunque se retire el equipo que también la otorgaba.
 - Los eventos de habilidad reciben el **estado de esa habilidad concreta**, además de los participantes pertinentes. Las firmas de todos los eventos y todas sus llamadas deben ser consistentes.
 - Para recorrer las habilidades, se ha planteado `dispararHabilidades(Combatiente, BiConsumer<Habilidad, EstadoHabilidad>)`, iterando por `entrySet()` y pasando `entrada.getKey()` y `entrada.getValue()`.
@@ -149,9 +154,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 14 de octubre de 2026. Atributos/equipo y correcciones iniciales publicados en `fc7754c`. El ataque individual y sus eventos están integrados en local tras confirmar las reglas; `combatir` sigue comentado. Sin commit ni push de estos últimos cambios.
+> **Estado:** 14 de octubre de 2026. Base publicada `79d15c7`. En local se han completado las etapas A/B/C de combatir y los invariantes de actividad/nivel de habilidades. El enfrentamiento automático completo termina con el ResultadoCombate correspondiente; no hay retorno ficticio o provisional. Sin commit ni push.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 33 archivos principales y 18 archivos de pruebas recompilados; 158 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan las 139 anteriores y se añaden 19 escenarios de eventos. `app` sigue siendo una demostración de comparación de armas; no se ha probado una partida completa.
+> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 33 fuentes principales y 21 archivos de pruebas recompilados; 202 pruebas, 0 fallos, 0 errores, 0 omitidas. Son las 158 anteriores, 14 de EstadoHabilidadTest, 9 de InicioCombateTest y 21 de CombateCompletoTest. El método combatir se ejecuta en enfrentamientos completos mediante pruebas; `app` sigue comparando armas, pues no se añade interfaz.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -160,32 +165,35 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos `aumentarAtributo`, `disminuirAtributo` y `modificarAtributo`; las habilidades corregidas leen la base, no valores efectivos. Los métodos genéricos rechazan VIDA explícitamente.
 - [x] `TiradorDado`, `Dado`, `ContextoAtaque` y lógica inicial de iniciativa.
 - [x] `Combate` y `ResultadoCombate`, incluyendo resultados de huida sin mecánica implementada.
-- [x] Borrador de resolución de muertes: escrito dentro de un bloque comentado, no compilado ni operativo.
+- [x] Resolución de muertes y final integrados en inicio/turnos/ataques; una invocación de muerte por participante y resolución, continuación tras resurrección y limpieza final solo del jugador.
 - [x] `Habilidad` / `EstadoHabilidad` y mapa por combatiente; las 13 habilidades con efectos heredan ahora de Habilidad y su igualdad por clase. FuriaMaximaBerserker sigue siendo un borrador sin efectos.
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 158 pruebas ejecutadas sin fallos ni errores; 51 iniciales, 42 de atributos/equipo, 46 de reglas de ataque y 19 de integración de eventos.
+- [x] Suite JUnit: 202 pruebas ejecutadas sin fallos ni errores; 158 previas, 14 de invariantes de habilidades, 9 de inicio y 21 de combate completo.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
 - [x] Auditar clases, paquetes, firmas, dependencias y referencias del repositorio.
 - [x] Comprobar compilación del código principal: `mvn compile` termina correctamente.
 - [x] Ejecutar las pruebas existentes con `mvn test`.
-- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 158 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
+- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 202 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
 - [x] Revisar `EventosHabilidad`: todas sus firmas actuales y overrides implementados reciben `EstadoHabilidad` y compilan en el código principal.
 - [x] Revisar y corregir las seis llamadas del borrador a `dispararHabilidades`: las lambdas reciben habilidad y estado y pasan ese estado al evento.
 - [x] Activar el auxiliar existente `dispararHabilidades` para usarlo desde ataque, recorriendo habilidad y estado juntos.
-- [ ] Activar e integrar el flujo completo cuando se autorice; sus eventos de inicio/final y muerte no están ejecutados en un combate completo. El borrador de `combatir` sigue comentado.
+- [x] Completar etapas A/B/C: combatir, ordenHabilidades, primerTurno iterativo, eventosTurno, resolverMuertes, personajeMuere y finalDelCombate. El ataque individual conserva sus fórmulas y eventos.
+- [x] Probar enfrentamiento completo: victoria, derrota, muerte simultánea, resurrección, alternancia, prioridad y restauración.
 - [x] Corregir la selección del segundo participante en el borrador: `determinarOponente(primero)`.
-- [ ] Completar el bucle de turnos y sustituir el retorno provisional AMBOS_MUEREN. Todo el flujo está comentado.
+- [x] Completar el bucle de turnos y eliminar todos los retornos ficticios/provisionales. CONTINUA es un estado interno para continuar, no el resultado público de un enfrentamiento terminado.
 - [x] Aplicar el daño de ataque sin habilidades: copiar bruto a final y restar vida una vez si no falla. Conservar las reglas existentes de fallo, defensa fallida, crítico 6/1 y contraataque 1/6. Probadas las 36 combinaciones de dados y seis valores del dado crítico extra.
 - [x] Integrar eventos del ataque según la secuencia confirmada, atacante antes que defensor, con el EstadoHabilidad propio de cada entrada. Probar daño final aplicado una vez, efectos posteriores solo con daño efectivo y contraataque directo sin segunda secuencia.
-- [ ] Integrar ataques con el bucle de turnos; `combatir` permanece comentado.
+- [x] Integrar atacante y ataque existentes con el bucle, sin alterar sus fórmulas. Alternar poseedor independientemente de quién atacó efectivamente.
 - [x] Revisar por lectura `resolverMuertes` / `personajeMuere`: algunas ramas omiten los efectos del segundo muerto; no hay validación ejecutada de esa lógica comentada.
-- [ ] Confirmar y corregir la resolución de muertes según las reglas del autor; comprobar activaciones únicas cuando exista código operativo.
+- [x] Corregir resolución de muertes y probarla en inicio y ataques: estado final reevaluado, una activación por participante/resolución y nuevas resoluciones para muertes posteriores a una resurrección.
 - [x] Revisar `finalDelCombate`: el borrador solo dispara eventos para el jugador.
-- [ ] Confirmar los destinatarios y resultados en los que deben ejecutarse eventos iniciales y finales.
+- [x] Confirmar participación de ambos en las fases de habilidades, prioridad por iniciativa actual con poseedor del turno como respaldo, y transición a alMorir si se muere antes de ejecutar el inicio.
+- [x] Confirmar y aplicar cierre inmediato tras muerte definitiva: no hay alFinalTurno posterior; alFinalCombate solo del jugador, vivo o muerto, como limpieza. PrimerImpulso solo resta su aumento si lo aplicó.
+- [x] Conectar y probar eventos de turnos y finalización. Ambos ejecutan eventos de turno mientras viven; las fases respetan prioridad y comprobaciones de muerte.
 - [x] Integrar las 13 habilidades con efectos en el tipo `Habilidad`, conservando los constructores públicos y los efectos existentes.
 - [ ] Unificar el uso del nivel donde corresponda: solo Caparazon lee `estado.getNivel()`; varias habilidades usan campos propios.
 - [x] Corregir `Combatiente.setHabilidades` para asignar el parámetro recibido; no se ha añadido una prueba específica de este setter.
@@ -200,9 +208,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Probar retirada exacta de contribuciones positivas/negativas, atributos efectivos limitados a cero, cambios permanentes con equipo activo y habilidades compartidas entre piezas o aprendidas.
 - [x] Ejecutar el comparador: FUERZA +3, AGILIDAD +3, INICIATIVA -2 y RESISTENCIA -7 para las armas actuales.
 - [x] El constructor de Equipo copia ambos mapas y sus getters devuelven mapas de solo lectura; proteger también los mapas de ranuras y modificadores de Combatiente. No se encontraron llamadas existentes que necesiten escribir mediante esos getters.
-- [ ] Confirmar el +2 del turno: el contexto indica AGILIDAD, pero `Combate.atacante` bonifica INICIATIVA.
-- [ ] Decidir el empate con ambas iniciativas cero y evitar agotamiento de pila por recursión en `primerTurno`.
-- [ ] Crear flujo de consola para iniciar y terminar un combate; `app` solo compara armas.
+- [x] Confirmar el +2 del turno: solo suma al cálculo de iniciativa + 1D6 del poseedor; no modifica atributos ni agilidad.
+- [x] Confirmar y aplicar excepción de iniciativas cero, repetición iterativa y prueba de 10.000 empates sin acumular pila.
+- [ ] Crear interfaz de consola cuando se autorice; combatir ya ejecuta el enfrentamiento, pero app sigue comparando armas.
 - [ ] Crear catálogos Java de enemigos, armas, objetos y habilidades en memoria.
 - [ ] Integrar encuentros desde esos catálogos, sin Factory ni persistencia.
 - [ ] Definir e implementar atacar desde un menú, huir y usar objeto.
@@ -212,7 +220,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Añadir y ejecutar 34 escenarios de EquipamientoTest y 8 de HabilidadesConEquipoTest por autorización expresa del autor.
 - [x] Añadir y ejecutar 46 escenarios de AtaqueTest: combinaciones, críticos, daño cero/letal, atacante enemigo y dado inválido. Estos escenarios no añaden habilidades; su integración se prueba en EventosAtaqueTest.
 - [x] Conservar los 46 escenarios de AtaqueTest y añadir 19 de EventosAtaqueTest: fases, destinatarios, contexto único, estados diferentes, bruto/final, habilidades reales, cero/fallo/letal y contraataques sin duplicación.
-- [ ] Añadir pruebas del flujo completo de combate cuando se implemente; no está validado por la suite actual.
+- [x] Validar nivel positivo, actividad por aprendizaje/equipo y retirada sin nivel cero; ejecutar 14 escenarios de EstadoHabilidadTest junto con los anteriores.
+- [x] Añadir 9 escenarios de InicioCombateTest: prioridad, participación, muertes, limpieza del jugador y desempates.
+- [x] Añadir 21 escenarios de CombateCompletoTest: resultados, turnos, prioridad cambiante, ambas resurrecciones, contraataque letal, habilidades reales, limpieza viva/muerta, actividad y reutilización del jugador.
 - [ ] Preparar README con instrucciones de ejecución local.
 - [x] Publicar el estado inicial en GitHub: commit `9a9f274`, rama main, repositorio `danisanchezadev/viajedragosaccesodatos`, por petición expresa del autor. Esa publicación no acredita una demo jugable ni una suite pasando.
 
@@ -259,7 +269,7 @@ Después de programar, informa de:
 - La secuencia del ataque individual y el contraataque ya están confirmados y probados, según el apartado 3.2; falta conectar esa operación al futuro bucle de combate.
 - ¿Qué duración exacta tiene el modificador de agilidad del turno?
 - ¿Qué reglas concretas rigen huida, uso de objetos, inventario y comercio?
-- ¿Qué habilidades se ejecutan al final del combate y para quién?
+- Confirmado: alFinalCombate solo del jugador, siempre, como limpieza incluso muerto; el enemigo no participa.
 - ¿Qué ocurre al terminar cada encuentro y qué recompensas se conceden?
 - ¿Qué catálogo mínimo de enemigos y objetos quiere el autor para la primera demo?
 

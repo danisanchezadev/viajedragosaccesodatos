@@ -217,7 +217,9 @@ public abstract class Combatiente {
         }
 
         for (Map.Entry<Habilidad, EstadoHabilidad> hab : habilidades.entrySet()) {
-            hab.getKey().alCurarse(this, hab.getValue());
+            if (hab.getValue().isActiva()) {
+                hab.getKey().alCurarse(this, hab.getValue());
+            }
         }
     }
 
@@ -237,6 +239,11 @@ public abstract class Combatiente {
 
     public void aprenderHabilidad(Habilidad habilidad, int niveles) {
 
+        Objects.requireNonNull(habilidad, "La habilidad no puede ser null");
+        if (niveles <= 0) {
+            throw new IllegalArgumentException("Los niveles aprendidos deben ser positivos");
+        }
+
         EstadoHabilidad estado = habilidades.get(habilidad);
 
         if (habilidades.containsKey(habilidad) && estado.isAprendida()) {
@@ -244,8 +251,8 @@ public abstract class Combatiente {
 
         } else if (habilidades.containsKey(habilidad) && !estado.isAprendida()) {
 
-            estado.setAprendida(true);
             estado.setNivel(estado.getNivel() + niveles);
+            estado.setAprendida(true);
 
         } else {
 
@@ -257,8 +264,8 @@ public abstract class Combatiente {
     public void agregarHabilidadEquipo(Habilidad habilidad, int niveles) {
 
         Objects.requireNonNull(habilidad, "La habilidad no puede ser null");
-        if (niveles < 0) {
-            throw new IllegalArgumentException("Los niveles otorgados no pueden ser negativos");
+        if (niveles <= 0) {
+            throw new IllegalArgumentException("Los niveles otorgados deben ser positivos");
         }
 
         EstadoHabilidad estado = habilidades.get(habilidad);
@@ -271,11 +278,9 @@ public abstract class Combatiente {
             // si era por estar aprendida o no
         } else {
 
-            // Le aumentamos el nivel de equipada en 1
-            estado.setVecesEquipada(estado.getVecesEquipada() + 1);
-
             // Aumentamos los niveles de la habilidad correspondientes
             estado.setNivel(estado.getNivel() + niveles);
+            estado.setVecesEquipada(estado.getVecesEquipada() + 1);
         }
     }
 
@@ -283,19 +288,24 @@ public abstract class Combatiente {
 
         EstadoHabilidad estado = habilidades.get(habilidad);
 
-        if (niveles < 0) {
-            throw new IllegalArgumentException("Los niveles a retirar no pueden ser negativos");
+        if (niveles <= 0) {
+            throw new IllegalArgumentException("Los niveles a retirar deben ser positivos");
         }
         if (estado == null || estado.getVecesEquipada() <= 0 || estado.getNivel() < niveles) {
             throw new IllegalStateException("La habilidad no tiene esa contribución de equipo para retirar");
         }
 
-        estado.setNivel(estado.getNivel() - niveles);
-        estado.setVecesEquipada(estado.getVecesEquipada() - 1);
-
-        if (!estado.isAprendida() && estado.getVecesEquipada() == 0) {
+        int equiposRestantes = estado.getVecesEquipada() - 1;
+        if (!estado.isAprendida() && equiposRestantes == 0) {
+            estado.setVecesEquipada(0);
             eliminarHabilidad(habilidad);
+            return;
         }
+        if (estado.getNivel() - niveles <= 0) {
+            throw new IllegalStateException("Una habilidad que permanece activa debe conservar nivel positivo");
+        }
+        estado.setNivel(estado.getNivel() - niveles);
+        estado.setVecesEquipada(equiposRestantes);
     }
 
     public void agregarHabilidad(Habilidad habilidad) {

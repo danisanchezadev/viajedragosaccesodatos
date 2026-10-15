@@ -13,6 +13,7 @@ public class Combate {
     private Combatiente enemigo;
 
     private TiradorDado tirador;
+    private Combatiente poseedorTurno;
 
     public Combate(Combatiente jugador, Combatiente enemigo, TiradorDado tirador) {
         this.jugador = jugador;
@@ -21,22 +22,20 @@ public class Combate {
     }
 
     public Combatiente primerTurno() {
-
-        int tiradaJugador = tirador.tirarDado();
-        int tiradaEnemigo = tirador.tirarDado();
-
-        int resultadoIniciativaJugador = tiradaJugador * jugador.getIniciativa();
-        int resultadoIniciativaEnemigo = tiradaEnemigo * enemigo.getIniciativa();
-
-        if (resultadoIniciativaJugador == resultadoIniciativaEnemigo) {
-
-            System.out.println("Empate");
-            return primerTurno();
+        while (true) {
+            int tiradaJugador = tirador.tirarDado();
+            int tiradaEnemigo = tirador.tirarDado();
+            int iniciativaJugador = jugador.getIniciativa();
+            int iniciativaEnemigo = enemigo.getIniciativa();
+            int resultadoJugador = tiradaJugador * iniciativaJugador;
+            int resultadoEnemigo = tiradaEnemigo * iniciativaEnemigo;
+            if (iniciativaJugador == 0 && iniciativaEnemigo == 0) {
+                resultadoJugador = tiradaJugador;
+                resultadoEnemigo = tiradaEnemigo;
+            }
+            if (resultadoJugador > resultadoEnemigo) return jugador;
+            if (resultadoEnemigo > resultadoJugador) return enemigo;
         }
-
-        if (resultadoIniciativaJugador > resultadoIniciativaEnemigo) return jugador;
-        else return enemigo;
-
     }
 
     public Combatiente atacante(Combatiente poseedorTurno, Combatiente oponente) {
@@ -164,75 +163,86 @@ public class Combate {
         for (Map.Entry<Habilidad, EstadoHabilidad> entrada
                 : combatiente.getHabilidades().entrySet()) {
 
-            accion.accept(entrada.getKey(), entrada.getValue());
+            if (entrada.getValue().isActiva()) {
+                accion.accept(entrada.getKey(), entrada.getValue());
+            }
         }
     }
 
-/*
-    //Principal de combate, el que lo junta todo
     public ResultadoCombate combatir() {
-
-        ResultadoCombate resultado = ResultadoCombate.CONTINUA;
-
+        poseedorTurno = null;
         Combatiente primero = ordenHabilidades();
         Combatiente segundo = determinarOponente(primero);
 
-        dispararHabilidades(primero, (h, estado) -> h.alInicioCombate(primero, segundo, estado));
-
-        if(algunoMuerto()){
-            ResultadoCombate resultadoMuertes = resolverMuertes(primero);
-            if(algunoMuerto()){
-                return finalDelCombate(resultadoMuertes);
-            }
+        if (primero.estaVivo()) {
+            dispararHabilidades(primero, (h, estado) -> h.alInicioCombate(primero, segundo, estado));
+        }
+        // Si muere antes de su inicio, pasa a alMorir aunque luego resucite.
+        boolean segundoPuedeIniciar = segundo.estaVivo();
+        if (algunoMuerto()) {
+            ResultadoCombate resultado = resolverMuertes(null);
+            if (resultado != ResultadoCombate.CONTINUA) return finalDelCombate(resultado);
+        }
+        if (segundoPuedeIniciar && segundo.estaVivo()) {
+            dispararHabilidades(segundo, (h, estado) -> h.alInicioCombate(segundo, primero, estado));
+        }
+        if (algunoMuerto()) {
+            ResultadoCombate resultado = resolverMuertes(null);
+            if (resultado != ResultadoCombate.CONTINUA) return finalDelCombate(resultado);
         }
 
-        Combatiente poseedorPrimerTurno = primerTurno();
-        Combatiente noPoseedorPrimerTurno = determinarOponente(poseedorPrimerTurno);
+        poseedorTurno = primerTurno();
+        while (true) {
+            ResultadoCombate resultado = eventosTurno(true);
+            if (resultado != ResultadoCombate.CONTINUA) return finalDelCombate(resultado);
 
-        int turno = 1;
+            Combatiente combatienteAtacante = atacante(poseedorTurno, determinarOponente(poseedorTurno));
+            ataque(combatienteAtacante, determinarOponente(combatienteAtacante));
+            if (algunoMuerto()) {
+                resultado = resolverMuertes(null);
+                if (resultado != ResultadoCombate.CONTINUA) return finalDelCombate(resultado);
+            }
 
-        //Posibilidades del jugador: atacar, huir, usar objeto.
-
-
-
-        //resultado de prueba, no es el que debe devolverre
-        return ResultadoCombate.AMBOS_MUEREN;
+            resultado = eventosTurno(false);
+            if (resultado != ResultadoCombate.CONTINUA) return finalDelCombate(resultado);
+            poseedorTurno = determinarOponente(poseedorTurno);
+        }
     }
 
-    //Cerrado
-    //Se utilizará en los momentos donde las habilides se disparan
-    //y es necesario ver en qué orden lo hacen (jugador o enemigo)
-    private Combatiente ordenHabilidades() {
+    private ResultadoCombate eventosTurno(boolean inicio) {
+        Combatiente primero = ordenHabilidades();
+        Combatiente segundo = determinarOponente(primero);
+        for (Combatiente combatiente : new Combatiente[]{primero, segundo}) {
+            Combatiente oponente = determinarOponente(combatiente);
+            if (combatiente.estaVivo()) {
+                dispararHabilidades(combatiente, (h, estado) -> {
+                    if (inicio) h.alInicioTurno(combatiente, oponente, estado);
+                    else h.alFinalTurno(combatiente, oponente, estado);
+                });
+            }
+            if (algunoMuerto()) {
+                ResultadoCombate resultado = resolverMuertes(null);
+                if (resultado != ResultadoCombate.CONTINUA) return resultado;
+            }
+        }
+        return ResultadoCombate.CONTINUA;
+    }
 
+    private Combatiente ordenHabilidades() {
         int iniciativaJugador = jugador.getIniciativa();
         int iniciativaEnemigo = enemigo.getIniciativa();
-
         if (iniciativaJugador > iniciativaEnemigo) return jugador;
-        else if (iniciativaEnemigo > iniciativaJugador) return enemigo;
+        if (iniciativaEnemigo > iniciativaJugador) return enemigo;
+        if (poseedorTurno != null) return poseedorTurno;
 
-        else {
-
-            while (true) {
-
-                int tiradaDesempateJugador = tirador.tirarDado();
-                int tiradaDesempateEnemigo = tirador.tirarDado();
-
-                if (tiradaDesempateJugador > tiradaDesempateEnemigo) {
-                    return jugador;
-
-                } else if (tiradaDesempateEnemigo > tiradaDesempateJugador) {
-                    return enemigo;
-                }
-            }
+        while (true) {
+            int dadoJugador = tirador.tirarDado();
+            int dadoEnemigo = tirador.tirarDado();
+            if (dadoJugador > dadoEnemigo) return jugador;
+            if (dadoEnemigo > dadoJugador) return enemigo;
         }
     }
 
-    //================================================
-    //------------- COMPROBAR MUERTES ----------------
-    //================================================
-
-
-    //Aquí determinamos si alguno de los personajes ha muerto combatiendo
     private boolean algunoMuerto() {
         return !jugador.estaVivo() || !enemigo.estaVivo();
     }
@@ -241,139 +251,33 @@ public class Combate {
         return jugador.estaVivo() && enemigo.estaVivo();
     }
 
-    //Si alguno de los personajes ha muerto (o los dos) pasamos a disparar sus habilidades alMorir()
-    //y determinar que ocurre al lanzar esas habilidades.
-    // PRECONDICIÓN:
-    // Se llama únicamente si algunoMuerto() == true.
-    //Cerrado
-
-    //Leer normas del juego, apartado Combate
+    // Cada participante ejecuta alMorir como máximo una vez en esta resolución.
     private ResultadoCombate resolverMuertes(Combatiente prioridad) {
-
-        //Comprobamos si es el enemigo el que está muerto
-        if (jugador.estaVivo() && !enemigo.estaVivo()) {
-
-            //Disparamos las habilidades que tengan alguna acción al morir.
-            //Esto podría generar que resucitara, que matara al personaje, etc, etc...
-            dispararHabilidades(enemigo, (h, estado) -> h.alMorir(enemigo, jugador, estado));
-
-            //Por eso hay que volver a comprobar si está vivo o muerto
-
-            //Si ambos están vivos tras la habilidad del enemigo: el combate continúa.
-            if (ambosVivos()) {
-                return ResultadoCombate.CONTINUA;
-
-                //Si el enemigo continúa muerto tras sus habilidades, el combate finaliza con enemigo muerto
-            } else if (jugador.estaVivo() && !enemigo.estaVivo()) {
-
-                return ResultadoCombate.ENEMIGO_MUERE;
-
-                //Si el jugador o ambos jugadores mueren, se disparan las habilidades del jugador.
-                //El metodo jugadorMuere comprende todas las posibilidades que pueden ocurrir al lanzarse las habilidades
-                //Jugador sigue muerto y enemigo vivo; ambos vivos, jugador resucita y enemigo muerto, ambos muertos.
-            } else if ((!jugador.estaVivo() && enemigo.estaVivo())
-                    || (!jugador.estaVivo() && !enemigo.estaVivo())) {
-
-                return personajeMuere(jugador, enemigo);
-
-            }
-
-            //Comprobamos si es el jugador es el que está muerto.
-        } else if (!jugador.estaVivo() && enemigo.estaVivo()) {
-
-            dispararHabilidades(jugador, (h, estado) -> h.alMorir(jugador, enemigo, estado));
-
-            //Hay que volver a comprobar si está vivo o muerto
-
-            //Si ambos están vivos tras la habilidad del jugador: el combate continúa.
-            if (ambosVivos()) return ResultadoCombate.CONTINUA;
-
-            //Si el jugador continúa muerto tras sus habilidades, el combate finaliza con jugador muerto
-            else if (enemigo.estaVivo() && !jugador.estaVivo()) return ResultadoCombate.JUGADOR_MUERE;
-
-            else if ((!enemigo.estaVivo() && jugador.estaVivo())) return personajeMuere(enemigo, jugador);
-
-            //Si mueren los dos, ya no me interesa que el enemigo lance sus habilidades, no es relevante
-            else if (!enemigo.estaVivo() && !jugador.estaVivo()) return ResultadoCombate.AMBOS_MUEREN;
-
-        } else{
-
-            Combatiente noPrioridad = determinarOponente(prioridad);
-
-            dispararHabilidades(prioridad, (h, estado) -> h.alMorir(prioridad, noPrioridad, estado));
-
-            //Si ambos están vivos tras la primera habilidad, el combate continúa.
-            if (ambosVivos()) return ResultadoCombate.CONTINUA;
-
-            //Si muere el que no tenía prioridad y no había lanzado sus habilidades
-            else if (prioridad.estaVivo() && !noPrioridad.estaVivo()) {
-
-               return personajeMuere(noPrioridad, prioridad);
-
-            } else if (!prioridad.estaVivo() && noPrioridad.estaVivo()) {
-
-                if(prioridad == jugador){
-                    return ResultadoCombate.JUGADOR_MUERE;
-
-                }else{
-                    return ResultadoCombate.ENEMIGO_MUERE;
-                }
-
-            } else if (!prioridad.estaVivo() && !noPrioridad.estaVivo()) {
-
-                if(prioridad == jugador) return ResultadoCombate.AMBOS_MUEREN;
-                else return personajeMuere(noPrioridad, prioridad);
-            }
-        }
-        return ResultadoCombate.CONTINUA;
-    }
-
-    // PRECONDICIÓN:
-    // "muerto" todavía no ha ejecutado alMorir() en esta resolución.
-    // "sobrevive" ya ha ejecutado alMorir() en esta resolución.
-    private ResultadoCombate personajeMuere(Combatiente muerto, Combatiente sobrevive) {
-
-        dispararHabilidades(muerto, (h, estado) -> h.alMorir(muerto, sobrevive, estado));
-
-        if (ambosVivos()) {
-            return ResultadoCombate.CONTINUA;
-
-        } else if (muerto.estaVivo() && !sobrevive.estaVivo()) {
-
-            if (muerto == jugador) {
-                return ResultadoCombate.ENEMIGO_MUERE;
-            } else {
-                return ResultadoCombate.JUGADOR_MUERE;
-            }
-
-        } else if (!muerto.estaVivo() && sobrevive.estaVivo()) {
-
-            if (muerto == jugador) {
-                return ResultadoCombate.JUGADOR_MUERE;
-            } else {
-                return ResultadoCombate.ENEMIGO_MUERE;
-            }
-
+        if (ambosVivos()) return ResultadoCombate.CONTINUA;
+        Combatiente primero;
+        if (!jugador.estaVivo() && !enemigo.estaVivo()) {
+            primero = prioridad == null ? ordenHabilidades() : prioridad;
         } else {
-
-            return ResultadoCombate.AMBOS_MUEREN;
+            primero = jugador.estaVivo() ? enemigo : jugador;
         }
-    }
-
-
-//================================================
-//--------------FINAL DEL COMBATE-----------------
-//================================================
-
-    //Aqui se vuelve a lanzar las habilidades del jugador para que, cosas que se han modificado durante el combate
-//Como atributos o vida, se reestablezcan en sus valores normales.
-    private ResultadoCombate finalDelCombate(ResultadoCombate resultado) {
-
-        dispararHabilidades(jugador, (h, estado) -> h.alFinalCombate(jugador, enemigo, estado));
-
+        Combatiente segundo = determinarOponente(primero);
+        ResultadoCombate resultado = personajeMuere(primero, segundo);
+        if (!segundo.estaVivo()) {
+            resultado = personajeMuere(segundo, primero);
+        }
         return resultado;
     }
 
+    private ResultadoCombate personajeMuere(Combatiente muerto, Combatiente oponente) {
+        dispararHabilidades(muerto, (h, estado) -> h.alMorir(muerto, oponente, estado));
+        if (ambosVivos()) return ResultadoCombate.CONTINUA;
+        if (!jugador.estaVivo() && !enemigo.estaVivo()) return ResultadoCombate.AMBOS_MUEREN;
+        return jugador.estaVivo() ? ResultadoCombate.ENEMIGO_MUERE : ResultadoCombate.JUGADOR_MUERE;
+    }
 
- */
+    private ResultadoCombate finalDelCombate(ResultadoCombate resultado) {
+        // Excepción de limpieza: el jugador restaura sus efectos incluso muerto.
+        dispararHabilidades(jugador, (h, estado) -> h.alFinalCombate(jugador, enemigo, estado));
+        return resultado;
+    }
 }

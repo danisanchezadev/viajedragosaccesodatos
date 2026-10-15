@@ -32,8 +32,8 @@ public abstract class Equipo extends Objeto implements Equipable {
         habilidadesOtorgadas.forEach((habilidad, niveles) -> {
             Objects.requireNonNull(habilidad, "La habilidad no puede ser null");
             Objects.requireNonNull(niveles, "Los niveles no pueden ser null");
-            if (niveles < 0) {
-                throw new IllegalArgumentException("Los niveles otorgados no pueden ser negativos");
+            if (niveles <= 0) {
+                throw new IllegalArgumentException("Los niveles otorgados deben ser positivos");
             }
             copiaHabilidades.put(habilidad, niveles);
         });
@@ -59,6 +59,9 @@ public abstract class Equipo extends Objeto implements Equipable {
             var estado = combatiente.getHabilidades().get(habilidad);
             if (estado == null || estado.getVecesEquipada() <= 0 || estado.getNivel() < niveles) {
                 throw new IllegalStateException("No se pueden retirar las habilidades de este equipo");
+            }
+            if ((estado.isAprendida() || estado.getVecesEquipada() > 1) && estado.getNivel() == niveles) {
+                throw new IllegalStateException("Una habilidad que permanece activa debe conservar nivel positivo");
             }
         });
         bonificaciones.forEach((atributo, cantidad) -> combatiente.modificarAtributo(atributo, -cantidad));

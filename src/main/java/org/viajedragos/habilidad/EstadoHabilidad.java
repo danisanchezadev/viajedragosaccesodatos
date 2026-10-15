@@ -8,11 +8,12 @@ public class EstadoHabilidad {
 
     public EstadoHabilidad(boolean aprendida, int vecesEquipada, int nivel) {
         this.aprendida = aprendida;
-        this.vecesEquipada = vecesEquipada;
-        this.nivel = nivel;
+        setVecesEquipada(vecesEquipada);
+        setNivel(nivel);
     }
 
     public EstadoHabilidad() {
+        this(false, 0, 1);
     }
 
     public boolean isAprendida() {
@@ -28,6 +29,9 @@ public class EstadoHabilidad {
     }
 
     public void setVecesEquipada(int vecesEquipada) {
+        if (vecesEquipada < 0) {
+            throw new IllegalArgumentException("El número de equipos no puede ser negativo");
+        }
         this.vecesEquipada = vecesEquipada;
     }
 
@@ -36,6 +40,13 @@ public class EstadoHabilidad {
     }
 
     public void setNivel(int nivel) {
+        if (nivel <= 0) {
+            throw new IllegalArgumentException("El nivel de una habilidad debe ser positivo");
+        }
         this.nivel = nivel;
+    }
+
+    public boolean isActiva() {
+        return aprendida || vecesEquipada > 0;
     }
 }
