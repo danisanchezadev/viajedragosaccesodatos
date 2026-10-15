@@ -4,7 +4,10 @@ import org.viajedragos.habilidad.EstadoHabilidad;
 import org.viajedragos.habilidad.Habilidad;
 import org.viajedragos.modelo.Combatiente;
 
+import java.io.PrintStream;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Scanner;
 import java.util.function.BiConsumer;
 
 public class Combate {
@@ -40,6 +43,7 @@ public class Combate {
 
     public Combatiente atacante(Combatiente poseedorTurno, Combatiente oponente) {
 
+        // En el turno de dos acciones, este resultado determina quién actúa primero.
         //La fórmula para ver quién es el atacante es iniciativa + 1D6 y quien saque la puntuación mayor es el atacante del turno.
         //Además, el poseedor del turno tendrá una bonificación de +2 a la iniciativa.
         //En caso de empate, el atacante será el poseedor del turno.
@@ -60,6 +64,10 @@ public class Combate {
     }
 
     public void ataque(Combatiente atacante, Combatiente defensor) {
+        ataque(atacante, defensor, null);
+    }
+
+    private void ataque(Combatiente atacante, Combatiente defensor, PrintStream salida) {
 
         //creo el contexto para este ataque en específico
         ContextoAtaque ca = new ContextoAtaque(atacante, defensor);
@@ -79,7 +87,9 @@ public class Combate {
 
         //Determinamos el daño bruto que consigue realizar el ataque.
         //Este daño nunca puede ser menor que 0.
+        int vidaAtacanteAntes = atacante.getVida();
         danioBruto(ca);
+        int danioContraataque = Math.max(0, vidaAtacanteAntes - atacante.getVida());
 
         ca.setDanioFinal(ca.getDanioBruto());
         dispararHabilidades(atacante, (h, estado) -> h.antesDeAplicarDanio(ca, estado));
@@ -87,11 +97,25 @@ public class Combate {
 
         if (ca.isAtaqueFallido()) {
             ca.setDanioFinal(0);
+            if (salida != null) {
+                salida.printf("%s falla su ataque contra %s.%n", atacante.getNombre(), defensor.getNombre());
+                if (ca.isContraataque()) {
+                    salida.printf("%s contraataca a %s y causa %d puntos de daño.%n",
+                            defensor.getNombre(), atacante.getNombre(), danioContraataque);
+                }
+            }
             return;
         }
 
         int vidaAntes = defensor.getVida();
         defensor.recibirDanio(ca.getDanioFinal());
+        if (salida != null) {
+            if (ca.getDadoAtaque() == 6 && ca.getDadoDefensa() == 1) {
+                salida.println("¡Golpe crítico!");
+            }
+            salida.printf("%s golpea a %s y causa %d puntos de daño.%n",
+                    atacante.getNombre(), defensor.getNombre(), Math.max(0, vidaAntes - defensor.getVida()));
+        }
         boolean huboDanioEfectivo = defensor.getVida() < vidaAntes;
         if (huboDanioEfectivo) {
             dispararHabilidades(atacante, (h, estado) -> h.alHacerDanio(ca, estado));
@@ -170,6 +194,22 @@ public class Combate {
     }
 
     public ResultadoCombate combatir() {
+        return combatirInterno(null, null);
+    }
+
+    /**
+     * Ejecuta el mismo motor, esperando la elección solo al llegar la acción del jugador.
+     * Si se cierra la entrada, Scanner lanza NoSuchElementException: la sesión se
+     * interrumpe, sin inventar un resultado de combate ni ejecutar su finalización.
+     * Los flujos pertenecen al llamador y no se cierran aquí.
+     */
+    public ResultadoCombate combatir(Scanner entrada, PrintStream salida) {
+        Objects.requireNonNull(entrada);
+        Objects.requireNonNull(salida);
+        return combatirInterno(entrada, salida);
+    }
+
+    private ResultadoCombate combatirInterno(Scanner entrada, PrintStream salida) {
         poseedorTurno = null;
         Combatiente primero = ordenHabilidades();
         Combatiente segundo = determinarOponente(primero);
@@ -192,20 +232,53 @@ public class Combate {
         }
 
         poseedorTurno = primerTurno();
+        int turno = 1;
         while (true) {
             ResultadoCombate resultado = eventosTurno(true);
             if (resultado != ResultadoCombate.CONTINUA) return finalDelCombate(resultado);
 
-            Combatiente combatienteAtacante = atacante(poseedorTurno, determinarOponente(poseedorTurno));
-            ataque(combatienteAtacante, determinarOponente(combatienteAtacante));
-            if (algunoMuerto()) {
-                resultado = resolverMuertes(null);
-                if (resultado != ResultadoCombate.CONTINUA) return finalDelCombate(resultado);
+            Combatiente primeroEnActuar = atacante(poseedorTurno, determinarOponente(poseedorTurno));
+            if (salida != null) {
+                salida.printf("%nTurno %d. Orden: %s, después %s.%n", turno,
+                        primeroEnActuar.getNombre(), determinarOponente(primeroEnActuar).getNombre());
+            }
+            for (Combatiente actual : new Combatiente[]{primeroEnActuar, determinarOponente(primeroEnActuar)}) {
+                if (salida != null) {
+                    mostrarEstado(salida);
+                    salida.printf("Actúa %s.%n", actual.getNombre());
+                    if (actual == jugador) esperarAtaque(entrada, salida);
+                    else salida.println("El enemigo elige atacar.");
+                    ataque(actual, determinarOponente(actual), salida);
+                } else {
+                    ataque(actual, determinarOponente(actual));
+                }
+                if (algunoMuerto()) {
+                    resultado = resolverMuertes(null);
+                    if (resultado != ResultadoCombate.CONTINUA) return finalDelCombate(resultado);
+                }
             }
 
             resultado = eventosTurno(false);
             if (resultado != ResultadoCombate.CONTINUA) return finalDelCombate(resultado);
             poseedorTurno = determinarOponente(poseedorTurno);
+            turno++;
+        }
+    }
+
+    private void mostrarEstado(PrintStream salida) {
+        salida.printf("%s: %d/%d de vida | %s: %d/%d de vida%n",
+                jugador.getNombre(), jugador.getVida(), jugador.getVidaMaxima(),
+                enemigo.getNombre(), enemigo.getVida(), enemigo.getVidaMaxima());
+    }
+
+    private void esperarAtaque(Scanner entrada, PrintStream salida) {
+        while (true) {
+            salida.println("1. Atacar");
+            salida.print("> ");
+            salida.flush();
+            // El cierre de la entrada interrumpe la sesión; no representa una huida.
+            if (entrada.nextLine().trim().equals("1")) return;
+            salida.println("Entrada inválida. Escribe 1 para atacar.");
         }
     }
 

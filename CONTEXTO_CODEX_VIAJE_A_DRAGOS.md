@@ -1,7 +1,7 @@
 ﻿# Viaje a Dragos — contexto de producto, reglas y plan de implementación para Codex
 
 > **Naturaleza:** documento vivo de referencia para un agente de programación.
-> **Fecha:** 14 de octubre de 2026.
+> **Fecha:** 15 de octubre de 2026.
 > **Fuente de verdad del estado del código:** el repositorio actual. Las descripciones de implementación aquí proceden de conversaciones y fragmentos compartidos; **no sustituyen una inspección del código**.
 > **Objetivo inmediato:** MVP Java de consola, sin ningún acceso a datos, que permita jugar y sirva como banco de pruebas para que otra persona aprenda posteriormente diferentes técnicas de persistencia.
 
@@ -50,6 +50,7 @@ Estas reglas proceden del diseño de combate previamente discutido; **Codex debe
 
 - La iniciativa inicial se decide comparando `INICIATIVA × tirada de 1D6` de cada combatiente. Si empatan, se repite la tirada hasta obtener un orden. Excepción confirmada: si ambas iniciativas efectivas son cero, se comparan directamente los dados y se repiten solo los empates. La repetición es iterativa, sin recursión.
 - Regla confirmada para el turno: `atacante()` compara iniciativa + 1D6 y añade +2 únicamente al cálculo del poseedor del turno, con desempate a su favor. No aumenta agilidad ni modifica permanentemente iniciativa.
+- Aclaración confirmada en la fase de consola: ese resultado determina el **primero en actuar**. Cada turno permite una acción de cada combatiente, primero el ganador de iniciativa y después el otro si el combate continúa. El jugador decide únicamente al llegar su acción, nunca antes de resolver la acción previa del enemigo. El poseedor sigue alternando al terminar cada turno completo; no se vuelve a tirar entre las dos acciones.
 - Para un ataque físico se discutió: `daño = (FUERZA + AGILIDAD + 1D6 del atacante) - (RESISTENCIA + AGILIDAD + 1D6 del defensor)`, con daño mínimo de cero.
 - También se discutieron casos especiales asociados a resultados naturales del dado: una tirada de agilidad de `1` provoca fallo; una tirada defensiva de `1` permite recibir el daño completo; la combinación de ataque `1` y defensa `6` puede producir contraataque. **La interacción exacta de estas excepciones con la fórmula debe contrastarse con el código y las decisiones posteriores** antes de completar la mecánica.
 - Hay una abstracción de dado (`TiradorDado`) para que la tirada pueda controlarse en pruebas.
@@ -67,7 +68,7 @@ Estas reglas proceden del diseño de combate previamente discutido; **Codex debe
 3. Se comprueba si alguien ha muerto como consecuencia de esos efectos.
 4. Si hay muertos, se ejecuta la resolución de muertes, que puede activar habilidades `alMorir` y cambiar el desenlace.
 5. Si ambos siguen vivos, se determina el primer turno (`primerTurno()`).
-6. El bucle automático ejecuta inicio de turno para ambos vivos por prioridad, resuelve muertes, selecciona atacante con `atacante()` y ejecuta `ataque()`, resuelve muertes y, si el combate continúa, ejecuta final de turno para ambos y alterna el poseedor. Las futuras elecciones de atacar/huir/usar objeto no se implementan en esta tarea.
+6. El bucle compartido ejecuta inicio de turno para ambos vivos por prioridad y resuelve muertes. `atacante()` determina el orden de las dos acciones. Ejecuta la primera y resuelve muertes; si ambos siguen vivos, ejecuta la segunda y vuelve a resolver muertes. Si continúa, ejecuta final de turno para ambos y alterna el poseedor. En consola el enemigo ataca automáticamente y el jugador elige Atacar solo al llegar su acción. Huida y objetos siguen pendientes.
 7. Regla final confirmada: una muerte definitiva cierra el combate sin eventos normales posteriores ni alFinalTurno. Solo el jugador ejecuta alFinalCombate, siempre, incluso muerto, como excepción de limpieza y contingencias. El enemigo no ejecuta alFinalCombate.
 
 Decisiones expresas del autor para completar combatir: ambos pueden ejecutar habilidades en las fases correspondientes; la prioridad se determina por la iniciativa en ese momento, en ausencia de prioridad se usa el poseedor del turno, y si no lo hay se tira para determinar quién empieza. Si alguien muere antes de ejecutar su inicio, ejecuta alMorir en vez de ese inicio. El límite de una activación de muerte por participante y resolución se conserva. PrimerTurno mantiene iniciativa × 1D6 y el autor confirmó la excepción de comparación directa de dados si ambas iniciativas son cero. La huida queda para otra tarea y no se inventa un resultado o límite para combates sin progreso.
@@ -154,9 +155,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 14 de octubre de 2026. Base publicada `79d15c7`. En local se han completado las etapas A/B/C de combatir y los invariantes de actividad/nivel de habilidades. El enfrentamiento automático completo termina con el ResultadoCombate correspondiente; no hay retorno ficticio o provisional. Sin commit ni push.
+> **Estado:** 15 de octubre de 2026. Base publicada `e393563`, rama main. En local está completada la fase de combate interactivo por consola. Los modos automático e interactivo comparten el motor y aplican la regla de dos acciones por turno confirmada durante esta fase. Sin commit ni push de estos cambios.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 33 fuentes principales y 21 archivos de pruebas recompilados; 202 pruebas, 0 fallos, 0 errores, 0 omitidas. Son las 158 anteriores, 14 de EstadoHabilidadTest, 9 de InicioCombateTest y 21 de CombateCompletoTest. El método combatir se ejecuta en enfrentamientos completos mediante pruebas; `app` sigue comparando armas, pues no se añade interfaz.
+> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 33 fuentes principales y 22 archivos de pruebas recompilados; 224 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 202 escenarios anteriores, adaptando seis de CombateCompletoTest a las dos acciones por turno, y se añaden 10 de AppTest y 12 de CombateConsolaTest. `app.main()` inicia ahora el flujo de consola, con elección real de Atacar y repetición con personajes nuevos. Se ha eliminado la clase vacía de pruebas llamada app que ocultaba la clase principal.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -170,14 +171,14 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 202 pruebas ejecutadas sin fallos ni errores; 158 previas, 14 de invariantes de habilidades, 9 de inicio y 21 de combate completo.
+- [x] Suite JUnit: 224 pruebas ejecutadas sin fallos ni errores; los 202 escenarios anteriores y 22 nuevos de consola. Se adaptaron seis escenarios completos a las dos acciones por turno.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
 - [x] Auditar clases, paquetes, firmas, dependencias y referencias del repositorio.
 - [x] Comprobar compilación del código principal: `mvn compile` termina correctamente.
 - [x] Ejecutar las pruebas existentes con `mvn test`.
-- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 202 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
+- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 224 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
 - [x] Revisar `EventosHabilidad`: todas sus firmas actuales y overrides implementados reciben `EstadoHabilidad` y compilan en el código principal.
 - [x] Revisar y corregir las seis llamadas del borrador a `dispararHabilidades`: las lambdas reciben habilidad y estado y pasan ese estado al evento.
 - [x] Activar el auxiliar existente `dispararHabilidades` para usarlo desde ataque, recorriendo habilidad y estado juntos.
@@ -187,7 +188,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Completar el bucle de turnos y eliminar todos los retornos ficticios/provisionales. CONTINUA es un estado interno para continuar, no el resultado público de un enfrentamiento terminado.
 - [x] Aplicar el daño de ataque sin habilidades: copiar bruto a final y restar vida una vez si no falla. Conservar las reglas existentes de fallo, defensa fallida, crítico 6/1 y contraataque 1/6. Probadas las 36 combinaciones de dados y seis valores del dado crítico extra.
 - [x] Integrar eventos del ataque según la secuencia confirmada, atacante antes que defensor, con el EstadoHabilidad propio de cada entrada. Probar daño final aplicado una vez, efectos posteriores solo con daño efectivo y contraataque directo sin segunda secuencia.
-- [x] Integrar atacante y ataque existentes con el bucle, sin alterar sus fórmulas. Alternar poseedor independientemente de quién atacó efectivamente.
+- [x] Integrar atacante y ataque existentes con el bucle, sin alterar sus fórmulas. Tras la aclaración de consola, atacante establece el orden de dos acciones; comprobar muertes entre ellas y alternar poseedor al terminar el turno.
 - [x] Revisar por lectura `resolverMuertes` / `personajeMuere`: algunas ramas omiten los efectos del segundo muerto; no hay validación ejecutada de esa lógica comentada.
 - [x] Corregir resolución de muertes y probarla en inicio y ataques: estado final reevaluado, una activación por participante/resolución y nuevas resoluciones para muertes posteriores a una resurrección.
 - [x] Revisar `finalDelCombate`: el borrador solo dispara eventos para el jugador.
@@ -210,10 +211,14 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] El constructor de Equipo copia ambos mapas y sus getters devuelven mapas de solo lectura; proteger también los mapas de ranuras y modificadores de Combatiente. No se encontraron llamadas existentes que necesiten escribir mediante esos getters.
 - [x] Confirmar el +2 del turno: solo suma al cálculo de iniciativa + 1D6 del poseedor; no modifica atributos ni agilidad.
 - [x] Confirmar y aplicar excepción de iniciativas cero, repetición iterativa y prueba de 10.000 empates sin acumular pila.
-- [ ] Crear interfaz de consola cuando se autorice; combatir ya ejecuta el enfrentamiento, pero app sigue comparando armas.
+- [x] Crear interfaz de consola: app.main presenta el juego, inicia combate, muestra vidas y resultado, y permite repetir con personajes nuevos o salir. Las entradas inválidas repiten la pregunta sin consumir dados ni acciones. Sin System.exit.
+- [x] Integrar Atacar después de determinar el orden, únicamente cuando llega la acción del jugador. El ataque previo del enemigo se resuelve antes de preguntar; una muerte definitiva impide la acción pendiente y una resurrección permite continuar.
+- [x] Conservar combatir() automático y añadir combatir(Scanner, PrintStream) con un bucle compartido. La narración muestra atacante, objetivo, fallo, crítico, contraataque y vida realmente perdida.
+- [x] Probar consola con dados controlados y flujos en memoria: inicio, decisión, entradas inválidas, victoria/derrota, mensaje de muerte simultánea, resurrección, reinicio, salida, cierre de entrada y equivalencia de ambos modos.
 - [ ] Crear catálogos Java de enemigos, armas, objetos y habilidades en memoria.
 - [ ] Integrar encuentros desde esos catálogos, sin Factory ni persistencia.
-- [ ] Definir e implementar atacar desde un menú, huir y usar objeto.
+- [x] Implementar Atacar desde el menú en su momento real de acción.
+- [ ] Definir e implementar huir y usar objeto; no se ofrecen en la consola actual.
 - [ ] Definir e implementar inventario y adquisición/consumo de objetos.
 - [ ] Definir e implementar comercio mínimo si lo requiere el MVP.
 - [ ] Definir el final del encuentro, recompensas y transición al siguiente.
@@ -223,7 +228,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Validar nivel positivo, actividad por aprendizaje/equipo y retirada sin nivel cero; ejecutar 14 escenarios de EstadoHabilidadTest junto con los anteriores.
 - [x] Añadir 9 escenarios de InicioCombateTest: prioridad, participación, muertes, limpieza del jugador y desempates.
 - [x] Añadir 21 escenarios de CombateCompletoTest: resultados, turnos, prioridad cambiante, ambas resurrecciones, contraataque letal, habilidades reales, limpieza viva/muerta, actividad y reutilización del jugador.
-- [ ] Preparar README con instrucciones de ejecución local.
+- [x] Preparar README con JDK 23, ejecución desde IntelliJ y terminal, opciones y comprobación con Maven.
 - [x] Publicar el estado inicial en GitHub: commit `9a9f274`, rama main, repositorio `danisanchezadev/viajedragosaccesodatos`, por petición expresa del autor. Esa publicación no acredita una demo jugable ni una suite pasando.
 
 ### 8.3 Fuera del alcance del MVP actual
@@ -266,8 +271,8 @@ Después de programar, informa de:
 
 ## 11. Preguntas que Codex no debe resolver por su cuenta
 
-- La secuencia del ataque individual y el contraataque ya están confirmados y probados, según el apartado 3.2; falta conectar esa operación al futuro bucle de combate.
-- ¿Qué duración exacta tiene el modificador de agilidad del turno?
+- La secuencia del ataque individual y el contraataque están confirmados, integrados y probados. El turno tiene dos acciones ordenadas y resuelve muertes entre ellas, según la aclaración expresa del autor durante la fase 3.
+- No existe un modificador de agilidad del turno: el +2 se aplica exclusivamente al cálculo de iniciativa del poseedor.
 - ¿Qué reglas concretas rigen huida, uso de objetos, inventario y comercio?
 - Confirmado: alFinalCombate solo del jugador, siempre, como limpieza incluso muerto; el enemigo no participa.
 - ¿Qué ocurre al terminar cada encuentro y qué recompensas se conceden?

@@ -78,21 +78,21 @@ class CombateCompletoTest {
     }
 
     @Test
-    void alternaPoseedorAunqueElAtacanteSeaElOponenteEnUnTurno() {
+    void alternaPoseedorYAmbosActuanEnElOrdenDeCadaTurno() {
         Jugador jugador = jugador();
         Enemigo enemigo = enemigo(25);
         List<String> eventos = new ArrayList<>();
         Registro j = registrar(jugador, "J", eventos);
         Registro e = registrar(enemigo, "E", eventos);
         assertEquals(ResultadoCombate.ENEMIGO_MUERE, ejecutar(jugador, enemigo,
-                2, 1, 1, 1, 4, 2, 6, 1, 4, 2, 1, 1, 4, 2, 1, 6, 4, 2));
-        assertEquals(List.of("J:ataque", "E:ataque", "J:ataque", "J:ataque"),
+                2, 1, 1, 1, 4, 2, 4, 2, 6, 1, 4, 2, 4, 2, 1, 1, 4, 2));
+        assertEquals(List.of("J:ataque", "E:ataque", "E:ataque", "J:ataque", "J:ataque"),
                 eventos.stream().filter(s -> s.endsWith(":ataque")).toList());
-        assertEquals(4, j.turnos);
-        assertEquals(4, e.turnos);
-        assertEquals(3, j.finalesTurno);
-        assertEquals(3, e.finalesTurno);
-        assertEquals(22, jugador.getVida());
+        assertEquals(3, j.turnos);
+        assertEquals(3, e.turnos);
+        assertEquals(2, j.finalesTurno);
+        assertEquals(2, e.finalesTurno);
+        assertEquals(14, jugador.getVida());
         assertEquals(3, jugador.getIniciativa());
         assertEquals(1, enemigo.getIniciativa());
     }
@@ -137,7 +137,7 @@ class CombateCompletoTest {
         Registro j = registrar(jugador, "J", eventos);
         e.muerte = (p, o) -> { if (e.muertes == 1) p.curarse(20); };
         assertEquals(ResultadoCombate.ENEMIGO_MUERE, ejecutar(jugador, enemigo,
-                1, 1, 1, 1, 4, 2, 1, 6, 4, 2, 1, 1, 4, 2));
+                1, 1, 1, 1, 4, 2, 4, 2, 1, 6, 4, 2, 4, 2, 1, 1, 4, 2));
         assertEquals(2, e.muertes);
         assertEquals(3, j.turnos);
         assertEquals(2, j.finalesTurno);
@@ -154,11 +154,11 @@ class CombateCompletoTest {
         Registro j = registrar(jugador, "J", eventos);
         j.muerte = (p, o) -> { if (j.muertes == 1) p.curarse(20); };
         assertEquals(ResultadoCombate.ENEMIGO_MUERE, ejecutar(jugador, enemigo,
-                1, 6, 6, 1, 4, 2, 1, 1, 4, 2, 1, 6, 4, 2, 1, 1, 4, 2));
+                1, 6, 6, 1, 4, 2, 4, 2, 1, 1, 4, 2, 1, 2, 1, 6, 4, 2));
         assertEquals(1, j.muertes);
         assertEquals(20, jugador.getVida());
-        assertEquals(4, j.turnos);
-        assertEquals(3, j.finalesTurno);
+        assertEquals(3, j.turnos);
+        assertEquals(2, j.finalesTurno);
         assertEquals(1, j.finales);
     }
 
@@ -231,7 +231,7 @@ class CombateCompletoTest {
             o.setIniciativa(5);
         };
         assertEquals(ResultadoCombate.JUGADOR_MUERE, ejecutar(jugador, enemigo,
-                1, 1, 1, 1, 4, 2, 1, 1, 4, 2));
+                1, 1, 1, 1, 4, 2, 1, 2, 1, 1, 4, 2));
         assertTrue(eventos.indexOf("J:turno") < eventos.indexOf("E:turno"));
         assertTrue(eventos.indexOf("E:finTurno") < eventos.indexOf("J:finTurno"));
         assertEquals(2, eventos.stream().filter("E:ataque"::equals).count());
@@ -260,7 +260,7 @@ class CombateCompletoTest {
         Registro j = registrar(jugador, "J", eventos);
         Registro e = registrar(enemigo, "E", eventos);
         j.finTurno = (p, o) -> o.recibirDanio(o.getVida());
-        assertEquals(ResultadoCombate.ENEMIGO_MUERE, ejecutar(jugador, enemigo, 1, 1, 1, 1, 4, 2));
+        assertEquals(ResultadoCombate.ENEMIGO_MUERE, ejecutar(jugador, enemigo, 1, 1, 1, 1, 4, 2, 4, 2));
         assertEquals(1, j.finalesTurno);
         assertEquals(0, e.finalesTurno);
         assertEquals(0, e.finales);
@@ -308,7 +308,7 @@ class CombateCompletoTest {
         jugador.aprenderHabilidad(new InstintoSupervivencia(), 1);
         jugador.aprenderHabilidad(new FuriaContenida(), 1);
         assertEquals(ResultadoCombate.ENEMIGO_MUERE, ejecutar(jugador, enemigo,
-                1, 1, 1, 1, 4, 2, 6, 1, 4, 2, 1, 1, 4, 2));
+                1, 1, 1, 1, 4, 2, 4, 2, 1, 6, 4, 2));
         assertEquals(10, jugador.getAtributoBase(Atributo.FUERZA));
         assertEquals(12, jugador.getFuerza());
         assertEquals(0, jugador.getAtributoBase(Atributo.AGILIDAD));

@@ -1,46 +1,68 @@
 package org.viajedragos;
 
-import org.viajedragos.arma.Arma;
-import org.viajedragos.arma.Atributo;
-import org.viajedragos.arma.TipoEquipo;
-import org.viajedragos.habilidad.EventosHabilidad;
-import org.viajedragos.habilidad.implementacion.InstintoSupervivencia;
+import org.viajedragos.combate.Combate;
+import org.viajedragos.combate.Dado;
+import org.viajedragos.combate.ResultadoCombate;
+import org.viajedragos.combate.TiradorDado;
+import org.viajedragos.modelo.Enemigo;
+import org.viajedragos.modelo.Jugador;
 
-import java.util.EnumMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.io.PrintStream;
+import java.util.NoSuchElementException;
+import java.util.Scanner;
 
 public class app {
-
     public static void main(String[] args) {
-        Map<Atributo, Integer> atributosEspada1 = new EnumMap<>(Atributo.class);
-        atributosEspada1.put(Atributo.FUERZA, 5);
-        atributosEspada1.put(Atributo.RESISTENCIA, 3);
-        atributosEspada1.put(Atributo.INICIATIVA, 2);
-
-        Map<Atributo, Integer> atributosEspada2 = new EnumMap<>(Atributo.class);
-        atributosEspada2.put(Atributo.FUERZA, 8);
-        atributosEspada2.put(Atributo.RESISTENCIA, -4);
-        atributosEspada2.put(Atributo.AGILIDAD, 3);
-
-        Arma espadaHierro = new Arma(
-                "Espada de hierro",
-                TipoEquipo.ARMA,
-                atributosEspada1,
-                new LinkedHashMap<>()
-        );
-
-        Arma espadaMaldita = new Arma(
-                "Espada maldita",
-                TipoEquipo.ARMA,
-                atributosEspada2,
-                new LinkedHashMap<>()
-        );
-
-// Comparamos la espada equipada con la nueva
-        espadaHierro.compararCon(espadaMaldita);
-
+        ejecutar(new Scanner(System.in), System.out, new Dado());
     }
 
+    public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados) {
+        salida.println("=== Viaje a Dragos ===");
+        salida.println("Un combate por turnos. La iniciativa decide quién actúa primero.");
+        boolean primerCombate = true;
+        while (true) {
+            salida.println(primerCombate ? "1. Iniciar combate" : "1. Nuevo combate");
+            salida.println("0. Salir");
+            salida.print("> ");
+            salida.flush();
+            if (!entrada.hasNextLine()) {
+                salida.println("Entrada finalizada. Hasta pronto.");
+                return;
+            }
+            String opcion = entrada.nextLine().trim();
+            if (opcion.equals("0")) {
+                salida.println("Hasta pronto.");
+                return;
+            }
+            if (!opcion.equals("1")) {
+                salida.println("Entrada inválida. Escribe 1 o 0.");
+                continue;
+            }
+            // Cada combate utiliza personajes nuevos, sin conservar daño ni efectos.
+            Jugador jugador = new Jugador("Aventurero", "", 6, 2, 3, 2, 2, 24, 24);
+            Enemigo enemigo = new Enemigo("Lobo", "", 5, 2, 2, 1, 2, 18, 18);
+            salida.println("Comienza el combate: Aventurero contra Lobo.");
+            ResultadoCombate resultado;
+            try {
+                resultado = new Combate(jugador, enemigo, dados).combatir(entrada, salida);
+            } catch (NoSuchElementException finEntrada) {
+                salida.println("Entrada finalizada. Sesión interrumpida; el combate queda sin terminar.");
+                return;
+            }
+            salida.printf("Vida final: %s %d/%d | %s %d/%d%n",
+                    jugador.getNombre(), jugador.getVida(), jugador.getVidaMaxima(),
+                    enemigo.getNombre(), enemigo.getVida(), enemigo.getVidaMaxima());
+            mostrarResultado(resultado, salida);
+            primerCombate = false;
+        }
+    }
 
+    static void mostrarResultado(ResultadoCombate resultado, PrintStream salida) {
+        salida.println(switch (resultado) {
+            case ENEMIGO_MUERE -> "Victoria. " + resultado.getDescripcion();
+            case JUGADOR_MUERE -> "Derrota. " + resultado.getDescripcion();
+            case AMBOS_MUEREN -> "Ambos han muerto. " + resultado.getDescripcion();
+            default -> resultado.getDescripcion();
+        });
+    }
 }
