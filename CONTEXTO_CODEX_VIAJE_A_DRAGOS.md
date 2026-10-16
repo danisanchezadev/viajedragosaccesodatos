@@ -1,7 +1,7 @@
 ﻿# Viaje a Dragos — contexto de producto, reglas y plan de implementación para Codex
 
 > **Naturaleza:** documento vivo de referencia para un agente de programación.
-> **Fecha:** 15 de octubre de 2026.
+> **Fecha:** 16 de octubre de 2026.
 > **Fuente de verdad del estado del código:** el repositorio actual. Las descripciones de implementación aquí proceden de conversaciones y fragmentos compartidos; **no sustituyen una inspección del código**.
 > **Objetivo inmediato:** MVP Java de consola, sin ningún acceso a datos, que permita jugar y sirva como banco de pruebas para que otra persona aprenda posteriormente diferentes técnicas de persistencia.
 
@@ -58,6 +58,8 @@ Estas reglas proceden del diseño de combate previamente discutido; **Codex debe
 **Secuencia del ataque individual confirmada por el autor e integrada:** crear ContextoAtaque; antesDeAtacar solo del atacante; tirar ataque/defensa; antesDeCalcularDanio del atacante y después del defensor; calcular bruto con las reglas existentes; copiar bruto a final; antesDeAplicarDanio del atacante y después del defensor; aplicar el final una vez si el ataque no falló; alHacerDanio del atacante y alRecibirDanio del defensor solo si hubo pérdida real de vida. Cada evento recibe el EstadoHabilidad de su entrada. Las fases se completan en orden; dentro de cada combatiente se conserva la iteración del mapa actual, sin imponer un orden nuevo.
 
 **Contraataque confirmado:** 1 de ataque y 6 de defensa mantienen el ataque original fallido. El defensor resta directamente su fuerza a la vida del atacante. No se crea otro contexto ni se invierten participantes; no se dispara otra secuencia ni eventos posteriores por ese daño. Los eventos previos del ataque original sí conservan sus fases.
+
+**Roles confirmados y corregidos el 16 de octubre de 2026:** Caparazón, Defensa perfecta y Guardia férrea solo modifican el daño si pertenecen al defensor; Castigo al torpe y Golpe certero, solo si pertenecen al atacante. Cada implementación compara por identidad el estado recibido con el asociado a su habilidad en el combatiente correspondiente de ContextoAtaque. No se modifican firmas de eventos ni el despachador. Se mantienen sus condiciones, magnitudes, niveles y orden.
 
 **Importante:** no mezclar estas fórmulas con reglas de otros reglamentos de rol discutidos en conversaciones distintas. Este documento describe el videojuego Java, no otro sistema de mesa.
 
@@ -155,9 +157,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 15 de octubre de 2026. Base publicada `e393563`, rama main. En local está completada la fase de combate interactivo por consola. Los modos automático e interactivo comparten el motor y aplican la regla de dos acciones por turno confirmada durante esta fase. Sin commit ni push de estos cambios.
+> **Estado:** 16 de octubre de 2026. Base publicada `072758f`, rama main, con combate interactivo. Se conservan en local la validación de habilidades y la corrección autorizada de los cinco roles de daño. Solo cambian esos cinco métodos productivos, sin modificar contratos públicos. Aventurero y el primer Lobo siguen sin habilidades. Sin commit ni push de estos cambios.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 33 fuentes principales y 22 archivos de pruebas recompilados; 224 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 202 escenarios anteriores, adaptando seis de CombateCompletoTest a las dos acciones por turno, y se añaden 10 de AppTest y 12 de CombateConsolaTest. `app.main()` inicia ahora el flujo de consola, con elección real de Atacar y repetición con personajes nuevos. Se ha eliminado la clase vacía de pruebas llamada app que ocultaba la clase principal.
+> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 33 fuentes principales y 24 archivos de pruebas recompilados; 286 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan íntegros los 21 casos de HabilidadesRealesIntegracionTest. RolesModificadoresDanioTest pasa de 10 caracterizaciones a 41 regresiones con roles correctos. Cuatro archivos unitarios registran el propietario sin cambiar sus 16 resultados esperados. App, motor, contexto, eventos y equipo no cambian.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -171,14 +173,14 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 224 pruebas ejecutadas sin fallos ni errores; los 202 escenarios anteriores y 22 nuevos de consola. Se adaptaron seis escenarios completos a las dos acciones por turno.
+- [x] Suite JUnit: 286 pruebas ejecutadas sin fallos ni errores; incluye las 21 de integración real intactas y 41 de roles, condiciones, instancias compartidas y reglas especiales.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
 - [x] Auditar clases, paquetes, firmas, dependencias y referencias del repositorio.
 - [x] Comprobar compilación del código principal: `mvn compile` termina correctamente.
 - [x] Ejecutar las pruebas existentes con `mvn test`.
-- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 224 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
+- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 286 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
 - [x] Revisar `EventosHabilidad`: todas sus firmas actuales y overrides implementados reciben `EstadoHabilidad` y compilan en el código principal.
 - [x] Revisar y corregir las seis llamadas del borrador a `dispararHabilidades`: las lambdas reciben habilidad y estado y pasan ese estado al evento.
 - [x] Activar el auxiliar existente `dispararHabilidades` para usarlo desde ataque, recorriendo habilidad y estado juntos.
@@ -215,6 +217,12 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Integrar Atacar después de determinar el orden, únicamente cuando llega la acción del jugador. El ataque previo del enemigo se resuelve antes de preguntar; una muerte definitiva impide la acción pendiente y una resurrección permite continuar.
 - [x] Conservar combatir() automático y añadir combatir(Scanner, PrintStream) con un bucle compartido. La narración muestra atacante, objetivo, fallo, crítico, contraataque y vida realmente perdida.
 - [x] Probar consola con dados controlados y flujos en memoria: inicio, decisión, entradas inválidas, victoria/derrota, mensaje de muerte simultánea, resurrección, reinicio, salida, cierre de entrada y equivalencia de ambos modos.
+- [x] Auditar las 14 clases de habilidades para la demo sobre main publicado 072758f: 13 con efectos y un borrador. Análisis en ANALISIS_HABILIDADES_DEMO.md; mvn clean test confirma 224 pruebas superadas, sin modificaciones de código.
+- [x] Confirmar partida inicial de aprendizaje: Aventurero y primer Lobo sin habilidades. La propuesta de asignarlas para demostración está descartada. No se añaden progresión, recompensas ni experiencia; su adquisición posterior queda por definir.
+- [x] Validar habilidades existentes exclusivamente con combatientes de prueba: 21 casos nuevos de eventos, atributos usados en cálculos, curación limitada, restauración del jugador vivo/muerto, estado/nivel, equipo y equivalencia de modos.
+- [x] Tras reproducir el defecto en 10 casos, convertir RolesModificadoresDanioTest en 41 regresiones de roles confirmados, condiciones originales, mismo tipo/instancia en ambos participantes, daño cero, crítico, fallo y contraataque; documentado en ANALISIS_ROLES_MODIFICADORES_DANIO.md.
+- [ ] Narración de habilidades aplazada expresamente por el autor; no añadir mensajes ni cambiar la interfaz en esta tarea.
+- [x] Confirmar y corregir los cinco roles: Caparazón/Defensa perfecta/Guardia férrea solo defensor; Castigo al torpe/Golpe certero solo atacante. Guarda por identidad del estado asociado al propietario; sin cambiar eventos, fórmulas, niveles, equipo ni otras habilidades.
 - [ ] Crear catálogos Java de enemigos, armas, objetos y habilidades en memoria.
 - [ ] Integrar encuentros desde esos catálogos, sin Factory ni persistencia.
 - [x] Implementar Atacar desde el menú en su momento real de acción.

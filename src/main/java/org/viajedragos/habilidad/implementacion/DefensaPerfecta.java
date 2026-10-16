@@ -12,6 +12,9 @@ public class DefensaPerfecta extends Habilidad {
 
     @Override
     public void antesDeAplicarDanio(ContextoAtaque contexto, EstadoHabilidad estado) {
+        // Debe ser el estado asociado a esta habilidad en el defensor.
+        if (contexto.getDefensor().getHabilidades().get(this) != estado) return;
+
         int resultadoDefensa = contexto.getDadoDefensa();
 
         if(resultadoDefensa == 6){

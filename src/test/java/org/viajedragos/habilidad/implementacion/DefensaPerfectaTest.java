@@ -1,7 +1,5 @@
 package org.viajedragos.habilidad.implementacion;
 
-import org.viajedragos.habilidad.EstadoHabilidad;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -32,13 +30,14 @@ public class DefensaPerfectaTest {
     void defensaPerfectaReduceDanioALaMitadSiSeis(int tiradaDadoDefensa, int danio, int danioFinalEsperado){
 
         DefensaPerfecta df = new DefensaPerfecta();
+        enemigo.aprenderHabilidad(df, 1);
 
         ContextoAtaque contexto = new ContextoAtaque(jugador, enemigo);
 
         contexto.setDadoDefensa(tiradaDadoDefensa);
         contexto.setDanioFinal(danio);
 
-        df.antesDeAplicarDanio(contexto, new EstadoHabilidad(true, 0, 1));
+        df.antesDeAplicarDanio(contexto, enemigo.getHabilidades().get(df));
 
         assertEquals(danioFinalEsperado, contexto.getDanioFinal());
 

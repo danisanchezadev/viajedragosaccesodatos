@@ -1,7 +1,5 @@
 package org.viajedragos.habilidad.implementacion;
 
-import org.viajedragos.habilidad.EstadoHabilidad;
-
 import org.junit.jupiter.api.Test;
 import org.viajedragos.combate.ContextoAtaque;
 import org.viajedragos.modelo.Combatiente;
@@ -26,7 +24,8 @@ public class GolpeCerteroTest {
         contexto.setDanioFinal(10);
 
         GolpeCertero gp = new GolpeCertero();
-        gp.antesDeAplicarDanio(contexto, new EstadoHabilidad(true, 0, 2));
+        jugador.aprenderHabilidad(gp, 2);
+        gp.antesDeAplicarDanio(contexto, jugador.getHabilidades().get(gp));
 
         assertEquals(12, contexto.getDanioFinal());
     }
@@ -41,7 +40,8 @@ public class GolpeCerteroTest {
         contexto.setDanioFinal(0);
 
         GolpeCertero gp = new GolpeCertero();
-        gp.antesDeAplicarDanio(contexto, new EstadoHabilidad(true, 0, 2));
+        jugador.aprenderHabilidad(gp, 2);
+        gp.antesDeAplicarDanio(contexto, jugador.getHabilidades().get(gp));
 
         assertEquals(2, contexto.getDanioFinal());
     }
@@ -56,7 +56,8 @@ public class GolpeCerteroTest {
         contexto.setDanioFinal(-1);
 
         GolpeCertero gp = new GolpeCertero();
-        gp.antesDeAplicarDanio(contexto, new EstadoHabilidad(true, 0, 2));
+        jugador.aprenderHabilidad(gp, 2);
+        gp.antesDeAplicarDanio(contexto, jugador.getHabilidades().get(gp));
 
         assertEquals(2, contexto.getDanioFinal());
     }

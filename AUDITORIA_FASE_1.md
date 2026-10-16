@@ -354,3 +354,108 @@ Comprobación final: **mvn clean test, BUILD SUCCESS; 224 pruebas, 0 fallos, 0 e
 También se ejecutó `java -cp target/classes org.viajedragos.app` en una terminal interactiva con Dado real: iniciar con 1, elegir Atacar durante cinco turnos, victoria con Aventurero a 18/24 y Lobo a 0/18, y salir con 0. El proceso terminó con código 0. Se observaron golpes, daño cero, fallos, actualización de vidas y menú posterior al resultado. `git diff --check` terminó sin errores de formato.
 
 No se han añadido dependencias, patrones, capas, persistencia, inventario, comercio, exploración, huida ni objetos. No hay commit ni push de esta fase. Siguen pendientes las reglas de esas funcionalidades futuras y el equilibrio de combates sin progreso; no se introdujo un límite artificial de turnos. La ejecución desde la interfaz de IntelliJ queda para comprobación del autor; el flujo se ha ejecutado tanto desde terminal como desde las pruebas con entrada/salida controladas.
+
+## Validación de habilidades sin modificar la partida (15 de octubre de 2026)
+
+Base publicada: `072758f`. El autor ha jugado correctamente desde IntelliJ y ha
+confirmado que el primer enfrentamiento debe ser de aprendizaje: Aventurero y
+primer Lobo sin habilidades. Se descarta la propuesta de asignar habilidades
+artificialmente y se aplaza su narración. No se implementa progresión, experiencia,
+recompensas ni adquisición de habilidades.
+
+El análisis de impacto limita este cambio a dos archivos nuevos de pruebas y
+documentación. No se cambia ningún archivo de src/main ni ninguna de las 224
+pruebas anteriores. Las habilidades de prueba son las implementaciones reales,
+con instancias nuevas por combatiente; no se inventan habilidades para estos casos.
+
+### Cobertura nueva
+
+- HabilidadesRealesIntegracionTest: 21 casos. Rabia/Primer impulso alteran fuerza,
+  resistencia, agilidad e iniciativa antes de las tiradas y se restauran sin perder
+  equipo. Ímpetu modifica defensa y ataque posterior. Furia contenida aumenta el
+  ataque tras recibir daño. Instinto se retira mediante alCurarse disparado por Sed
+  y vuelve a activarse tras otro golpe; se limpia al finalizar.
+- Segundo aliento se comprueba en inicio de turno, sin activarse en inicio de
+  combate, con vida inferior a la mitad, exactamente la mitad y vida completa.
+  Un nivel del constructor 40 queda limitado por vida máxima, conservando el nivel
+  de estado 11. Sed de batalla cura 2 tras daño efectivo, incluyendo curación parcial
+  al alcanzar el máximo, sin utilizar su nivel de estado 50 para cambiar la fórmula.
+- Fallo y daño cero no activan Sed ni Ímpetu. La muerte del jugador limpia Rabia
+  concedida por equipo, conservando la pieza, los modificadores y el estado.
+  Caparazón usa su nivel de estado, ignora entradas inactivas y conserva actividad
+  por aprendizaje o equipo. Se integra su nivel combinado y se retira una pieza
+  sin borrar la habilidad aprendida. Debilidad enemiga puede terminar en inicio
+  sin consumir dados. Automático e interactivo producen el mismo resultado y
+  consumen las mismas tiradas con Rabia/Sed; no aparecen mensajes nuevos.
+- RolesModificadoresDanioTest: diez reproducciones de los cinco modificadores,
+  cada uno con dueño atacante y defensor. Se documenta expresamente que sus
+  expectativas caracterizan un defecto pendiente y no una regla aprobada.
+
+En todos los combates completos nuevos se controla el tiempo y el consumo exacto
+de dados. No se invocan directamente los eventos para simular su integración:
+se utilizan combatir, ataque y las operaciones reales de aprender/equipar/retirar.
+
+Resultado final ejecutado: **mvn clean test, BUILD SUCCESS, 255 pruebas,
+0 fallos, 0 errores y 0 omitidas**. Se recompilan 33 fuentes principales y 24
+archivos de pruebas. Son las 224 anteriores sin cambios y 31 nuevas. Los casos
+nuevos ejercitan las 13 habilidades con efectos; FuriaMaximaBerserker continúa
+incompleta y no se asigna. Las impresiones de depuración existentes de Debilidad
+enemiga siguen presentes porque no se modifica código productivo.
+
+ANALISIS_HABILIDADES_DEMO.md registra el rechazo de la propuesta y el nuevo alcance.
+ANALISIS_ROLES_MODIFICADORES_DANIO.md detalla propietario atacante/defensor,
+condiciones, ejemplos numéricos, roles propuestos pendientes de confirmación y
+métodos que se verían afectados. README y checklist reflejan la partida básica.
+No se han corregido los cinco roles ni cambiado fórmulas, niveles, interfaz o
+reglas de finalización. Sin commit ni push.
+
+## Corrección autorizada de los cinco roles de daño (16 de octubre de 2026)
+
+El autor confirmó Caparazón/Defensa perfecta/Guardia férrea solo para el defensor
+y Castigo al torpe/Golpe certero solo para el atacante. Se conservan el estado
+local y los 21 casos de integración de la tarea anterior. La base publicada sigue
+siendo 072758f; no se ha hecho commit ni push.
+
+### Análisis y cambio mínimo
+
+ContextoAtaque ya proporciona atacante y defensor; sus mapas contienen los estados
+asociados a cada habilidad. Combate.dispararHabilidades pasa exactamente ese estado
+al evento y filtra actividad. Aprender/equipar crean estados propios por personaje.
+Por eso no hace falta añadir portador a las firmas ni modificar el contexto o el
+despachador. Comparar solo el tipo de habilidad no bastaría cuando ambos lo tienen.
+
+Los únicos archivos de producción modificados son Caparazon.java,
+CastigoAlTorpe.java, DefensaPerfecta.java, GolpeCertero.java y GuardiaFerrea.java.
+Cada antesDeAplicarDanio añade una guarda: el estado recibido debe coincidir por
+identidad con el asociado a this en el mapa del participante del rol permitido.
+Si no coincide, retorna. El cuerpo anterior permanece después de la guarda.
+Se preservan condiciones, porcentajes, truncamiento, niveles internos, mínimos,
+orden y fases, daño bruto/final, crítico, fallo y contraataque.
+
+No se modifica ninguna otra habilidad, API pública, equipo, app o interfaz. La
+partida de aprendizaje continúa sin habilidades ni narración adicional.
+
+### Pruebas adaptadas y nuevas
+
+- RolesModificadoresDanioTest tiene 41 casos: 10 de roles, 17 de condiciones y
+  límites, 10 de propiedad del mismo tipo/instancia con estados propios y 4 de
+  combinación ofensiva/defensiva con reglas especiales. Consumo exacto de dados.
+- De sus 10 expectativas previas, cambian cinco porque esperaban el defecto del
+  rol incorrecto: Caparazón del atacante pasa de daño 6 a 9; Castigo del defensor
+  de 21 a 17; Defensa perfecta del atacante de 2 a 5; Golpe certero del defensor
+  de 11 a 9; Guardia férrea del atacante de 7 a 9. Las otras cinco se conservan.
+- CastigoAlTorpeTest, DefensaPerfectaTest, GolpeCerteroTest y GuardiaFerreaTest
+  conservan sus 16 casos y valores esperados. Solo registran la habilidad en su
+  propietario y utilizan el estado asociado en la llamada directa al evento.
+  Antes pasaban un estado nuevo que no pertenecía a ningún combatiente.
+- HabilidadesRealesIntegracionTest conserva íntegros sus 21 casos. Las demás
+  pruebas de combate, estados, equipo, restauración y consola pasan sin cambios.
+
+Resultado final ejecutado: **mvn clean test, BUILD SUCCESS; 286 pruebas,
+0 fallos, 0 errores y 0 omitidas**. Se recompilan 33 fuentes principales y 24
+archivos de pruebas. Son los 255 casos anteriores, con las adaptaciones descritas,
+y 31 casos adicionales de roles. No hay pruebas eliminadas ni deshabilitadas.
+
+ANALISIS_ROLES_MODIFICADORES_DANIO.md describe la solución aplicada y los ejemplos
+antes/después. Checklist, análisis de habilidades y README actualizados. La
+propuesta anterior de cambiar firmas queda descartada por innecesaria.

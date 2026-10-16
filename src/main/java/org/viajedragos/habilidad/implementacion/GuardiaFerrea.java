@@ -16,6 +16,9 @@ public class GuardiaFerrea extends Habilidad {
     @Override
     public void antesDeAplicarDanio(ContextoAtaque contexto, EstadoHabilidad estado) {
 
+        // Debe ser el estado asociado a esta habilidad en el defensor.
+        if (contexto.getDefensor().getHabilidades().get(this) != estado) return;
+
         //Primero veo si el ataque haría daño. Si el daño es 0 o menor no me interesa siquiera usar la guardia
         if (contexto.getDanioFinal() > 0) {
 

@@ -21,6 +21,9 @@ public class GolpeCertero extends Habilidad {
     @Override
     public void antesDeAplicarDanio(ContextoAtaque contexto, EstadoHabilidad estado) {
 
+        // Debe ser el estado asociado a esta habilidad en el atacante.
+        if (contexto.getAtacante().getHabilidades().get(this) != estado) return;
+
         if(!contexto.isAtaqueFallido()){
 
             contexto.setDanioFinal(contexto.getDanioFinal() + nivel);

@@ -1,7 +1,5 @@
 package org.viajedragos.habilidad.implementacion;
 
-import org.viajedragos.habilidad.EstadoHabilidad;
-
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.viajedragos.combate.ContextoAtaque;
@@ -29,9 +27,10 @@ public class CastigoAlTorpeTest {
         contexto.setDadoDefensa(dadoDef);
 
         CastigoAlTorpe ct = new CastigoAlTorpe();
+        jugador.aprenderHabilidad(ct, 4);
 
         //Act
-        ct.antesDeAplicarDanio(contexto, new EstadoHabilidad(true, 0, 4));
+        ct.antesDeAplicarDanio(contexto, jugador.getHabilidades().get(ct));
 
         //assert
 

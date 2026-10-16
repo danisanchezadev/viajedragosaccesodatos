@@ -14,6 +14,9 @@ public class Caparazon extends Habilidad {
     @Override
     public void antesDeAplicarDanio(ContextoAtaque contexto, EstadoHabilidad estado) {
 
+        // Debe ser el estado asociado a esta habilidad en el defensor.
+        if (contexto.getDefensor().getHabilidades().get(this) != estado) return;
+
         int nivel = estado.getNivel();
 
         if(contexto.getDanioFinal() > 0){

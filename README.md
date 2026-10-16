@@ -25,6 +25,8 @@ Las entradas inválidas repiten la pregunta sin consumir acciones ni dados.
 Cerrar la entrada interrumpe la sesión; no se interpreta como huida o victoria.
 
 Los valores de Aventurero y Lobo se definen directamente en `app.ejecutar`.
+El primer combate es de aprendizaje: ambos comienzan sin habilidades. Su
+adquisición mediante progresión, recompensas o equipamiento se definirá más adelante.
 Esta demo solo ofrece Atacar; huida, objetos, inventario, exploración y comercio
 quedan pendientes.
 
@@ -45,3 +47,12 @@ java -cp target/classes org.viajedragos.app
 entrada ni salida de consola. La sobrecarga `combatir(Scanner, PrintStream)`
 comparte el mismo motor. Ambos modos aplican la regla confirmada de dos acciones
 por turno; las pruebas anteriores de un ataque por turno se han adaptado a ella.
+
+Las habilidades reales se comprueban con combatientes creados exclusivamente en
+las pruebas de integración, sin asignarlas a la demo ni añadir narración.
+`HabilidadesRealesIntegracionTest` verifica eventos, atributos, curaciones,
+restauración, niveles y equipo. `RolesModificadoresDanioTest` comprueba los roles
+confirmados: Caparazón, Defensa perfecta y Guardia férrea solo en defensa;
+Castigo al torpe y Golpe certero solo en ataque. Incluye condiciones de activación,
+instancias compartidas y reglas especiales. La suite completa pasa con 286 pruebas.
+El análisis y la corrección están en `ANALISIS_ROLES_MODIFICADORES_DANIO.md`.
