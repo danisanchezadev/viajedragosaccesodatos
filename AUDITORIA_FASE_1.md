@@ -459,3 +459,64 @@ y 31 casos adicionales de roles. No hay pruebas eliminadas ni deshabilitadas.
 ANALISIS_ROLES_MODIFICADORES_DANIO.md describe la solución aplicada y los ejemplos
 antes/después. Checklist, análisis de habilidades y README actualizados. La
 propuesta anterior de cambiar firmas queda descartada por innecesaria.
+
+## Fase 4: continuidad entre encuentros (16 de octubre de 2026)
+
+Base local al comenzar: main, 77ede56, árbol limpio y 286 pruebas anteriores.
+El autor aprobó el análisis y autorizó explícitamente las reglas de continuidad
+del adjunto: misma instancia del jugador, vida restante sin recuperación, Lobos
+nuevos con atributos constantes, sin recompensas ni límite de encuentros.
+
+Solo se modifica app.java en producción. ejecutar muestra el menú inicial
+(1 Nueva aventura / 0 Salir) y construye un Aventurero por aventura. El método
+de paquete jugarAventura recibe esa instancia, crea un Lobo/Combate nuevos en
+cada encuentro y conserva al jugador sin reiniciar vida, atributos, equipo ni
+habilidades. Devuelve si corresponde volver al menú inicial o finalizar la sesión.
+No añade clases productivas ni cambia firmas públicas.
+
+Tras victoria: 1 continuar, 2 terminar aventura y volver al inicio, 0 salir.
+Muerte del jugador o de ambos termina la aventura y devuelve al inicio. Terminar
+voluntariamente también descarta el personaje; la siguiente aventura crea otro
+con 24/24 y sin habilidades/equipo. La interrupción de entrada finaliza toda la
+sesión sin resultado ficticio ni reutilización del personaje interrumpido.
+
+Combate, Combatiente, Jugador, Enemigo, ResultadoCombate, habilidades y equipo no
+cambian. La restauración temporal sigue perteneciendo alFinalCombate existente.
+No hay curación entre encuentros, progresión, experiencia, recompensas,
+inventario, persistencia, enemigos nuevos, huida, comercio o narración añadidos.
+
+### Verificación automatizada
+
+- AppTest conserva sus diez escenarios. Solo se adapta el de personajes nuevos:
+  ahora utiliza 2 para terminar la aventura antes de comenzar otra. Se mantienen
+  los dados y las expectativas de vida completa al iniciar una aventura nueva.
+- AventuraTest añade doce casos: conservar vida actual/máxima; identidad del
+  jugador y enemigos distintos; terminar y volver al inicio; nueva aventura con
+  vida completa; muerte y posterior reinicio; muerte simultánea; salida; entradas
+  inválidas sin consumir encuentros; cierre entre encuentros o durante el segundo;
+  efectos temporales sin acumulación ni pérdida de equipo/habilidades.
+- La identidad se observa desde una habilidad exclusiva de prueba sin efectos.
+  La muerte simultánea utiliza una contingencia de prueba, como en los escenarios
+  anteriores del motor; ninguna se asigna a la partida real.
+- La prueba de limpieza recorre dos encuentros con Rabia, Primer impulso, Ímpetu,
+  Instinto de supervivencia y equipo de prueba. Comprueba efectos iguales en ambos
+  inicios, vida 6/24 sin recuperación y restauración de bases/efectivos al finalizar,
+  manteniendo la pieza y los mismos estados de habilidad.
+- Todos los casos nuevos controlan dados y tiempo; los 286 escenarios anteriores
+  se conservan y pasan, incluidos los 21 de habilidades y los 41 de roles intactos.
+
+Resultado final ejecutado: **mvn clean test, BUILD SUCCESS; 298 pruebas,
+0 fallos, 0 errores, 0 omitidas**, recompilando 33 fuentes principales y 25
+archivos de pruebas. No se han eliminado ni deshabilitado pruebas.
+
+### Verificación jugable con dados reales
+
+Se ejecutó java -cp target/classes org.viajedragos.app en terminal interactiva:
+primera victoria tras cuatro turnos con Aventurero a 23/24; continuar a un Lobo
+nuevo de 18/18 con esos mismos 23/24; segunda victoria tras dos turnos, todavía
+a 23/24; opción 2 para terminar; opción 1 para iniciar otra aventura, comprobando
+24/24 y encuentro 1; tercer combate ganado a 20/24; opción 0 para salir. El proceso
+terminó con código 0. No se manipularon tiradas ni atributos.
+
+README y checklist actualizados con las reglas e instrucciones de IntelliJ.
+No se ha hecho commit ni push de esta fase.

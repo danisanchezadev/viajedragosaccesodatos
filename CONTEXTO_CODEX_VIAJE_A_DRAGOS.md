@@ -86,6 +86,18 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - Cuando ambos mueren, existe una noción de prioridad para decidir el orden de resolución. El método `resolverMuertes(Combatiente prioridad)` y su auxiliar `personajeMuere(...)` ya contienen lógica para varios casos, pero deben verificarse las ramas y el cumplimiento de la regla de una sola activación.
 - `resolverMuertes` está pensado para invocarse cuando **al menos uno está muerto**.
 
+### 3.5 Continuidad entre encuentros: fase 4 confirmada
+
+- Cada aventura crea un único Aventurero con los atributos actuales, 24/24 de vida y sin habilidades ni equipo inicial. Se conserva la misma instancia durante toda la aventura.
+- Cada encuentro crea un Lobo y un Combate nuevos. El Lobo mantiene sus atributos actuales, sin cambios automáticos de dificultad. No se fija un máximo de encuentros.
+- El jugador conserva exactamente la vida restante y su vida máxima, sin curación entre encuentros. No se reinician atributos ni se eliminan equipo o habilidades; la limpieza temporal sigue en alFinalCombate.
+- Tras victoria: `1. Continuar al siguiente encuentro`, `2. Terminar aventura y volver al menú inicial`, `0. Salir del programa`. Continuar conserva al jugador; terminar lo descarta; salir termina la sesión.
+- Menú inicial: `1. Nueva aventura`, `0. Salir`. Una nueva aventura crea un personaje nuevo.
+- Muerte del jugador o de ambos: mostrar resultado, terminar aventura y volver al menú inicial. El motor resuelve previamente sus muertes y contingencias según las reglas existentes.
+- Sin oro, experiencia, objetos, recompensas ni progresión. Su adquisición futura no se implementa.
+- Si se interrumpe la entrada durante el combate, termina la sesión sin resultado ficticio ni reutilización del personaje interrumpido.
+- Implementación limitada a app.java: ejecutar conserva el menú inicial y crea el jugador; jugarAventura, de acceso de paquete, contiene la repetición de encuentros y devuelve si corresponde volver al inicio o salir. No cambia el motor ni sus contratos.
+
 ## 4. Habilidades
 
 - `Habilidad` es una clase abstracta que implementa una interfaz de eventos (`EventosHabilidad`).
@@ -123,7 +135,7 @@ Estas áreas forman parte del objetivo del producto, pero **no se han establecid
 - **Comercio:** previsto como mecánica sencilla de compra/venta o interacción con una tienda; precios, moneda, descuentos y restricciones **no están confirmados para esta aplicación**. No importar reglas de ejercicios independientes sobre Strategy y tipos de cliente.
 - **Progresión:** no hay aquí una especificación confirmada de experiencia, niveles, clases de personaje o distribución de atributos para el MVP. No inventarla.
 - **Huida y uso de objetos en combate:** son acciones previstas, pero sus probabilidades, consecuencias y límites necesitan decisión o comprobación del código.
-- **Fin de partida, curación, recompensas y persistencia del estado entre encuentros:** pendiente de especificación.
+- **Continuidad actual:** mismo jugador, vida restante sin curación, Lobos nuevos, sin recompensas, muerte termina aventura y menús según 3.5. No hay persistencia; otras mecánicas futuras siguen sin definir.
 
 ## 7. Estructura de código conocida (orientativa; verificar)
 
@@ -157,9 +169,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 16 de octubre de 2026. Base publicada `072758f`, rama main, con combate interactivo. Se conservan en local la validación de habilidades y la corrección autorizada de los cinco roles de daño. Solo cambian esos cinco métodos productivos, sin modificar contratos públicos. Aventurero y el primer Lobo siguen sin habilidades. Sin commit ni push de estos cambios.
+> **Estado:** 16 de octubre de 2026. Base `77ede56` de main, con los cinco roles corregidos. En local está implementada la fase 4 de continuidad autorizada: solo cambia app.java en producción. Mismo jugador durante la aventura, Lobos nuevos y vida sin recuperación; sin habilidades ni equipo iniciales. Sin commit ni push de esta fase.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 33 fuentes principales y 24 archivos de pruebas recompilados; 286 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan íntegros los 21 casos de HabilidadesRealesIntegracionTest. RolesModificadoresDanioTest pasa de 10 caracterizaciones a 41 regresiones con roles correctos. Cuatro archivos unitarios registran el propietario sin cambiar sus 16 resultados esperados. App, motor, contexto, eventos y equipo no cambian.
+> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 33 fuentes principales y 25 archivos de pruebas recompilados; 298 pruebas, 0 fallos, 0 errores, 0 omitidas. Son los 286 escenarios anteriores y 12 nuevos de AventuraTest. Se adapta solo el escenario de AppTest que exigía personajes nuevos en cada combate: ahora comprueba una aventura nueva tras terminar la anterior. Motor, modelo, habilidades y equipo permanecen intactos. Flujo completo jugado en terminal con dados reales.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -173,14 +185,14 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 286 pruebas ejecutadas sin fallos ni errores; incluye las 21 de integración real intactas y 41 de roles, condiciones, instancias compartidas y reglas especiales.
+- [x] Suite JUnit: 298 pruebas ejecutadas sin fallos ni errores; conserva los 286 escenarios anteriores y añade 12 de continuidad, incluidos los 21 de integración real y 41 de roles sin cambios.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
 - [x] Auditar clases, paquetes, firmas, dependencias y referencias del repositorio.
 - [x] Comprobar compilación del código principal: `mvn compile` termina correctamente.
 - [x] Ejecutar las pruebas existentes con `mvn test`.
-- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 286 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
+- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 298 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
 - [x] Revisar `EventosHabilidad`: todas sus firmas actuales y overrides implementados reciben `EstadoHabilidad` y compilan en el código principal.
 - [x] Revisar y corregir las seis llamadas del borrador a `dispararHabilidades`: las lambdas reciben habilidad y estado y pasan ese estado al evento.
 - [x] Activar el auxiliar existente `dispararHabilidades` para usarlo desde ataque, recorriendo habilidad y estado juntos.
@@ -213,7 +225,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] El constructor de Equipo copia ambos mapas y sus getters devuelven mapas de solo lectura; proteger también los mapas de ranuras y modificadores de Combatiente. No se encontraron llamadas existentes que necesiten escribir mediante esos getters.
 - [x] Confirmar el +2 del turno: solo suma al cálculo de iniciativa + 1D6 del poseedor; no modifica atributos ni agilidad.
 - [x] Confirmar y aplicar excepción de iniciativas cero, repetición iterativa y prueba de 10.000 empates sin acumular pila.
-- [x] Crear interfaz de consola: app.main presenta el juego, inicia combate, muestra vidas y resultado, y permite repetir con personajes nuevos o salir. Las entradas inválidas repiten la pregunta sin consumir dados ni acciones. Sin System.exit.
+- [x] Crear interfaz de consola: app.main presenta el juego, inicia aventura, muestra vidas y resultado, y permite continuar con el mismo personaje, terminar aventura o salir. Las entradas inválidas repiten la pregunta sin consumir dados ni acciones. Sin System.exit.
 - [x] Integrar Atacar después de determinar el orden, únicamente cuando llega la acción del jugador. El ataque previo del enemigo se resuelve antes de preguntar; una muerte definitiva impide la acción pendiente y una resurrección permite continuar.
 - [x] Conservar combatir() automático y añadir combatir(Scanner, PrintStream) con un bucle compartido. La narración muestra atacante, objetivo, fallo, crítico, contraataque y vida realmente perdida.
 - [x] Probar consola con dados controlados y flujos en memoria: inicio, decisión, entradas inválidas, victoria/derrota, mensaje de muerte simultánea, resurrección, reinicio, salida, cierre de entrada y equivalencia de ambos modos.
@@ -229,7 +241,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [ ] Definir e implementar huir y usar objeto; no se ofrecen en la consola actual.
 - [ ] Definir e implementar inventario y adquisición/consumo de objetos.
 - [ ] Definir e implementar comercio mínimo si lo requiere el MVP.
-- [ ] Definir el final del encuentro, recompensas y transición al siguiente.
+- [x] Confirmar e implementar la continuidad de fase 4: misma instancia del jugador, vida restante sin recuperación, Lobos nuevos, sin recompensas ni límite de encuentros; muerte/terminación voluntaria devuelve al inicio y nueva aventura crea otro jugador.
+- [x] Añadir 12 casos de AventuraTest: identidad jugador/enemigos, vida actual/máxima, menús, muerte y muerte simultánea, entrada inválida/interrumpida y limpieza temporal con equipo y habilidades de prueba.
+- [x] Comprobar flujo en terminal con Dado real: primera victoria a 23/24, continuar a otro Lobo con 23/24, segunda victoria, terminar aventura, nueva aventura a 24/24, completar combate y salir con código 0. No se alteran tiradas ni atributos.
 - [x] Añadir y ejecutar 34 escenarios de EquipamientoTest y 8 de HabilidadesConEquipoTest por autorización expresa del autor.
 - [x] Añadir y ejecutar 46 escenarios de AtaqueTest: combinaciones, críticos, daño cero/letal, atacante enemigo y dado inválido. Estos escenarios no añaden habilidades; su integración se prueba en EventosAtaqueTest.
 - [x] Conservar los 46 escenarios de AtaqueTest y añadir 19 de EventosAtaqueTest: fases, destinatarios, contexto único, estados diferentes, bruto/final, habilidades reales, cero/fallo/letal y contraataques sin duplicación.
@@ -283,7 +297,7 @@ Después de programar, informa de:
 - No existe un modificador de agilidad del turno: el +2 se aplica exclusivamente al cálculo de iniciativa del poseedor.
 - ¿Qué reglas concretas rigen huida, uso de objetos, inventario y comercio?
 - Confirmado: alFinalCombate solo del jugador, siempre, como limpieza incluso muerto; el enemigo no participa.
-- ¿Qué ocurre al terminar cada encuentro y qué recompensas se conceden?
+- Confirmado en fase 4: tras victoria se permite continuar/terminar aventura/salir; no hay recompensas ni recuperación entre encuentros. Futuras ampliaciones necesitan reglas propias.
 - ¿Qué catálogo mínimo de enemigos y objetos quiere el autor para la primera demo?
 
 Si alguna de estas respuestas ya está expresada de forma inequívoca en código o pruebas del repositorio, documentarla con referencia a los archivos correspondientes. Si no, pedir una decisión concreta antes de implementarla.

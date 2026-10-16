@@ -19,9 +19,8 @@ public class app {
     public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados) {
         salida.println("=== Viaje a Dragos ===");
         salida.println("Un combate por turnos. La iniciativa decide quién actúa primero.");
-        boolean primerCombate = true;
         while (true) {
-            salida.println(primerCombate ? "1. Iniciar combate" : "1. Nuevo combate");
+            salida.println("1. Nueva aventura");
             salida.println("0. Salir");
             salida.print("> ");
             salida.flush();
@@ -38,22 +37,58 @@ public class app {
                 salida.println("Entrada inválida. Escribe 1 o 0.");
                 continue;
             }
-            // Cada combate utiliza personajes nuevos, sin conservar daño ni efectos.
+            // Un jugador por aventura; continuar nunca reconstruye este personaje.
             Jugador jugador = new Jugador("Aventurero", "", 6, 2, 3, 2, 2, 24, 24);
+            if (!jugarAventura(jugador, entrada, salida, dados)) return;
+        }
+    }
+
+    // Devuelve true para volver al menú inicial y false para terminar la sesión.
+    static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida, TiradorDado dados) {
+        int encuentro = 1;
+        while (true) {
             Enemigo enemigo = new Enemigo("Lobo", "", 5, 2, 2, 1, 2, 18, 18);
-            salida.println("Comienza el combate: Aventurero contra Lobo.");
+            salida.printf("%nEncuentro %d.%n", encuentro);
+            salida.printf("Comienza el combate: %s contra %s.%n", jugador.getNombre(), enemigo.getNombre());
             ResultadoCombate resultado;
             try {
                 resultado = new Combate(jugador, enemigo, dados).combatir(entrada, salida);
             } catch (NoSuchElementException finEntrada) {
                 salida.println("Entrada finalizada. Sesión interrumpida; el combate queda sin terminar.");
-                return;
+                return false;
             }
             salida.printf("Vida final: %s %d/%d | %s %d/%d%n",
                     jugador.getNombre(), jugador.getVida(), jugador.getVidaMaxima(),
                     enemigo.getNombre(), enemigo.getVida(), enemigo.getVidaMaxima());
             mostrarResultado(resultado, salida);
-            primerCombate = false;
+            if (resultado == ResultadoCombate.JUGADOR_MUERE || resultado == ResultadoCombate.AMBOS_MUEREN) {
+                salida.println("La aventura ha terminado.");
+                return true;
+            }
+
+            while (true) {
+                salida.println("1. Continuar al siguiente encuentro");
+                salida.println("2. Terminar aventura y volver al menú inicial");
+                salida.println("0. Salir del programa");
+                salida.print("> ");
+                salida.flush();
+                if (!entrada.hasNextLine()) {
+                    salida.println("Entrada finalizada. Hasta pronto.");
+                    return false;
+                }
+                String opcion = entrada.nextLine().trim();
+                if (opcion.equals("0")) {
+                    salida.println("Hasta pronto.");
+                    return false;
+                }
+                if (opcion.equals("2")) {
+                    salida.println("La aventura ha terminado.");
+                    return true;
+                }
+                if (opcion.equals("1")) break;
+                salida.println("Entrada inválida. Escribe 1, 2 o 0.");
+            }
+            encuentro++;
         }
     }
 
