@@ -9,10 +9,12 @@ import org.viajedragos.combate.ResultadoCombate;
 import org.viajedragos.combate.TiradorDado;
 import org.viajedragos.modelo.Enemigo;
 import org.viajedragos.modelo.Jugador;
+import org.viajedragos.modelo.TipoPocion;
 
 import java.io.PrintStream;
 import java.util.NoSuchElementException;
 import java.util.Map;
+import java.util.Random;
 import java.util.Scanner;
 
 public class app {
@@ -21,6 +23,11 @@ public class app {
     }
 
     public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados) {
+        // Un generador de botín por sesión, distinto del generador interno de Dado.
+        ejecutar(entrada, salida, dados, new Random());
+    }
+
+    static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin) {
         salida.println("=== Viaje a Dragos ===");
         salida.println("Un combate por turnos. La iniciativa decide quién actúa primero.");
         while (true) {
@@ -43,12 +50,17 @@ public class app {
             }
             // Un jugador por aventura; continuar nunca reconstruye este personaje.
             Jugador jugador = new Jugador("Aventurero", "", 6, 2, 3, 2, 2, 24, 24);
-            if (!jugarAventura(jugador, entrada, salida, dados)) return;
+            if (!jugarAventura(jugador, entrada, salida, dados, azarBotin)) return;
         }
     }
 
     // Devuelve true para volver al menú inicial y false para terminar la sesión.
     static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida, TiradorDado dados) {
+        return jugarAventura(jugador, entrada, salida, dados, new Random());
+    }
+
+    static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
+                                 TiradorDado dados, Random azarBotin) {
         int encuentro = 1;
         while (true) {
             Enemigo enemigo = new Enemigo("Lobo", "", 5, 2, 2, 1, 2, 18, 18);
@@ -70,8 +82,11 @@ public class app {
                 return true;
             }
 
-            if (resultado == ResultadoCombate.ENEMIGO_MUERE && encuentro == 1
-                    && !ofrecerEspada(jugador, entrada, salida)) return false;
+            if (resultado == ResultadoCombate.ENEMIGO_MUERE) {
+                // Solo una vez tras la resolución definitiva, fuera de los menús.
+                obtenerBotin(jugador, azarBotin, salida);
+                if (encuentro == 1 && !ofrecerEspada(jugador, entrada, salida)) return false;
+            }
 
             while (true) {
                 salida.println("1. Continuar al siguiente encuentro");
@@ -96,6 +111,17 @@ public class app {
                 salida.println("Entrada inválida. Escribe 1, 2 o 0.");
             }
             encuentro++;
+        }
+    }
+
+    static void obtenerBotin(Jugador jugador, Random azarBotin, PrintStream salida) {
+        if (azarBotin.nextInt(100) < 50) {
+            jugador.agregarPocion(TipoPocion.PEQUENA);
+            salida.printf("Botín: %s (+1).%n", TipoPocion.PEQUENA.getNombre());
+        }
+        if (azarBotin.nextInt(100) < 20) {
+            jugador.agregarPocion(TipoPocion.GRANDE);
+            salida.printf("Botín: %s (+1).%n", TipoPocion.GRANDE.getNombre());
         }
     }
 

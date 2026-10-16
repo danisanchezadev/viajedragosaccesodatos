@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Random;
 import java.util.function.IntConsumer;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -52,7 +53,7 @@ class RecompensaTest {
 
     private boolean jugar(Jugador j, String entrada, Dados dados) {
         boolean volver = assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(j, new Scanner(entrada), consola(), dados));
+                app.jugarAventura(j, new Scanner(entrada), consola(), dados, new Random(0)));
         dados.comprobarConsumo();
         return volver;
     }
@@ -197,7 +198,7 @@ class RecompensaTest {
         // Segundo personaje: ataque normal 4/2 causa 7, no los 8 que daría la espada.
         Dados dados = new Dados(VICTORIA, new int[]{1, 1, 1, 1, 4, 2, 1, 2, 1, 6, 4, 1});
         assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.ejecutar(new Scanner("1\n1\n1\n2\n1\n1\n1\n2\n0\n"), consola(), dados));
+                app.ejecutar(new Scanner("1\n1\n1\n2\n1\n1\n1\n2\n0\n"), consola(), dados, new Random(0)));
         dados.comprobarConsumo();
         assertEquals(2, veces("Encuentro 1."));
         assertEquals(2, veces("Has encontrado una Espada desgastada"));

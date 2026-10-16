@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Random;
 import java.util.function.IntConsumer;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -48,13 +49,13 @@ class AventuraTest {
 
     private void ejecutar(String entrada, Dados dados) {
         assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.ejecutar(new Scanner(entrada), consola(), dados));
+                app.ejecutar(new Scanner(entrada), consola(), dados, new Random(0)));
         dados.comprobarConsumo();
     }
 
     private boolean jugar(Jugador jugador, String entrada, Dados dados) {
         boolean volverAlInicio = assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(jugador, new Scanner(entrada), consola(), dados));
+                app.jugarAventura(jugador, new Scanner(entrada), consola(), dados, new Random(0)));
         dados.comprobarConsumo();
         return volverAlInicio;
     }

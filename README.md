@@ -19,18 +19,42 @@ El menú inicial ofrece `1. Nueva aventura` y `0. Salir`. Cada aventura crea un
 Aventurero con 24/24 de vida, sin habilidades ni equipamiento. Cada encuentro crea
 un Lobo nuevo con los valores actuales, sin dificultad automática ni límite de
 encuentros. Al continuar se conserva exactamente la vida restante del Aventurero:
-no hay curación entre encuentros ni progresión. La única recompensa es la espada
-fija después del primer Lobo; no vuelve a ofrecerse durante esa aventura.
+no hay curación automática entre encuentros ni progresión. La espada fija se ofrece
+después del primer Lobo y no vuelve a ofrecerse durante esa aventura. Además, cada
+enemigo derrotado definitivamente puede dejar pociones.
 
 La espada permanece equipada y su bonificación no se acumula. La fuerza base
 sigue siendo 6 y la efectiva pasa a 7. Equiparla no recupera vida. Las entradas
 inválidas repiten la elección; cerrar la entrada durante la oferta termina la
-sesión sin equiparla. No existe inventario ni sustitución de armas.
+sesión sin equiparla. No hay inventario de armas ni sustitución de equipo.
+
+## Botín de pociones
+
+Después de cada victoria se realizan dos comprobaciones independientes:
+
+- Poción pequeña: 50 % de probabilidad, una unidad si tiene éxito.
+- Poción grande: 20 % de probabilidad, una unidad si tiene éxito.
+
+Puede obtenerse ninguna, una de las dos o ambas. La consola informa solo de las
+unidades obtenidas. No hay botín por derrota, muerte simultánea o combate
+interrumpido. Se espera al resultado definitivo después de posibles resurrecciones.
+
+Las cantidades se acumulan en el inventario encapsulado del mismo Aventurero,
+durante toda la aventura. Morir o terminar la aventura descarta el personaje y
+sus pociones; una nueva aventura empieza con inventario vacío. Obtenerlas no cura.
+La pequeña recuperará 8 PS y la grande 16 PS cuando se implemente su uso: por ahora
+no se pueden consumir, no hay consulta interactiva ni menú de inventario.
+
+El botín utiliza un Random propio, conservado durante la sesión, separado de los
+dados de combate. Cada victoria solicita dos valores 0–99: éxito con <50 para la
+pequeña y <20 para la grande. Los menús no repiten estas comprobaciones. En la
+primera victoria se informa del botín antes de ofrecer la espada; sus opciones
+y reglas no cambian.
 
 Si muere el Aventurero, incluso si mueren ambos, se muestra el resultado y se
 regresa al menú inicial. Terminar voluntariamente la aventura también descarta
-el personaje junto con su equipo. Una nueva aventura comienza con otro Aventurero
-a 24/24, sin espada, y puede conseguir su propia recompensa después de ganar.
+el personaje junto con su equipo e inventario. Una nueva aventura comienza con
+otro Aventurero a 24/24, sin espada ni pociones, y puede conseguir sus propias recompensas.
 
 Cada turno ordena las dos acciones mediante la iniciativa y los dados existentes.
 El enemigo ataca automáticamente cuando le corresponde. Si actúa primero, su
@@ -51,8 +75,8 @@ enemigo/Combate por encuentro y deja la limpieza de efectos a alFinalCombate.
 no modifica fuerza directamente ni llama a aplicarEfectos manualmente.
 El primer combate es de aprendizaje: ambos comienzan sin habilidades. Su
 adquisición mediante progresión, recompensas o equipamiento se definirá más adelante.
-Esta demo solo ofrece Atacar; huida, objetos, inventario, exploración y comercio
-quedan pendientes.
+Esta demo solo ofrece Atacar en combate; consumo de objetos, menús de inventario,
+huida, cofres, mazmorras, exploración y comercio quedan pendientes.
 
 ## Comprobar el proyecto
 
@@ -78,7 +102,7 @@ las pruebas de integración, sin asignarlas a la demo ni añadir narración.
 restauración, niveles y equipo. `RolesModificadoresDanioTest` comprueba los roles
 confirmados: Caparazón, Defensa perfecta y Guardia férrea solo en defensa;
 Castigo al torpe y Golpe certero solo en ataque. Incluye condiciones de activación,
-instancias compartidas y reglas especiales. La suite completa pasa con 309 pruebas.
+instancias compartidas y reglas especiales. La suite completa pasa con 338 pruebas.
 El análisis y la corrección están en `ANALISIS_ROLES_MODIFICADORES_DANIO.md`.
 
 `AventuraTest` añade 12 casos de continuidad: identidad del jugador, enemigos
@@ -94,4 +118,17 @@ espada, daño real 7→8 con dados 4/2 y limpieza temporal que conserva la bonif
 También comprueba que una ranura ocupada no se sustituye ni se anuncia como éxito.
 
 La continuidad entre encuentros está publicada en `main`, commit `6fc2a8d`.
-La recompensa de esta fase se ha implementado localmente; no se ha hecho commit ni push.
+La Espada desgastada está publicada en `ec9dc46`. El botín de pociones se ha
+implementado localmente; no se ha hecho commit ni push.
+
+`InventarioPocionesTest` añade 8 casos de cantidades, recuperación futura,
+independencia entre jugadores, encapsulación y ausencia de curación automática.
+`BotinPocionesTest` añade 21 casos de límites, cuatro resultados, acumulación,
+continuidad, muertes/resurrección, interrupciones, compatibilidad con la espada y
+consumo exacto de aleatoriedad. Enumera las 10.000 parejas posibles sin muestreo
+aleatorio: 40 % ninguna, 40 % solo pequeña, 10 % solo grande, 10 % ambas.
+
+Las firmas originales de ejecutar/jugarAventura siguen disponibles; las
+sobrecargas de paquete permiten fijar un Random distinto del TiradorDado en
+pruebas. Jugador expone cantidades y un mapa de solo lectura, sin operaciones de
+consumo. No se añaden clases genéricas de inventario ni cambios al motor.

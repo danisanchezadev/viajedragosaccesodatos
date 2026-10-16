@@ -11,6 +11,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Scanner;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,7 +24,7 @@ class AppTest {
             return valores[usadas[0]++];
         };
         assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.ejecutar(new Scanner(entrada), new PrintStream(salida, true, StandardCharsets.UTF_8), dados));
+                app.ejecutar(new Scanner(entrada), new PrintStream(salida, true, StandardCharsets.UTF_8), dados, new Random(0)));
         assertEquals(valores.length, usadas[0]);
         return salida.toString(StandardCharsets.UTF_8);
     }

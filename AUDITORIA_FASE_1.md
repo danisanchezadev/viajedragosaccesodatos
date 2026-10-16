@@ -2,7 +2,7 @@
 
 Fecha: 14 de octubre de 2026.
 
-> **Estado actual (16 de octubre de 2026):** continuidad publicada en GitHub, main `6fc2a8d`. Fase 5 de Espada desgastada implementada localmente, sin commit ni push de esa fase. `mvn clean test`: 309 pruebas pasan, sin fallos, errores ni omisiones. Los apartados siguientes conservan los hallazgos y resultados históricos de cada etapa; la fase más reciente se documenta al final.
+> **Estado actual (16 de octubre de 2026):** base publicada ec9dc46, Espada desgastada; continuidad publicada en 6fc2a8d. Botín de pociones implementado localmente, sin consumo ni menús. `mvn clean test`: 338 pruebas pasan, sin fallos, errores ni omisiones. Sin commit ni push del botín. Los apartados siguientes conservan el historial de cada etapa; la más reciente se documenta al final.
 
 ## Alcance y resultado
 
@@ -527,6 +527,9 @@ Esta fase se publicó posteriormente en 6fc2a8d; la fase 5 parte de ese commit.
 
 ## Fase 5: primera recompensa de equipamiento (16 de octubre de 2026)
 
+Publicada posteriormente en main ec9dc46. El relato de implementación siguiente
+es histórico; la espada ya no es trabajo pendiente de publicar.
+
 Base de implementación: main 6fc2a8d, continuidad ya publicada en GitHub y árbol
 limpio al comenzar. El autor aprobó el análisis y autorizó una recompensa fija:
 Espada desgastada, ARMA, FUERZA +1, sin habilidades, exclusivamente después de
@@ -597,4 +600,46 @@ ganar ese combate a 13/24, se rechaza su propia oferta y se sale; código final 
 
 README, checklist y cabecera del informe actualizados. Se corrigen las referencias
 que describían continuidad como local/no publicada: fase 4 está publicada en
-6fc2a8d; únicamente esta fase 5 permanece sin commit ni push.
+6fc2a8d. Posteriormente se publicó también la fase 5 en ec9dc46, base del botín de pociones.
+
+## Botín de pociones — 16 de octubre de 2026
+
+Implementación local sobre ec9dc46, sin commit ni push. Se incorpora TipoPocion
+con pequeña (recuperación futura de 8 PS) y grande (16 PS). Jugador encapsula sus
+cantidades en un EnumMap: permite añadir una unidad, consultar cantidades y obtener
+una vista de solo lectura. Recibir pociones no cura ni modifica atributos.
+
+app genera el botín una sola vez tras ENEMIGO_MUERE, antes de la oferta de espada
+y del menú de continuación. Realiza siempre dos comprobaciones independientes
+nextInt(100): pequeña con resultado menor que 50 y grande menor que 20. Utiliza
+un Random separado de TiradorDado, creado una vez por sesión y reutilizado entre
+encuentros. La variante directa de jugarAventura conserva ese generador durante
+toda su aventura. Se mantienen las firmas anteriores mediante sobrecargas.
+
+El inventario permanece con el mismo jugador entre encuentros. Al terminar o
+morir se descarta ese personaje en el flujo de la aplicación; un jugador nuevo
+empieza sin pociones, equipo ni habilidades. No hay botín por derrota, muerte
+simultánea ni combate interrumpido. La Espada desgastada conserva sus reglas.
+No se modifica Combate, Dado, equipamiento ni ninguna habilidad. Quedan pendientes
+el consumo y la interacción con el inventario; no se añaden menús para ello.
+
+### Pruebas y compatibilidad
+
+- InventarioPocionesTest: 8 casos para cantidades, aislamiento, encapsulación,
+  metadatos, constructores y ausencia de efectos sobre el personaje.
+- BotinPocionesTest: 21 casos para los cuatro resultados, umbrales, acumulación,
+  continuidad, aventuras nuevas, muerte, resurrección, interrupción, entradas
+  inválidas y compatibilidad con la espada y las tiradas de combate.
+- Enumeración determinista de las 10.000 parejas posibles: 4.000 sin pociones,
+  4.000 solo pequeña, 1.000 solo grande y 1.000 ambas.
+- AppTest, AventuraTest y RecompensaTest solo adaptan sus generadores de botín
+  para que las pruebas existentes sean deterministas; conservan sus escenarios.
+
+Resultado real de mvn clean test: BUILD SUCCESS, **338 pruebas, 0 fallos,
+0 errores y 0 omitidas**, compilando 34 fuentes principales y 28 archivos de
+pruebas. Se conservan los 309 casos anteriores y se añaden 29. No se han detectado
+incompatibilidades. Esta fase se verifica mediante pruebas automatizadas, sin
+atribuirle el recorrido manual de consola documentado en la fase anterior.
+
+README y documento de contexto actualizados con el alcance implementado, la
+checklist, las pruebas y las referencias publicadas frente a los cambios locales.
