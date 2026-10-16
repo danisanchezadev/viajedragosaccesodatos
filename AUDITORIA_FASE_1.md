@@ -2,7 +2,7 @@
 
 Fecha: 14 de octubre de 2026.
 
-> **Estado actual (16 de octubre de 2026):** base publicada c1d20d, botín de pociones; espada publicada en ec9dc46 y continuidad en 6fc2a8d. Cambios locales: menú de exploración, consulta de inventario/equipo y consumo de pociones entre combates. `mvn clean test`: 369 pruebas pasan, sin fallos, errores ni omisiones. Sin commit ni push de esta fase. Los apartados siguientes conservan el historial de cada etapa; la más reciente se documenta al final.
+> **Estado actual (16 de octubre de 2026):** base publicada e363c95, exploración y consumo fuera del combate; botín publicado en c1d20d. Cambios locales: uso de pociones durante la acción del jugador, sin perder la compatibilidad con otros Combatiente. `mvn clean test`: 398 pruebas pasan, sin fallos, errores ni omisiones. Sin commit ni push de esta fase. Los apartados siguientes conservan el historial de cada etapa; la más reciente se documenta al final.
 
 ## Alcance y resultado
 
@@ -649,6 +649,10 @@ checklist, las pruebas y las referencias publicadas frente a los cambios locales
 
 ## Exploración, inventario y consumo entre combates — 16 de octubre de 2026
 
+Nota de continuidad: esta fase se publicó posteriormente en e363c95. Sus notas de
+entrega se conservan como historial, incluida la ausencia de objetos en combate
+en aquella versión.
+
 Base: main c1d20d3, botín de pociones publicado y árbol inicialmente limpio.
 El autor aprobó el análisis y limitó los cambios a Jugador, app, el comentario de
 TipoPocion, pruebas y documentación. No se hace commit ni push de esta fase.
@@ -708,3 +712,68 @@ atribuye a esta fase una sesión manual jugada desde IntelliJ.
 README, contexto y checklist actualizados. Las referencias actuales reconocen
 c1d20d como botín publicado; sus notas de entrega originales quedan como historial.
 Pendientes: objetos en combate, huida, mazmorra, cofres, otros consumibles y comercio.
+
+## Uso de pociones durante el combate — 16 de octubre de 2026
+
+Base: main e363c95, árbol inicialmente limpio. Tras aprobar el análisis, el autor
+autoriza modificar solo Combate.java, pruebas y documentación. Exige conservar
+el constructor con Combatiente y los participantes que no sean Jugador. No se
+crean clases productivas, ni se hace commit o push de esta fase.
+
+### Implementación e impacto
+
+- combatirInterno conserva su bucle común. En modo consola, la acción del jugador
+  llama a elegirAtaque: true ejecuta ataque; false solo puede significar que una
+  poción se utilizó con éxito y la acción ya terminó. El enemigo sigue atacando.
+- elegirAtaque sustituye al método privado esperarAtaque; ofrece 1 Atacar y,
+  exclusivamente si el participante es Jugador, 2 Usar objeto. El submenú mantiene
+  1 pequeña, 2 grande y 0 cancelar aunque no haya existencias. Usa separadores ASCII.
+- usarPocionEnCombate reutiliza Jugador.usarPocion; no calcula otra curación ni
+  altera el mapa de inventario. Muestra recuperación real, vida y unidades. Devuelve
+  true solo tras recuperación positiva; cancelar devuelve false al menú del turno.
+  Inválidos, falta de poción, vida completa o consumo rechazado permiten elegir
+  de nuevo sin terminar la acción. Un éxito no crea ContextoAtaque ni dispara
+  sus eventos o dados. Se conserva la comprobación común de muertes tras la acción.
+- Para otros Combatiente en el lugar del jugador, el menú mantiene únicamente
+  Atacar. La entrada 2 se rechaza sin conversión ni acción ficticia. El modo
+  automático sigue atacando, aunque el jugador tenga pociones y esté herido.
+- No cambian las firmas públicas, la iniciativa, el orden de las dos acciones,
+  los eventos de turno, la resolución de muertes/resurrecciones o la limpieza.
+  No se modifican Jugador, app, habilidades, equipo, dados, botín ni espada.
+- La curación mantiene alCurarse con estado y nivel. Instinto puede retirar su
+  bonificación antes de la acción enemiga y reactivarla tras recibir daño según
+  sus reglas; la limpieza conserva el equipo sin retirar dos veces el efecto.
+  Segundo aliento puede completar la vida al inicio del turno antes del menú.
+- Cerrar la entrada mantiene NoSuchElementException. app ya la captura y termina
+  la sesión sin resultado ficticio, botín ni finalización de combate incompleto.
+  No se cierran los flujos del llamador. El menú de exploración no se modifica.
+
+### Pruebas y resultado real
+
+Se conservan los **369 casos anteriores sin cambiar sus entradas o expectativas**.
+Se añaden 29 casos a archivos de pruebas existentes:
+
+- CombateConsolaTest: 25 nuevos, 37 en total. Ambas pociones sustituyen al ataque;
+  enemigo antes/después; cancelación, inválidos, existencias cero, vida completa,
+  recuperación parcial, última unidad y rechazo del modelo sin consumo de acción.
+  Verifica las fases y eventos de ataque/turno/curación, estados/niveles/actividad,
+  Instinto con equipo, Segundo aliento, muerte, resurrección y limpieza. También
+  cierre de entrada en ambos menús, modo automático sin consumo, participante no
+  Jugador sin conversión y equivalencia de sus tres turnos con el modo automático.
+- ExploracionTest: 4 nuevos, 21 en total. Dos encuentros con botín y espada;
+  consumo en combate, consulta posterior y consumo fuera del combate sobre el
+  mismo inventario. Verifica cantidades/vida, oferta única, cuatro llamadas de
+  botín y consumo exacto de dados. Tres cierres de entrada en la nueva interacción
+  se comprueban desde app, sin botín ni resultado inventado ni más encuentros.
+
+Se ejecutaron mvn test (392 casos en la comprobación intermedia) y después
+**mvn clean test**, ya con todos los casos nuevos: **BUILD SUCCESS; 398 pruebas,
+0 fallos, 0 errores y 0 omitidas**. Se recompilaron 34 fuentes principales y 30
+archivos de pruebas. No se detectaron incompatibilidades ni errores de compilación.
+La consola se verifica con Scanner/PrintStream en memoria y dados controlados;
+no se atribuye a esta fase una partida manual desde IntelliJ.
+
+README, contexto y checklist actualizados. Se reconoce e363c95 como la fase de
+exploración publicada y se conserva el historial de entregas previas. Pendientes:
+huida, otros consumibles, cofres, mazmorra, nuevos enemigos y comercio. Sin nuevas
+reglas, persistencia ni arquitectura genérica de acciones.

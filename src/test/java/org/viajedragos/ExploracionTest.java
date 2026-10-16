@@ -224,4 +224,72 @@ class ExploracionTest {
         assertEquals(1, texto().split("Comienza el combate", -1).length - 1);
         assertTrue(texto().endsWith("Entrada finalizada. Hasta pronto." + System.lineSeparator()));
     }
+
+    @Test
+    void pocionEnCombateConservaInventarioBotinYConsumoPosteriorEnExploracion() {
+        Jugador j = jugador(24);
+        int[] tiradas = {1, 1, 1, 6, 6, 1, 6, 6, 1, 6,
+                1, 1, 1, 1, 4, 2, 1, 6, 6, 1, 6};
+        int[] usadas = {0};
+        int[] botin = {0};
+        Random azar = new Random(0) {
+            @Override
+            public int nextInt(int bound) {
+                assertEquals(100, bound);
+                assertTrue(botin[0]++ < 4);
+                return 0;
+            }
+        };
+        assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.jugarAventura(j,
+                new Scanner("1\n1\n3\n2\n1\n1\n1\n0\n2\n2\n0\n"), consola(), () -> {
+                    assertTrue(usadas[0] < tiradas.length, "El consumo no tira dados de ataque");
+                    if (usadas[0] == 14) {
+                        assertEquals(14, j.getVida(), "Se curó al llegar su acción del segundo combate");
+                        assertEquals(0, j.getCantidadPociones(TipoPocion.PEQUENA));
+                        assertEquals(7, j.getFuerza());
+                    }
+                    return tiradas[usadas[0]++];
+                }, azar)));
+        assertEquals(tiradas.length, usadas[0]);
+        assertEquals(4, botin[0]);
+        assertEquals(24, j.getVida());
+        assertEquals(1, j.getCantidadPociones(TipoPocion.PEQUENA));
+        assertEquals(1, j.getCantidadPociones(TipoPocion.GRANDE));
+        assertEquals(7, j.getFuerza());
+        assertEquals(1, texto().split("Has encontrado una Espada desgastada", -1).length - 1);
+        assertEquals(1, texto().split("Tu acción ha terminado", -1).length - 1);
+        assertTrue(texto().contains("Vida final: Aventurero 10/24"));
+        assertTrue(texto().contains("Vida recuperada: +14 PS"));
+        String inventario = texto().substring(texto().indexOf("  INVENTARIO"));
+        assertTrue(inventario.matches("(?s).*Poción pequeña +x1.*Poción grande +x2.*"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2\n", "2\nx\n", "2\n0\n"})
+    void appTrataCierreEnMenuDeCombateComoInterrupcionSinBotin(String entrada) {
+        Jugador j = jugador(20);
+        j.agregarPocion(TipoPocion.PEQUENA);
+        int[] tiradas = {1, 1, 1, 1};
+        int[] usadas = {0};
+        Random azar = new Random(0) {
+            @Override
+            public int nextInt(int bound) {
+                fail("No hay botín en un combate interrumpido");
+                return 0;
+            }
+        };
+        assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.jugarAventura(j,
+                new Scanner(entrada), consola(), () -> {
+                    assertTrue(usadas[0] < tiradas.length);
+                    return tiradas[usadas[0]++];
+                }, azar)));
+        assertEquals(4, usadas[0]);
+        assertEquals(20, j.getVida());
+        assertEquals(1, j.getCantidadPociones(TipoPocion.PEQUENA));
+        assertTrue(texto().contains("el combate queda sin terminar"));
+        assertFalse(texto().contains("Victoria."));
+        assertFalse(texto().contains("Derrota."));
+        assertFalse(texto().contains("EXPLORACIÓN"));
+        assertFalse(texto().contains("Has encontrado"));
+    }
 }

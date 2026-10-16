@@ -3,6 +3,8 @@ package org.viajedragos.combate;
 import org.viajedragos.habilidad.EstadoHabilidad;
 import org.viajedragos.habilidad.Habilidad;
 import org.viajedragos.modelo.Combatiente;
+import org.viajedragos.modelo.Jugador;
+import org.viajedragos.modelo.TipoPocion;
 
 import java.io.PrintStream;
 import java.util.Map;
@@ -246,9 +248,14 @@ public class Combate {
                 if (salida != null) {
                     mostrarEstado(salida);
                     salida.printf("Actúa %s.%n", actual.getNombre());
-                    if (actual == jugador) esperarAtaque(entrada, salida);
-                    else salida.println("El enemigo elige atacar.");
-                    ataque(actual, determinarOponente(actual), salida);
+                    if (actual == jugador) {
+                        if (elegirAtaque(entrada, salida)) {
+                            ataque(actual, determinarOponente(actual), salida);
+                        }
+                    } else {
+                        salida.println("El enemigo elige atacar.");
+                        ataque(actual, determinarOponente(actual), salida);
+                    }
                 } else {
                     ataque(actual, determinarOponente(actual));
                 }
@@ -271,14 +278,68 @@ public class Combate {
                 enemigo.getNombre(), enemigo.getVida(), enemigo.getVidaMaxima());
     }
 
-    private void esperarAtaque(Scanner entrada, PrintStream salida) {
+    // true: atacar; false: la acción ya se ha consumido utilizando una poción.
+    private boolean elegirAtaque(Scanner entrada, PrintStream salida) {
         while (true) {
+            salida.printf("%n----------------------------------------%n  TU TURNO%n----------------------------------------%n");
+            salida.printf("  %s%n  Vida: %d/%d PS%n%n", jugador.getNombre(), jugador.getVida(), jugador.getVidaMaxima());
             salida.println("1. Atacar");
-            salida.print("> ");
+            if (jugador instanceof Jugador) salida.println("2. Usar objeto");
+            salida.print("Elige una opción > ");
             salida.flush();
             // El cierre de la entrada interrumpe la sesión; no representa una huida.
-            if (entrada.nextLine().trim().equals("1")) return;
-            salida.println("Entrada inválida. Escribe 1 para atacar.");
+            String opcion = entrada.nextLine().trim();
+            if (opcion.equals("1")) return true;
+            if (opcion.equals("2") && jugador instanceof Jugador portador) {
+                if (usarPocionEnCombate(portador, entrada, salida)) {
+                    salida.println("Tu acción ha terminado.");
+                    return false;
+                }
+            } else {
+                salida.println(jugador instanceof Jugador
+                        ? "Entrada inválida. Escribe 1 para atacar o 2 para usar objeto."
+                        : "Entrada inválida. Escribe 1 para atacar.");
+            }
+        }
+    }
+
+    // true solo tras consumir; cancelar devuelve false y no termina la acción.
+    private boolean usarPocionEnCombate(Jugador portador, Scanner entrada, PrintStream salida) {
+        salida.printf("%n----------------------------------------%n  USAR OBJETO%n----------------------------------------%n");
+        salida.printf("  Vida actual: %d/%d PS%n%n", portador.getVida(), portador.getVidaMaxima());
+        salida.printf("1. %s (x%d) +%d PS%n", TipoPocion.PEQUENA.getNombre(),
+                portador.getCantidadPociones(TipoPocion.PEQUENA), TipoPocion.PEQUENA.getRecuperacionPS());
+        salida.printf("2. %s (x%d) +%d PS%n", TipoPocion.GRANDE.getNombre(),
+                portador.getCantidadPociones(TipoPocion.GRANDE), TipoPocion.GRANDE.getRecuperacionPS());
+        salida.println("0. Cancelar");
+        while (true) {
+            salida.print("Elige una opción > ");
+            salida.flush();
+            String opcion = entrada.nextLine().trim();
+            if (opcion.equals("0")) return false;
+            TipoPocion tipo;
+            if (opcion.equals("1")) tipo = TipoPocion.PEQUENA;
+            else if (opcion.equals("2")) tipo = TipoPocion.GRANDE;
+            else {
+                salida.println("Entrada inválida. Escribe 1, 2 o 0.");
+                continue;
+            }
+            if (portador.getCantidadPociones(tipo) == 0) {
+                salida.println("No tienes esa poción.");
+                continue;
+            }
+            if (portador.getVida() >= portador.getVidaMaxima()) {
+                salida.println("La vida está completa. No se ha consumido la poción.");
+                continue;
+            }
+            int recuperacion = portador.usarPocion(tipo);
+            if (recuperacion > 0) {
+                salida.printf("Has utilizado una %s.%nVida recuperada: +%d PS%nVida actual: %d/%d PS%n",
+                        tipo.getNombre(), recuperacion, portador.getVida(), portador.getVidaMaxima());
+                salida.printf("Unidades restantes de %s: %d%n", tipo.getNombre(), portador.getCantidadPociones(tipo));
+                return true;
+            }
+            salida.println("No se ha recuperado vida. No se ha consumido la poción.");
         }
     }
 

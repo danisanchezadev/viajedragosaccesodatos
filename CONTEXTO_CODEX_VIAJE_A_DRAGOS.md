@@ -70,7 +70,7 @@ Estas reglas proceden del diseño de combate previamente discutido; **Codex debe
 3. Se comprueba si alguien ha muerto como consecuencia de esos efectos.
 4. Si hay muertos, se ejecuta la resolución de muertes, que puede activar habilidades `alMorir` y cambiar el desenlace.
 5. Si ambos siguen vivos, se determina el primer turno (`primerTurno()`).
-6. El bucle compartido ejecuta inicio de turno para ambos vivos por prioridad y resuelve muertes. `atacante()` determina el orden de las dos acciones. Ejecuta la primera y resuelve muertes; si ambos siguen vivos, ejecuta la segunda y vuelve a resolver muertes. Si continúa, ejecuta final de turno para ambos y alterna el poseedor. En consola el enemigo ataca automáticamente y el jugador elige Atacar solo al llegar su acción. Huida y objetos siguen pendientes.
+6. El bucle compartido ejecuta inicio de turno para ambos vivos por prioridad y resuelve muertes. `atacante()` determina el orden de las dos acciones. Ejecuta la primera y resuelve muertes; si ambos siguen vivos, ejecuta la segunda y vuelve a resolver muertes. Si continúa, ejecuta final de turno para ambos y alterna el poseedor. En consola el enemigo ataca automáticamente y el jugador elige Atacar o usar una poción solo al llegar su acción, según 3.9. Huida sigue pendiente.
 7. Regla final confirmada: una muerte definitiva cierra el combate sin eventos normales posteriores ni alFinalTurno. Solo el jugador ejecuta alFinalCombate, siempre, incluso muerto, como excepción de limpieza y contingencias. El enemigo no ejecuta alFinalCombate.
 
 Decisiones expresas del autor para completar combatir: ambos pueden ejecutar habilidades en las fases correspondientes; la prioridad se determina por la iniciativa en ese momento, en ausencia de prioridad se usa el poseedor del turno, y si no lo hay se tira para determinar quién empieza. Si alguien muere antes de ejecutar su inicio, ejecuta alMorir en vez de ese inicio. El límite de una activación de muerte por participante y resolución se conserva. PrimerTurno mantiene iniciativa × 1D6 y el autor confirmó la excepción de comparación directa de dados si ambas iniciativas son cero. La huida queda para otra tarea y no se inventa un resultado o límite para combates sin progreso.
@@ -122,14 +122,26 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 
 ### 3.8 Exploración, consulta y consumo de pociones entre combates
 
-- Cambio local autorizado sobre c1d20d. El menú de exploración aparece después del botín y de resolver la espada cuando corresponda; muestra nombre y vida actual/máxima. Continuar (3) inicia directamente otro combate, sin tiradas de mazmorra ni curación automática.
+- Publicado en e363c95 sobre c1d20d. El menú de exploración aparece después del botín y de resolver la espada cuando corresponda; muestra nombre y vida actual/máxima. Continuar (3) inicia directamente otro combate, sin tiradas de mazmorra ni curación automática.
 - Consultar inventario (1) muestra solo pociones con cantidad positiva, sus cantidades y recuperación máxima; si no hay, «No tienes consumibles». Muestra las piezas realmente equipadas, bonificaciones con signo y habilidades otorgadas, sin reaplicar efectos ni permitir operaciones de equipo. 0 vuelve a exploración; consultar no cambia el estado.
 - Usar objeto (2) ofrece siempre 1 pequeña, 2 grande y 0 cancelar, incluso con cantidad cero. No se consume si falta la poción o la vida está completa. Entrada inválida/cancelación no cambia el estado. Un intento rechazado permite elegir de nuevo; un éxito vuelve a exploración.
 - Jugador.usarPocion(TipoPocion) devuelve los PS realmente recuperados o cero si no consume. Comprueba existencias y vida, reutiliza curarse y descuenta una unidad solo si hay recuperación positiva; elimina del mapa la última unidad. No expone escritura externa ni modifica firmas anteriores.
 - La consola calcula el resultado mediante la recuperación devuelta y muestra vida y cantidad restante. Con 22/24, una pequeña cura 2 PS. Nunca se supera la vida máxima mediante la recuperación de la poción.
 - Se conservan los eventos alCurarse activos y sus estados/niveles. Instinto de supervivencia mantiene sus efectos según vida, aun fuera de combate; el siguiente combate conserva su restauración final. No se añaden habilidades a la demo.
 - app conserva el bucle entre encuentros y contiene métodos sencillos de presentación, consulta, uso y lectura de opciones. Cabeceras y separadores ASCII, sin nuevas clases productivas ni bibliotecas. El cierre de entrada en los submenús termina la sesión sin otra acción o encuentro.
-- Sin uso de objetos durante el combate, huida, cofres, mazmorra ni nuevos consumibles. La futura acción de usar objeto en combate consumirá la acción solo al tener éxito; cancelar o una entrada inválida no la consumirá. Esa acción y su menú no se implementan en esta fase.
+- El consumo durante el combate está implementado según 3.9. Siguen pendientes huida, cofres, mazmorra y otros consumibles.
+
+### 3.9 Pociones durante la acción del jugador en combate
+
+- Cambio local autorizado sobre e363c95. En modo interactivo, Combate muestra TU TURNO solo al llegar la acción del jugador, después de resolver cualquier acción previa del enemigo. Opciones 1 Atacar y 2 Usar objeto; sin huida.
+- El submenú mantiene 1 pequeña, 2 grande y 0 cancelar, aunque la cantidad sea cero. Reutiliza exclusivamente Jugador.usarPocion para curación/descuento; muestra recuperación real, vida y unidades restantes.
+- Un resultado de recuperación positiva consume la acción y sustituye al ataque: no se crea ContextoAtaque ni se ejecutan eventos/tiradas de ataque por usar la poción. Después se conserva la comprobación de muertes, la acción pendiente del enemigo, los eventos de fin de turno y la alternancia actuales.
+- Cancelar vuelve al menú del turno; inválidos, poción inexistente, vida completa o consumo rechazado permiten seguir eligiendo sin consumir acción, dados ni eventos de turno adicionales.
+- elegirAtaque es un método privado que devuelve true para atacar y false solo si una poción ya consumió la acción. usarPocionEnCombate devuelve true tras éxito y false al cancelar; no son contratos públicos ni un sistema genérico de acciones.
+- El constructor conserva Combatiente. Si el participante en el lugar del jugador no es Jugador, solo ofrece Atacar y rechaza 2 sin perder la acción, sin conversión inválida ni acceso a inventario. El modo automático no muestra menús y siempre ataca, aunque un Jugador tenga pociones.
+- Se conservan alCurarse, actividad/estados/niveles y las fórmulas de habilidades. Instinto puede retirar su fuerza al curarse y reactivarla tras daño según su umbral; la limpieza conserva el equipo. Segundo aliento puede completar vida al inicio del turno y hacer innecesaria una poción.
+- Scanner.nextLine mantiene NoSuchElementException al cerrar la entrada en cualquiera de los menús. app ya captura esa excepción: interrumpe sin resultado ficticio, botín ni finalización de un combate incompleto.
+- Solo cambia Combate.java, sus pruebas y documentación. No se cambian firmas públicas, Jugador, app, habilidades, dados, equipo ni recompensas. Presentación ASCII sencilla en Combate sin dependencia hacia app ni nuevas clases productivas; las reglas de consumo siguen centralizadas en Jugador.
 
 ## 4. Habilidades
 
@@ -164,10 +176,10 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 Estas áreas forman parte del objetivo del producto, pero **no se han establecido aquí suficientes reglas detalladas para implementarlas completas**:
 
 - **Encuentros y exploración:** el personaje podrá encontrar enemigos y objetos. Quedan pendientes el procedimiento de selección de encuentros, desplazamiento, zonas, eventos y recompensas concretas.
-- **Inventario actual:** cantidades de las dos pociones según 3.7, encapsuladas en Jugador, consultables y consumibles entre combates según 3.8. Cualquier inventario general sigue pendiente. No se inventan límites de capacidad ni otros objetos.
+- **Inventario actual:** cantidades de las dos pociones según 3.7, encapsuladas en Jugador, consultables y consumibles entre combates según 3.8 y utilizables durante su acción según 3.9. Cualquier inventario general sigue pendiente. No se inventan límites de capacidad ni otros objetos.
 - **Comercio:** previsto como mecánica sencilla de compra/venta o interacción con una tienda; precios, moneda, descuentos y restricciones **no están confirmados para esta aplicación**. No importar reglas de ejercicios independientes sobre Strategy y tipos de cliente.
 - **Progresión:** no hay aquí una especificación confirmada de experiencia, niveles, clases de personaje o distribución de atributos para el MVP. No inventarla.
-- **Huida y uso de objetos en combate:** son acciones previstas, pero sus probabilidades, consecuencias y límites necesitan decisión o comprobación del código.
+- **Huida:** pendiente de reglas e implementación. **Objetos en combate:** únicamente las dos pociones, según 3.9; otros objetos siguen pendientes.
 - **Continuidad actual:** mismo jugador y sus pociones, vida restante sin curación automática, Lobos nuevos y menús según 3.5. Espada según 3.6 y botín según 3.7. Muerte termina aventura; sin persistencia ni otras recompensas.
 
 ## 7. Estructura de código conocida (orientativa; verificar)
@@ -202,9 +214,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 16 de octubre de 2026. Base publicada c1d20d, botín de pociones; espada publicada en ec9dc46 y continuidad en 6fc2a8d. En local se implementan el menú de exploración, la consulta de inventario/equipo y el consumo de pociones fuera del combate. Sin commit ni push de esta fase.
+> **Estado:** 16 de octubre de 2026. Base publicada e363c95, exploración y consumo fuera de combate; botín publicado en c1d20d. En local se implementa el uso de pociones durante la acción del jugador, sustituyendo al ataque y conservando participantes Combatiente que no son Jugador. Sin commit ni push de esta fase.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 34 fuentes principales y 30 archivos de pruebas recompilados; 369 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 338 escenarios previos y se añaden 14 de ConsumoPocionesTest y 17 de ExploracionTest. Los escenarios anteriores adaptan las opciones de exploración (continuar 3, terminar 4 y 5 como entrada inválida), conservando dados y resultados. Combate, dados, habilidades y equipo no se modifican.
+> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 34 fuentes principales y 30 archivos de pruebas recompilados; 398 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 369 escenarios previos sin adaptación y se añaden 25 en CombateConsolaTest y 4 en ExploracionTest. Dados controlados y generador de botín separado. Solo Combate.java cambia en producción; no se modifican firmas públicas ni clases de modelo/habilidades/equipo.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -218,14 +230,14 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 369 pruebas ejecutadas sin fallos ni errores; 338 escenarios anteriores y 31 nuevos de consumo/exploración, sin pruebas eliminadas ni deshabilitadas.
+- [x] Suite JUnit: 398 pruebas ejecutadas sin fallos ni errores; 369 escenarios anteriores y 29 nuevos de pociones en combate, sin pruebas eliminadas ni deshabilitadas.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
 - [x] Auditar clases, paquetes, firmas, dependencias y referencias del repositorio.
 - [x] Comprobar compilación del código principal: `mvn compile` termina correctamente.
 - [x] Ejecutar las pruebas existentes con `mvn test`.
-- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 369 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
+- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 398 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
 - [x] Revisar `EventosHabilidad`: todas sus firmas actuales y overrides implementados reciben `EstadoHabilidad` y compilan en el código principal.
 - [x] Revisar y corregir las seis llamadas del borrador a `dispararHabilidades`: las lambdas reciben habilidad y estado y pasan ese estado al evento.
 - [x] Activar el auxiliar existente `dispararHabilidades` para usarlo desde ataque, recorriendo habilidad y estado juntos.
@@ -271,7 +283,10 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [ ] Crear catálogos Java de enemigos, armas, objetos y habilidades en memoria.
 - [ ] Integrar encuentros desde esos catálogos, sin Factory ni persistencia.
 - [x] Implementar Atacar desde el menú en su momento real de acción.
-- [ ] Implementar huir y usar objeto durante el combate; no se ofrecen en su menú actual. El consumo entre encuentros ya está implementado según 3.8.
+- [ ] Implementar huir; no se ofrece en el menú actual.
+- [x] Implementar las dos pociones en combate según 3.9, sustituyendo al ataque solo tras éxito. Sin perder acción por cancelar/inválidos/rechazo ni modificar iniciativa, eventos de turno o resolución de muertes.
+- [x] Conservar Combatiente no Jugador con su selección de Atacar y modo automático sin consumo de pociones. Sin conversiones forzadas, nuevas clases ni contratos públicos.
+- [x] Añadir 29 casos de consumo en combate, eventos/estados/habilidades reales, muerte/resurrección, recuperación real, dados exactos, interrupción y continuidad con exploración/botín/espada.
 - [x] Implementar almacenamiento y adquisición de dos pociones en Jugador, 50 %/20 % independientes por victoria definitiva, una unidad por éxito y conservación durante la aventura.
 - [x] Verificar límites 0/49/50/99 y 0/19/20/99, los cuatro resultados y enumerar 10.000 parejas: 40/40/10/10. Dos llamadas de botín por victoria y ninguna por derrota/muerte simultánea/interrupción; sin dados extra.
 - [x] Verificar acumulación, inventario nuevo vacío, resurrección antes de la muerte definitiva, generador conservado entre encuentros/aventuras y espada intacta. Obtener pociones no recupera vida.
@@ -335,7 +350,7 @@ Después de programar, informa de:
 
 - La secuencia del ataque individual y el contraataque están confirmados, integrados y probados. El turno tiene dos acciones ordenadas y resuelve muertes entre ellas, según la aclaración expresa del autor durante la fase 3.
 - No existe un modificador de agilidad del turno: el +2 se aplica exclusivamente al cálculo de iniciativa del poseedor.
-- ¿Qué reglas concretas rigen huida y comercio? Las pociones, su consulta y consumo fuera del combate están confirmados en 3.7/3.8. El uso exitoso futuro durante el combate consumirá la acción; consulta/cancelación/inválidos no, pero su integración sigue pendiente.
+- ¿Qué reglas concretas rigen huida y comercio? Las pociones, su consulta y consumo están confirmados en 3.7/3.8/3.9. El consumo exitoso en combate sustituye al ataque; cancelar/inválidos/rechazos no consumen la acción.
 - Confirmado: alFinalCombate solo del jugador, siempre, como limpieza incluso muerto; el enemigo no participa.
 - Confirmado: tras victoria se permite consultar inventario/usar poción/continuar/terminar aventura/salir, sin recuperación automática. Espada única tras primera victoria y botín de pociones tras cada victoria definitiva. Futuras ampliaciones necesitan reglas propias.
 - ¿Qué catálogo mínimo de enemigos y objetos quiere el autor para la primera demo?
