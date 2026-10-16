@@ -29,4 +29,19 @@ public class Jugador extends Combatiente{
         return Collections.unmodifiableMap(inventarioPociones);
     }
 
+    // Devuelve los PS recuperados; cero indica que no se ha consumido la poción.
+    public int usarPocion(TipoPocion tipo) {
+        int cantidad = getCantidadPociones(tipo);
+        if (cantidad == 0 || getVida() >= getVidaMaxima()) return 0;
+
+        int vidaAnterior = getVida();
+        curarse(tipo.getRecuperacionPS());
+        int recuperacion = getVida() - vidaAnterior;
+        if (recuperacion > 0) {
+            if (cantidad == 1) inventarioPociones.remove(tipo);
+            else inventarioPociones.put(tipo, cantidad - 1);
+        }
+        return recuperacion;
+    }
+
 }

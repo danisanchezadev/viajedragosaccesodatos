@@ -12,8 +12,9 @@ Requiere JDK 23 y Maven. No utiliza persistencia ni servicios externos.
 5. Cuando llegue la acción de Aventurero, escribe `1` para atacar.
 6. Tras la primera victoria, encontrarás la **Espada desgastada**: `1` la equipa
    y `2` la rechaza definitivamente. Aporta **Fuerza +1** y ninguna habilidad.
-7. Después de resolver la recompensa, escribe `1` para continuar con el mismo Aventurero, `2` para
-   terminar la aventura y volver al inicio, o `0` para salir del programa.
+7. Después del botín y de la oferta de espada aparece el menú de exploración:
+   `1` revisa el inventario, `2` permite usar una poción, `3` continúa al siguiente
+   encuentro, `4` termina la aventura y vuelve al inicio, y `0` sale del juego.
 
 El menú inicial ofrece `1. Nueva aventura` y `0. Salir`. Cada aventura crea un
 Aventurero con 24/24 de vida, sin habilidades ni equipamiento. Cada encuentro crea
@@ -42,14 +43,39 @@ interrumpido. Se espera al resultado definitivo después de posibles resurreccio
 Las cantidades se acumulan en el inventario encapsulado del mismo Aventurero,
 durante toda la aventura. Morir o terminar la aventura descarta el personaje y
 sus pociones; una nueva aventura empieza con inventario vacío. Obtenerlas no cura.
-La pequeña recuperará 8 PS y la grande 16 PS cuando se implemente su uso: por ahora
-no se pueden consumir, no hay consulta interactiva ni menú de inventario.
+La pequeña recupera hasta 8 PS y la grande hasta 16 PS al utilizarlas desde el
+menú de exploración. No pueden utilizarse durante el combate.
 
 El botín utiliza un Random propio, conservado durante la sesión, separado de los
 dados de combate. Cada victoria solicita dos valores 0–99: éxito con <50 para la
 pequeña y <20 para la grande. Los menús no repiten estas comprobaciones. En la
 primera victoria se informa del botín antes de ofrecer la espada; sus opciones
 y reglas no cambian.
+
+## Exploración e inventario
+
+El menú de exploración muestra nombre y vida actual/máxima con separadores ASCII.
+Continuar inicia directamente otro combate; no hay tiradas de mazmorra.
+
+Revisar inventario muestra únicamente las pociones disponibles, sus cantidades y
+su recuperación máxima. Si no hay, indica «No tienes consumibles». También muestra
+el equipo realmente equipado, sus bonificaciones y las habilidades que otorgue,
+sin volver a aplicar efectos. `0` vuelve a exploración. Consultar no cambia el estado.
+
+Usar objeto conserva las opciones fijas `1. Poción pequeña`, `2. Poción grande`
+y `0. Cancelar`, incluso con cantidades cero. Un uso correcto recupera vida sin
+superar el máximo, descuenta exactamente una unidad y vuelve a exploración.
+La consola muestra los PS realmente recuperados y la cantidad restante: con
+22/24, una pequeña recupera 2 PS. La última unidad se elimina del mapa.
+Una poción inexistente, vida completa, cancelar o una entrada inválida no consume
+nada. Tras un intento rechazado se puede elegir de nuevo o cancelar.
+
+`Jugador.usarPocion(TipoPocion)` encapsula curación y descuento; devuelve la
+recuperación real o cero si no hay consumo. Reutiliza `Combatiente.curarse(int)`
+y sus eventos `alCurarse`, con el estado de cada habilidad activa. Instinto de
+supervivencia mantiene su comportamiento según el porcentaje de vida, también
+fuera del combate; el siguiente combate conserva su limpieza final existente.
+No se añaden habilidades al Aventurero de la demo. No hay curación automática.
 
 Si muere el Aventurero, incluso si mueren ambos, se muestra el resultado y se
 regresa al menú inicial. Terminar voluntariamente la aventura también descarta
@@ -75,8 +101,8 @@ enemigo/Combate por encuentro y deja la limpieza de efectos a alFinalCombate.
 no modifica fuerza directamente ni llama a aplicarEfectos manualmente.
 El primer combate es de aprendizaje: ambos comienzan sin habilidades. Su
 adquisición mediante progresión, recompensas o equipamiento se definirá más adelante.
-Esta demo solo ofrece Atacar en combate; consumo de objetos, menús de inventario,
-huida, cofres, mazmorras, exploración y comercio quedan pendientes.
+Esta demo solo ofrece Atacar en combate. Usar objetos durante el combate, huida,
+cofres, tiradas de mazmorra, desplazamiento y comercio quedan pendientes.
 
 ## Comprobar el proyecto
 
@@ -102,7 +128,7 @@ las pruebas de integración, sin asignarlas a la demo ni añadir narración.
 restauración, niveles y equipo. `RolesModificadoresDanioTest` comprueba los roles
 confirmados: Caparazón, Defensa perfecta y Guardia férrea solo en defensa;
 Castigo al torpe y Golpe certero solo en ataque. Incluye condiciones de activación,
-instancias compartidas y reglas especiales. La suite completa pasa con 338 pruebas.
+instancias compartidas y reglas especiales. La suite completa pasa con 369 pruebas.
 El análisis y la corrección están en `ANALISIS_ROLES_MODIFICADORES_DANIO.md`.
 
 `AventuraTest` añade 12 casos de continuidad: identidad del jugador, enemigos
@@ -118,10 +144,11 @@ espada, daño real 7→8 con dados 4/2 y limpieza temporal que conserva la bonif
 También comprueba que una ranura ocupada no se sustituye ni se anuncia como éxito.
 
 La continuidad entre encuentros está publicada en `main`, commit `6fc2a8d`.
-La Espada desgastada está publicada en `ec9dc46`. El botín de pociones se ha
-implementado localmente; no se ha hecho commit ni push.
+La Espada desgastada está publicada en `ec9dc46` y el botín de pociones en
+`c1d20d`. El menú de exploración, consulta y consumo son cambios locales de esta
+fase; no se ha hecho commit ni push.
 
-`InventarioPocionesTest` añade 8 casos de cantidades, recuperación futura,
+`InventarioPocionesTest` añade 8 casos de cantidades, datos de recuperación,
 independencia entre jugadores, encapsulación y ausencia de curación automática.
 `BotinPocionesTest` añade 21 casos de límites, cuatro resultados, acumulación,
 continuidad, muertes/resurrección, interrupciones, compatibilidad con la espada y
@@ -130,5 +157,15 @@ aleatorio: 40 % ninguna, 40 % solo pequeña, 10 % solo grande, 10 % ambas.
 
 Las firmas originales de ejecutar/jugarAventura siguen disponibles; las
 sobrecargas de paquete permiten fijar un Random distinto del TiradorDado en
-pruebas. Jugador expone cantidades y un mapa de solo lectura, sin operaciones de
-consumo. No se añaden clases genéricas de inventario ni cambios al motor.
+pruebas. Jugador expone cantidades y un mapa de solo lectura; el consumo se
+gestiona mediante usarPocion. No se añaden clases genéricas de inventario ni cambios
+al motor.
+
+`ConsumoPocionesTest` añade 14 casos de recuperación, descuento, mapa de solo
+lectura, vida completa, falta de existencias y eventos de curación. Comprueba
+actividad/estado/nivel y el efecto real de Instinto con equipo y limpieza posterior.
+`ExploracionTest` añade 17 casos de consulta, equipo, opciones fijas, consumo,
+recuperación real, cancelación, entradas inválidas/cierre y dos encuentros
+conservando vida/pociones/equipo sin repetir botín ni consumir dados adicionales.
+Se conservan los 338 casos anteriores; sus flujos de consola adaptan Continuar de
+1 a 3 y Terminar de 2 a 4, sin cambiar las reglas ni las tiradas.

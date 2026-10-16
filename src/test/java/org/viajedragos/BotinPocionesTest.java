@@ -112,7 +112,7 @@ class BotinPocionesTest {
                 assertEquals(7, j.getFuerza());
             }
         };
-        assertFalse(jugar(j, "1\n1\n1\n1\n1\n1\n0\n", dados, azar));
+        assertFalse(jugar(j, "1\n1\n3\n1\n3\n1\n0\n", dados, azar));
         azar.comprobarConsumo();
         assertEquals(3, j.getCantidadPociones(TipoPocion.PEQUENA));
         assertEquals(2, j.getCantidadPociones(TipoPocion.GRANDE));
@@ -194,7 +194,7 @@ class BotinPocionesTest {
     void repetirOpcionesInvalidasNoDuplicaBotinNiTiradas() {
         Jugador j = jugador();
         AzarBotin azar = new AzarBotin(0, 0);
-        assertFalse(jugar(j, "1\nx\n0\n2\nx\n3\n0\n", new Dados(VICTORIA), azar));
+        assertFalse(jugar(j, "1\nx\n0\n2\nx\n5\n0\n", new Dados(VICTORIA), azar));
         azar.comprobarConsumo();
         assertEquals(4, veces("Entrada inválida"));
         assertEquals(1, j.getCantidadPociones(TipoPocion.PEQUENA));
@@ -208,7 +208,7 @@ class BotinPocionesTest {
         AzarBotin azar = new AzarBotin(0, 99, 99, 0);
         Dados dados = new Dados(VICTORIA, VICTORIA);
         assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.ejecutar(
-                new Scanner("1\n1\n2\n2\n1\n1\n2\n0\n"), consola(), dados, azar));
+                new Scanner("1\n1\n2\n4\n1\n1\n2\n0\n"), consola(), dados, azar));
         dados.comprobarConsumo();
         azar.comprobarConsumo();
         String primera = texto().substring(0, texto().lastIndexOf("Encuentro 1."));
@@ -226,7 +226,7 @@ class BotinPocionesTest {
         AzarBotin azar = new AzarBotin(0, 0, 99, 99);
         Dados previos = morir ? new Dados(VICTORIA_CON_VIDA_6, ENEMIGO_PRIMERO_LETAL)
                 : new Dados(VICTORIA_CON_VIDA_6);
-        assertTrue(jugar(anterior, morir ? "1\n2\n1\n" : "1\n2\n2\n", previos, azar));
+        assertTrue(jugar(anterior, morir ? "1\n2\n3\n" : "1\n2\n4\n", previos, azar));
 
         // Igual que ejecutar: al volver al inicio, la siguiente aventura construye otro jugador.
         Jugador nuevo = jugador();
@@ -245,7 +245,7 @@ class BotinPocionesTest {
     void botinNoAlteraLaOfertaUnicaDeEspadaNiSuAceptacionORechazo(boolean equipar) {
         Jugador j = jugador();
         AzarBotin azar = new AzarBotin(0, 0, 0, 0);
-        assertFalse(jugar(j, "1\n" + (equipar ? "1" : "2") + "\n1\n1\n0\n",
+        assertFalse(jugar(j, "1\n" + (equipar ? "1" : "2") + "\n3\n1\n0\n",
                 new Dados(VICTORIA, VICTORIA), azar));
         azar.comprobarConsumo();
         assertEquals(1, veces("Has encontrado una Espada desgastada"));
@@ -268,7 +268,7 @@ class BotinPocionesTest {
         assertEquals(1, veces("Botín: Poción pequeña (+1)."));
         assertEquals(1, veces("Botín: Poción grande (+1)."));
         assertEquals(1, veces("Comienza el combate"));
-        assertFalse(texto().contains("1. Continuar al siguiente encuentro"));
+        assertFalse(texto().contains("3. Continuar al siguiente encuentro"));
     }
 
     private static class AzarBotin extends Random {

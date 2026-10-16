@@ -52,7 +52,7 @@ class AppTest {
     @Test
     void nuevaAventuraCreaPersonajesConTodaSuVida() {
         // En cada combate el enemigo golpea primero y deja al jugador a 6 de vida.
-        String texto = ejecutar("1\n1\n2\n2\n1\n1\n2\n0\n",
+        String texto = ejecutar("1\n1\n2\n4\n1\n1\n2\n0\n",
                 1, 1, 1, 6, 6, 1, 6, 6, 1, 6,
                 1, 1, 1, 6, 6, 1, 6, 6, 1, 6);
         assertEquals(2, texto.split("Comienza el combate", -1).length - 1);
@@ -60,7 +60,7 @@ class AppTest {
         assertEquals(2, texto.split("Vida final: Aventurero 6/24", -1).length - 1);
         assertEquals(2, texto.split("Victoria\\.", -1).length - 1);
         assertTrue(texto.contains("1. Nueva aventura"));
-        assertTrue(texto.contains("1. Continuar al siguiente encuentro"));
+        assertTrue(texto.contains("3. Continuar al siguiente encuentro"));
     }
 
     @Test

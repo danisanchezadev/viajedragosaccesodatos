@@ -16,7 +16,7 @@ public enum TipoPocion {
         return nombre;
     }
 
-    // Dato para la futura utilización; obtener una poción no recupera vida.
+    // Recuperación máxima al utilizarla; obtener una poción no recupera vida.
     public int getRecuperacionPS() {
         return recuperacionPS;
     }

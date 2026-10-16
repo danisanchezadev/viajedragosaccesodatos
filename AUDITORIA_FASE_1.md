@@ -2,7 +2,7 @@
 
 Fecha: 14 de octubre de 2026.
 
-> **Estado actual (16 de octubre de 2026):** base publicada ec9dc46, Espada desgastada; continuidad publicada en 6fc2a8d. Botín de pociones implementado localmente, sin consumo ni menús. `mvn clean test`: 338 pruebas pasan, sin fallos, errores ni omisiones. Sin commit ni push del botín. Los apartados siguientes conservan el historial de cada etapa; la más reciente se documenta al final.
+> **Estado actual (16 de octubre de 2026):** base publicada c1d20d, botín de pociones; espada publicada en ec9dc46 y continuidad en 6fc2a8d. Cambios locales: menú de exploración, consulta de inventario/equipo y consumo de pociones entre combates. `mvn clean test`: 369 pruebas pasan, sin fallos, errores ni omisiones. Sin commit ni push de esta fase. Los apartados siguientes conservan el historial de cada etapa; la más reciente se documenta al final.
 
 ## Alcance y resultado
 
@@ -604,6 +604,9 @@ que describían continuidad como local/no publicada: fase 4 está publicada en
 
 ## Botín de pociones — 16 de octubre de 2026
 
+Nota de continuidad: esta fase se publicó posteriormente en c1d20d. La descripción
+siguiente conserva el estado local y las verificaciones que tenía al entregarse.
+
 Implementación local sobre ec9dc46, sin commit ni push. Se incorpora TipoPocion
 con pequeña (recuperación futura de 8 PS) y grande (16 PS). Jugador encapsula sus
 cantidades en un EnumMap: permite añadir una unidad, consultar cantidades y obtener
@@ -643,3 +646,65 @@ atribuirle el recorrido manual de consola documentado en la fase anterior.
 
 README y documento de contexto actualizados con el alcance implementado, la
 checklist, las pruebas y las referencias publicadas frente a los cambios locales.
+
+## Exploración, inventario y consumo entre combates — 16 de octubre de 2026
+
+Base: main c1d20d3, botín de pociones publicado y árbol inicialmente limpio.
+El autor aprobó el análisis y limitó los cambios a Jugador, app, el comentario de
+TipoPocion, pruebas y documentación. No se hace commit ni push de esta fase.
+
+### Cambios y llamadas afectadas
+
+- Jugador.usarPocion(TipoPocion), nueva operación pública sin sustituir firmas:
+  devuelve la recuperación real, cero si no hay consumo. Valida existencias y
+  vida, llama al curarse existente y descuenta una unidad solo tras recuperar PS.
+  La última unidad elimina la entrada. El mapa permanece encapsulado.
+- app.jugarAventura sustituye el menú entre encuentros por exploración:
+  1 inventario, 2 usar objeto, 3 continuar, 4 terminar aventura y 0 salir.
+  Conserva generación de botín y oferta de espada antes del menú, sus condiciones
+  y su aleatoriedad independiente. No se reconstruye el jugador al continuar.
+- app.consultarInventario muestra pociones presentes y equipo realmente equipado,
+  con bonificaciones con signo y habilidades otorgadas. No aplica efectos ni
+  permite acciones de equipo. 0 vuelve a exploración.
+- app.usarObjeto mantiene opciones fijas 1 pequeña, 2 grande y 0 cancelar,
+  incluso con cantidad cero. Informa de PS realmente recuperados, vida resultante
+  y cantidad restante; vuelve a exploración tras éxito. Los rechazos o inválidos
+  permiten elegir de nuevo sin consumir nada. Fin de entrada termina la sesión.
+- Auxiliares privados de cabecera, exploración y lectura de opciones en app,
+  con separadores ASCII y sin clases productivas nuevas. TipoPocion solo cambia
+  su comentario para reflejar que la recuperación ya puede utilizarse.
+
+Combatiente.curarse conserva su límite de vida máxima y sus llamadas alCurarse
+con el estado asociado de cada habilidad activa. No se modifica ese método ni
+el motor, habilidades, dados o sistema de equipamiento. Instinto de supervivencia
+reacciona también fuera del combate según su implementación existente: puede
+activar su +3 si después de curarse sigue con vida baja, o retirarlo al superar
+el umbral. El combate siguiente conserva su limpieza y no resta el efecto dos veces.
+No se añaden habilidades ni equipo inicial al Aventurero.
+
+### Pruebas y resultado real
+
+- Se mantienen los 338 casos anteriores. AppTest, AventuraTest, RecompensaTest y
+  BotinPocionesTest adaptan únicamente navegación/expectativas: continuar 1 a 3,
+  terminar 2 a 4 y entradas inválidas fuera del nuevo rango. Mismos dados y reglas.
+- ConsumoPocionesTest añade 14 casos: ambos tipos, recuperación máxima/parcial,
+  una unidad, última entrada, independencia del otro tipo, falta de existencias,
+  vida completa, null y ausencia de eventos en intentos rechazados. Verifica una
+  llamada alCurarse activa con su estado/nivel y ninguna para la inactiva, así
+  como Instinto con equipo y su restauración tras otro combate completo automático.
+- ExploracionTest añade 17 casos: inventario vacío y con pociones, equipo real
+  sin reaplicar efectos, cantidades, opciones fijas, consumo, recuperación real,
+  rechazo, cancelación, inválidos y cierre de entrada. Una aventura con dos
+  combates conserva la curación voluntaria, espada e inventario, sin curación
+  automática, repetición de oferta/botín ni dados adicionales.
+
+Se ejecutaron mvn test y después **mvn clean test**. Resultado final:
+**BUILD SUCCESS; 369 pruebas, 0 fallos, 0 errores y 0 omitidas**, con 34 fuentes
+principales y 30 archivos de pruebas recompilados. No se han encontrado errores
+de compilación ni incompatibilidades en la suite. La verificación de consola
+usa Scanner/PrintStream en memoria con entradas y tiradas controladas; no se
+atribuye a esta fase una sesión manual jugada desde IntelliJ.
+
+README, contexto y checklist actualizados. Las referencias actuales reconocen
+c1d20d como botín publicado; sus notas de entrega originales quedan como historial.
+Pendientes: objetos en combate, huida, mazmorra, cofres, otros consumibles y comercio.

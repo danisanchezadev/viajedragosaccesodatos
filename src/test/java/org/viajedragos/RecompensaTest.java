@@ -83,7 +83,7 @@ class RecompensaTest {
         assertTrue(texto().indexOf("Victoria.") < texto().indexOf("Has encontrado"));
         assertTrue(texto().contains("Fuerza +1"));
         assertTrue(texto().indexOf("Espada desgastada equipada")
-                < texto().indexOf("1. Continuar al siguiente encuentro"));
+                < texto().indexOf("3. Continuar al siguiente encuentro"));
     }
 
     @Test
@@ -105,7 +105,7 @@ class RecompensaTest {
             }
         };
 
-        assertFalse(jugar(j, "1\n1\n1\n1\n1\n1\n0\n", dados));
+        assertFalse(jugar(j, "1\n1\n3\n1\n3\n1\n0\n", dados));
         assertEquals(3, veces("Victoria."));
         assertEquals(1, veces("Has encontrado una Espada desgastada"));
         assertEquals(1, veces("1. Equipar Espada desgastada"));
@@ -118,7 +118,7 @@ class RecompensaTest {
     void rechazoNoAlteraPersonajeNiPermiteRecuperarLaEspadaDespues() {
         Jugador j = jugador();
         Map<Atributo, Integer> modificadores = new EnumMap<>(j.getModificadoresEquipo());
-        assertFalse(jugar(j, "1\n2\n1\n1\n0\n", new Dados(VICTORIA, VICTORIA)));
+        assertFalse(jugar(j, "1\n2\n3\n1\n0\n", new Dados(VICTORIA, VICTORIA)));
         assertEquals(2, veces("Victoria."));
         assertEquals(1, veces("Has encontrado una Espada desgastada"));
         assertEquals(1, veces("2. Rechazar Espada desgastada"));
@@ -161,7 +161,7 @@ class RecompensaTest {
         assertFalse(jugar(j, "1\n", new Dados(VICTORIA)));
         assertTrue(texto().contains("Victoria."));
         assertTrue(texto().contains("Entrada finalizada. Hasta pronto."));
-        assertFalse(texto().contains("1. Continuar al siguiente encuentro"));
+        assertFalse(texto().contains("3. Continuar al siguiente encuentro"));
         assertEquals(1, veces("Comienza el combate"));
         assertTrue(j.getEquipoEquipado().isEmpty());
         assertEquals(6, j.getFuerza());
@@ -198,7 +198,7 @@ class RecompensaTest {
         // Segundo personaje: ataque normal 4/2 causa 7, no los 8 que daría la espada.
         Dados dados = new Dados(VICTORIA, new int[]{1, 1, 1, 1, 4, 2, 1, 2, 1, 6, 4, 1});
         assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.ejecutar(new Scanner("1\n1\n1\n2\n1\n1\n1\n2\n0\n"), consola(), dados, new Random(0)));
+                app.ejecutar(new Scanner("1\n1\n1\n4\n1\n1\n1\n2\n0\n"), consola(), dados, new Random(0)));
         dados.comprobarConsumo();
         assertEquals(2, veces("Encuentro 1."));
         assertEquals(2, veces("Has encontrado una Espada desgastada"));
@@ -252,7 +252,7 @@ class RecompensaTest {
                 assertEquals(6, j.getVida());
             }
         };
-        assertFalse(jugar(j, "1\n1\n1\n1\n0\n", dados));
+        assertFalse(jugar(j, "1\n1\n3\n1\n0\n", dados));
         assertEquals(6, j.getAtributoBase(Atributo.FUERZA));
         assertEquals(7, j.getFuerza());
         assertEquals(2, j.getAgilidad());

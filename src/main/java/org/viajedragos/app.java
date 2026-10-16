@@ -89,28 +89,127 @@ public class app {
             }
 
             while (true) {
-                salida.println("1. Continuar al siguiente encuentro");
-                salida.println("2. Terminar aventura y volver al menú inicial");
-                salida.println("0. Salir del programa");
-                salida.print("> ");
-                salida.flush();
-                if (!entrada.hasNextLine()) {
-                    salida.println("Entrada finalizada. Hasta pronto.");
-                    return false;
-                }
-                String opcion = entrada.nextLine().trim();
+                mostrarExploracion(jugador, salida);
+                String opcion = leerOpcion(entrada, salida);
+                if (opcion == null) return false;
                 if (opcion.equals("0")) {
                     salida.println("Hasta pronto.");
                     return false;
                 }
-                if (opcion.equals("2")) {
+                if (opcion.equals("4")) {
                     salida.println("La aventura ha terminado.");
                     return true;
                 }
-                if (opcion.equals("1")) break;
-                salida.println("Entrada inválida. Escribe 1, 2 o 0.");
+                if (opcion.equals("3")) break;
+                if (opcion.equals("1")) {
+                    if (!consultarInventario(jugador, entrada, salida)) return false;
+                } else if (opcion.equals("2")) {
+                    if (!usarObjeto(jugador, entrada, salida)) return false;
+                } else {
+                    salida.println("Entrada inválida. Escribe 1, 2, 3, 4 o 0.");
+                }
             }
             encuentro++;
+        }
+    }
+
+    private static void cabecera(String titulo, PrintStream salida) {
+        salida.printf("%n----------------------------------------%n");
+        salida.println("  " + titulo);
+        salida.println("----------------------------------------");
+    }
+
+    private static void mostrarExploracion(Jugador jugador, PrintStream salida) {
+        cabecera("VIAJE A DRAGOS - EXPLORACIÓN", salida);
+        salida.printf("  %s%n  Vida: %d/%d PS%n%n",
+                jugador.getNombre(), jugador.getVida(), jugador.getVidaMaxima());
+        salida.println("1. Revisar inventario");
+        salida.println("2. Usar objeto");
+        salida.println("3. Continuar al siguiente encuentro");
+        salida.println("4. Terminar aventura y volver al menú inicial");
+        salida.println("0. Salir del juego");
+    }
+
+    // null representa fin de entrada; los flujos pertenecen al llamador.
+    private static String leerOpcion(Scanner entrada, PrintStream salida) {
+        salida.print("Elige una opción > ");
+        salida.flush();
+        if (!entrada.hasNextLine()) {
+            salida.println("Entrada finalizada. Hasta pronto.");
+            return null;
+        }
+        return entrada.nextLine().trim();
+    }
+
+    static boolean consultarInventario(Jugador jugador, Scanner entrada, PrintStream salida) {
+        cabecera("INVENTARIO", salida);
+        salida.println("CONSUMIBLES");
+        boolean tienePociones = false;
+        for (TipoPocion tipo : TipoPocion.values()) {
+            int cantidad = jugador.getCantidadPociones(tipo);
+            if (cantidad > 0) {
+                tienePociones = true;
+                salida.printf("  %-24s x%d%n    Recupera %d PS%n",
+                        tipo.getNombre(), cantidad, tipo.getRecuperacionPS());
+            }
+        }
+        if (!tienePociones) salida.println("  No tienes consumibles");
+
+        salida.printf("%nEQUIPO%n");
+        if (jugador.getEquipoEquipado().isEmpty()) salida.println("  No tienes equipo equipado");
+        for (TipoEquipo ranura : TipoEquipo.values()) {
+            var equipo = jugador.getEquipoEquipado().get(ranura);
+            if (equipo == null) continue;
+            salida.printf("  %s: %s%n", ranura.getNombre(), equipo.getNombre());
+            equipo.getBonificaciones().forEach((atributo, cantidad) ->
+                    salida.printf("    %s %+d%n", atributo, cantidad));
+            equipo.getHabilidadesOtorgadas().forEach((habilidad, nivel) ->
+                    salida.printf("    %s: nivel otorgado %d%n", habilidad.getNombre(), nivel));
+        }
+        salida.printf("%n0. Volver a exploración%n");
+        while (true) {
+            String opcion = leerOpcion(entrada, salida);
+            if (opcion == null) return false;
+            if (opcion.equals("0")) return true;
+            salida.println("Entrada inválida. Escribe 0 para volver.");
+        }
+    }
+
+    static boolean usarObjeto(Jugador jugador, Scanner entrada, PrintStream salida) {
+        cabecera("USAR OBJETO", salida);
+        salida.printf("  Vida actual: %d/%d PS%n%n", jugador.getVida(), jugador.getVidaMaxima());
+        salida.printf("1. %s (x%d) +%d PS%n", TipoPocion.PEQUENA.getNombre(),
+                jugador.getCantidadPociones(TipoPocion.PEQUENA), TipoPocion.PEQUENA.getRecuperacionPS());
+        salida.printf("2. %s (x%d) +%d PS%n", TipoPocion.GRANDE.getNombre(),
+                jugador.getCantidadPociones(TipoPocion.GRANDE), TipoPocion.GRANDE.getRecuperacionPS());
+        salida.println("0. Cancelar");
+        while (true) {
+            String opcion = leerOpcion(entrada, salida);
+            if (opcion == null) return false;
+            if (opcion.equals("0")) return true;
+            TipoPocion tipo;
+            if (opcion.equals("1")) tipo = TipoPocion.PEQUENA;
+            else if (opcion.equals("2")) tipo = TipoPocion.GRANDE;
+            else {
+                salida.println("Entrada inválida. Escribe 1, 2 o 0.");
+                continue;
+            }
+            if (jugador.getCantidadPociones(tipo) == 0) {
+                salida.println("No tienes esa poción.");
+                continue;
+            }
+            if (jugador.getVida() >= jugador.getVidaMaxima()) {
+                salida.println("La vida está completa. No se ha consumido la poción.");
+                continue;
+            }
+            int recuperacion = jugador.usarPocion(tipo);
+            if (recuperacion > 0) {
+                salida.printf("Has utilizado una %s.%nVida recuperada: +%d PS%nVida actual: %d/%d PS%n",
+                        tipo.getNombre(), recuperacion, jugador.getVida(), jugador.getVidaMaxima());
+                salida.printf("Unidades restantes de %s: %d%n", tipo.getNombre(), jugador.getCantidadPociones(tipo));
+                return true;
+            }
+            salida.println("No se ha recuperado vida. No se ha consumido la poción.");
         }
     }
 
