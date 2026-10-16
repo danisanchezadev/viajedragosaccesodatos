@@ -1,5 +1,8 @@
 package org.viajedragos;
 
+import org.viajedragos.arma.Arma;
+import org.viajedragos.arma.Atributo;
+import org.viajedragos.arma.TipoEquipo;
 import org.viajedragos.combate.Combate;
 import org.viajedragos.combate.Dado;
 import org.viajedragos.combate.ResultadoCombate;
@@ -9,6 +12,7 @@ import org.viajedragos.modelo.Jugador;
 
 import java.io.PrintStream;
 import java.util.NoSuchElementException;
+import java.util.Map;
 import java.util.Scanner;
 
 public class app {
@@ -66,6 +70,9 @@ public class app {
                 return true;
             }
 
+            if (resultado == ResultadoCombate.ENEMIGO_MUERE && encuentro == 1
+                    && !ofrecerEspada(jugador, entrada, salida)) return false;
+
             while (true) {
                 salida.println("1. Continuar al siguiente encuentro");
                 salida.println("2. Terminar aventura y volver al menú inicial");
@@ -89,6 +96,38 @@ public class app {
                 salida.println("Entrada inválida. Escribe 1, 2 o 0.");
             }
             encuentro++;
+        }
+    }
+
+    // La pieza se crea una sola vez por oferta. false indica cierre de entrada.
+    static boolean ofrecerEspada(Jugador jugador, Scanner entrada, PrintStream salida) {
+        Arma espada = new Arma("Espada desgastada", TipoEquipo.ARMA,
+                Map.of(Atributo.FUERZA, 1), Map.of());
+        salida.printf("Has encontrado una %s.%nFuerza %+d%n",
+                espada.getNombre(), espada.getBonificaciones().get(Atributo.FUERZA));
+        while (true) {
+            salida.printf("1. Equipar %s%n", espada.getNombre());
+            salida.printf("2. Rechazar %s%n", espada.getNombre());
+            salida.print("> ");
+            salida.flush();
+            if (!entrada.hasNextLine()) {
+                salida.println("Entrada finalizada. Hasta pronto.");
+                return false;
+            }
+            String opcion = entrada.nextLine().trim();
+            if (opcion.equals("1")) {
+                if (jugador.equipar(espada)) {
+                    salida.printf("%s equipada. Fuerza actual: %d.%n", espada.getNombre(), jugador.getFuerza());
+                } else {
+                    salida.println("No se puede equipar: la ranura de arma está ocupada.");
+                }
+                return true;
+            }
+            if (opcion.equals("2")) {
+                salida.printf("Has rechazado la %s. La dejas atrás.%n", espada.getNombre());
+                return true;
+            }
+            salida.println("Entrada inválida. Escribe 1 o 2.");
         }
     }
 

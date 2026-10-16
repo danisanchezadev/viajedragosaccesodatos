@@ -30,7 +30,7 @@ class AppTest {
 
     @Test
     void iniciarAtacarGanarYSalir() {
-        String texto = ejecutar("1\n1\n0\n", 1, 1, 1, 1, 6, 1, 6);
+        String texto = ejecutar("1\n1\n2\n0\n", 1, 1, 1, 1, 6, 1, 6);
         assertTrue(texto.contains("=== Viaje a Dragos ==="));
         assertTrue(texto.contains("1. Atacar"));
         assertTrue(texto.contains("Aventurero: 24/24 de vida | Lobo: 18/18 de vida"));
@@ -43,7 +43,7 @@ class AppTest {
 
     @Test
     void entradasInvalidasNoConsumenDadosNiCancelanLaPartida() {
-        String texto = ejecutar("x\n\n1\n0\natacar\n\n 1 \nx\n0\n", 1, 1, 1, 1, 6, 1, 6);
+        String texto = ejecutar("x\n\n1\n0\natacar\n\n 1 \nx\n2\n0\n", 1, 1, 1, 1, 6, 1, 6);
         assertEquals(6, texto.split("Entrada inválida", -1).length - 1);
         assertTrue(texto.contains("Victoria."));
     }
@@ -51,7 +51,7 @@ class AppTest {
     @Test
     void nuevaAventuraCreaPersonajesConTodaSuVida() {
         // En cada combate el enemigo golpea primero y deja al jugador a 6 de vida.
-        String texto = ejecutar("1\n1\n2\n1\n1\n0\n",
+        String texto = ejecutar("1\n1\n2\n2\n1\n1\n2\n0\n",
                 1, 1, 1, 6, 6, 1, 6, 6, 1, 6,
                 1, 1, 1, 6, 6, 1, 6, 6, 1, 6);
         assertEquals(2, texto.split("Comienza el combate", -1).length - 1);
@@ -92,7 +92,7 @@ class AppTest {
 
     @Test
     void cierreDeEntradaDespuesDeCombateNoReinicia() {
-        String texto = ejecutar("1\n1\n", 1, 1, 1, 1, 6, 1, 6);
+        String texto = ejecutar("1\n1\n2\n", 1, 1, 1, 1, 6, 1, 6);
         assertTrue(texto.contains("Victoria."));
         assertTrue(texto.contains("Entrada finalizada. Hasta pronto."));
     }

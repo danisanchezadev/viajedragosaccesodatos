@@ -2,7 +2,7 @@
 
 Fecha: 14 de octubre de 2026.
 
-> **Estado actual:** base publicada `79d15c7`. Combate completo A/B/C e invariantes de habilidades terminados en local. `mvn clean test`: 202 pruebas pasan, sin fallos ni errores. Solo el jugador ejecuta la limpieza final, incluso muerto. Sin commit ni push. Los apartados anteriores conservan los hallazgos históricos.
+> **Estado actual (16 de octubre de 2026):** continuidad publicada en GitHub, main `6fc2a8d`. Fase 5 de Espada desgastada implementada localmente, sin commit ni push de esa fase. `mvn clean test`: 309 pruebas pasan, sin fallos, errores ni omisiones. Los apartados siguientes conservan los hallazgos y resultados históricos de cada etapa; la fase más reciente se documenta al final.
 
 ## Alcance y resultado
 
@@ -462,6 +462,10 @@ propuesta anterior de cambiar firmas queda descartada por innecesaria.
 
 ## Fase 4: continuidad entre encuentros (16 de octubre de 2026)
 
+Publicación posterior confirmada por el autor: esta fase está en GitHub como
+main 6fc2a8d. El análisis y las comprobaciones siguientes corresponden a su
+implementación previa; ya no es trabajo pendiente de publicar.
+
 Base local al comenzar: main, 77ede56, árbol limpio y 286 pruebas anteriores.
 El autor aprobó el análisis y autorizó explícitamente las reglas de continuidad
 del adjunto: misma instancia del jugador, vida restante sin recuperación, Lobos
@@ -519,4 +523,78 @@ a 23/24; opción 2 para terminar; opción 1 para iniciar otra aventura, comproba
 terminó con código 0. No se manipularon tiradas ni atributos.
 
 README y checklist actualizados con las reglas e instrucciones de IntelliJ.
-No se ha hecho commit ni push de esta fase.
+Esta fase se publicó posteriormente en 6fc2a8d; la fase 5 parte de ese commit.
+
+## Fase 5: primera recompensa de equipamiento (16 de octubre de 2026)
+
+Base de implementación: main 6fc2a8d, continuidad ya publicada en GitHub y árbol
+limpio al comenzar. El autor aprobó el análisis y autorizó una recompensa fija:
+Espada desgastada, ARMA, FUERZA +1, sin habilidades, exclusivamente después de
+derrotar al primer Lobo de cada aventura. Sin commit ni push de esta fase.
+
+### Implementación e impacto
+
+Solo cambia app.java en producción. jugarAventura ofrece la espada después del
+resultado cuando resultado == ENEMIGO_MUERE y encuentro == 1. El método auxiliar
+de paquete ofrecerEspada crea una sola instancia con los constructores existentes,
+muestra nombre/bonificación y espera 1 Equipar o 2 Rechazar. La pregunta es previa
+al menú de continuidad; repetir entradas inválidas no crea piezas nuevas ni
+ejecuta el combate. EOF durante la oferta termina la sesión sin equipar ni iniciar
+otro encuentro, manteniendo la victoria que ya se produjo.
+
+Aceptar llama una sola vez a jugador.equipar y comprueba el resultado antes de
+anunciar éxito y fuerza efectiva. No cambia fuerza base ni llama a aplicarEfectos
+manualmente. Una ranura ocupada informa de fallo y conserva su pieza, sin sustituir.
+Rechazar deja atrás la espada definitivamente. No se vuelve a ofrecer tras otras
+victorias, tanto si fue aceptada como rechazada. La misma pieza permanece con el
+jugador durante los encuentros posteriores; al morir/terminar aventura se descarta
+el personaje. Una nueva aventura empieza a 24/24, sin habilidades ni equipo.
+
+No se cambian motor, fórmulas, modelos, niveles, habilidades ni sistema de equipo.
+No se añaden clases productivas, catálogo, botín aleatorio, inventario, recompensas
+genéricas, oro, experiencia, consumibles, comercio o persistencia. El primer
+combate sigue sin equipo y sin habilidades iniciales.
+
+### Pruebas y resultados
+
+AppTest y AventuraTest conservan sus 22 escenarios y expectativas; solo se adaptan
+las entradas que atraviesan la primera victoria para responder 2 a la oferta.
+Las 276 pruebas restantes anteriores no cambian. RecompensaTest añade 11 casos:
+
+1. Primer combate sin equipo/habilidades, oferta posterior al resultado, pieza
+   exacta, base intacta y fuerza efectiva 7, sin modificar vida actual/máxima.
+2. Misma espada durante tres encuentros, una sola oferta y sin acumular el +1;
+   continuación conservando vida 6/24.
+3. Rechazo sin cambios de atributos/estado/equipo y sin recuperar la recompensa
+   después de otra victoria.
+4. Entradas inválidas sin tirar dados extra; una sola creación visible de oferta
+   y una sola llamada real a equipar, contada mediante un jugador exclusivo de prueba.
+5. EOF en la recompensa sin equipar, sin menú posterior y sin otro encuentro.
+6. Derrota sin premio.
+7. Muerte simultánea sin premio, usando únicamente la contingencia de prueba.
+8. Terminar aventura con espada e iniciar otra sin su bonificación: el ataque
+   normal del nuevo personaje vuelve a causar 7, con vida inicial 24/24.
+9. Ataque real con dados 4/2: daño 7 sin espada, 8 con la espada obtenida mediante
+   la oferta. Mismo motor y tiradas, sin alterar la fuerza base.
+10. Dos combates con Rabia, Primer impulso, Ímpetu e Instinto de prueba: la espada
+    se obtiene entre ellos, no se acumulan temporales y la limpieza conserva
+    fuerza efectiva 7, base 6 y los estados de habilidades.
+11. Ranura ocupada: conserva la pieza anterior y no anuncia equipamiento exitoso.
+
+Resultado final ejecutado: **mvn clean test, BUILD SUCCESS; 309 pruebas,
+0 fallos, 0 errores y 0 omitidas**, recompilando 33 fuentes principales y 26
+archivos de pruebas. Se conservan los 298 escenarios anteriores y se añaden 11.
+git diff --check pasa; app.java es el único archivo productivo modificado.
+
+### Recorrido de consola con dados reales
+
+Se ejecutó java -cp target/classes org.viajedragos.app sin manipular atributos o
+tiradas: primera victoria tras tres turnos con 20/24, oferta de Espada desgastada,
+aceptar y mensaje de fuerza actual 7. Continuar inicia el segundo encuentro con
+20/24 contra otro Lobo de 18/18; victoria tras cuatro turnos con 17/24, sin otra
+oferta. Terminar aventura y comenzar una nueva muestra 24/24 y encuentro 1. Tras
+ganar ese combate a 13/24, se rechaza su propia oferta y se sale; código final 0.
+
+README, checklist y cabecera del informe actualizados. Se corrigen las referencias
+que describían continuidad como local/no publicada: fase 4 está publicada en
+6fc2a8d; únicamente esta fase 5 permanece sin commit ni push.

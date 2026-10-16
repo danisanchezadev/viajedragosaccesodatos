@@ -94,9 +94,20 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - Tras victoria: `1. Continuar al siguiente encuentro`, `2. Terminar aventura y volver al menú inicial`, `0. Salir del programa`. Continuar conserva al jugador; terminar lo descarta; salir termina la sesión.
 - Menú inicial: `1. Nueva aventura`, `0. Salir`. Una nueva aventura crea un personaje nuevo.
 - Muerte del jugador o de ambos: mostrar resultado, terminar aventura y volver al menú inicial. El motor resuelve previamente sus muertes y contingencias según las reglas existentes.
-- Sin oro, experiencia, objetos, recompensas ni progresión. Su adquisición futura no se implementa.
+- Sin oro, experiencia, consumibles ni progresión. La fase 5 añade exclusivamente la recompensa fija descrita en 3.6; no hay otras recompensas.
 - Si se interrumpe la entrada durante el combate, termina la sesión sin resultado ficticio ni reutilización del personaje interrumpido.
 - Implementación limitada a app.java: ejecutar conserva el menú inicial y crea el jugador; jugarAventura, de acceso de paquete, contiene la repetición de encuentros y devuelve si corresponde volver al inicio o salir. No cambia el motor ni sus contratos.
+
+### 3.6 Primera recompensa de equipamiento: fase 5 confirmada
+
+- Solo después de vencer al primer Lobo de cada aventura: mostrar el resultado y ofrecer una Espada desgastada, TipoEquipo.ARMA, FUERZA +1, sin habilidades otorgadas. El primer combate sigue sin equipo ni habilidades iniciales.
+- Pregunta independiente: `1. Equipar Espada desgastada`, `2. Rechazar Espada desgastada`. Después aparece el menú habitual entre encuentros. Entradas inválidas repiten la pregunta sin crear otra pieza, aplicar efectos o consumir dados.
+- Aceptar llama una sola vez a jugador.equipar y comprueba su booleano antes de anunciar éxito. No se modifica fuerza directamente ni se llama a aplicarEfectos manualmente. Si la ranura está ocupada, se informa del rechazo sin sustituirla.
+- Rechazar descarta definitivamente la pieza; no hay inventario ni recuperación posterior. No se vuelve a ofrecer en encuentros posteriores, se acepte o se rechace.
+- La espada y su FUERZA +1 permanecen con la misma instancia del jugador en los encuentros posteriores. Base de fuerza 6, efectiva 7 en el Aventurero sin otros efectos. No se modifica vida actual/máxima.
+- Morir o terminar aventura descarta personaje y equipo. Una aventura nueva empieza sin equipo y puede recibir su propia espada tras su primera victoria.
+- Si se cierra la entrada durante la oferta, termina la sesión sin equipar ni iniciar otro encuentro. La victoria ya obtenida conserva su resultado real.
+- Implementación en app.ofrecerEspada, llamado desde jugarAventura únicamente con ENEMIGO_MUERE y encuentro == 1. Sin catálogo, motor de recompensas, sustitución, clases productivas nuevas ni cambios de combate/modelo.
 
 ## 4. Habilidades
 
@@ -135,7 +146,7 @@ Estas áreas forman parte del objetivo del producto, pero **no se han establecid
 - **Comercio:** previsto como mecánica sencilla de compra/venta o interacción con una tienda; precios, moneda, descuentos y restricciones **no están confirmados para esta aplicación**. No importar reglas de ejercicios independientes sobre Strategy y tipos de cliente.
 - **Progresión:** no hay aquí una especificación confirmada de experiencia, niveles, clases de personaje o distribución de atributos para el MVP. No inventarla.
 - **Huida y uso de objetos en combate:** son acciones previstas, pero sus probabilidades, consecuencias y límites necesitan decisión o comprobación del código.
-- **Continuidad actual:** mismo jugador, vida restante sin curación, Lobos nuevos, sin recompensas, muerte termina aventura y menús según 3.5. No hay persistencia; otras mecánicas futuras siguen sin definir.
+- **Continuidad actual:** mismo jugador, vida restante sin curación, Lobos nuevos, muerte termina aventura y menús según 3.5. Solo se concede la Espada desgastada según 3.6; no hay persistencia ni otras recompensas. Otras mecánicas futuras siguen sin definir.
 
 ## 7. Estructura de código conocida (orientativa; verificar)
 
@@ -169,9 +180,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 16 de octubre de 2026. Base `77ede56` de main, con los cinco roles corregidos. En local está implementada la fase 4 de continuidad autorizada: solo cambia app.java en producción. Mismo jugador durante la aventura, Lobos nuevos y vida sin recuperación; sin habilidades ni equipo iniciales. Sin commit ni push de esta fase.
+> **Estado:** 16 de octubre de 2026. Fase 4 de continuidad publicada en GitHub, main `6fc2a8d`. En local está implementada la fase 5 de recompensa autorizada: solo cambia app.java en producción. Espada desgastada FUERZA +1 después de la primera victoria, opcional, sin habilidades. No hay commit ni push de la fase 5.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 33 fuentes principales y 25 archivos de pruebas recompilados; 298 pruebas, 0 fallos, 0 errores, 0 omitidas. Son los 286 escenarios anteriores y 12 nuevos de AventuraTest. Se adapta solo el escenario de AppTest que exigía personajes nuevos en cada combate: ahora comprueba una aventura nueva tras terminar la anterior. Motor, modelo, habilidades y equipo permanecen intactos. Flujo completo jugado en terminal con dados reales.
+> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 33 fuentes principales y 26 archivos de pruebas recompilados; 309 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 298 escenarios anteriores adaptando únicamente entradas de AppTest/AventuraTest para rechazar la oferta, y se añaden 11 casos de RecompensaTest. Motor, modelo, habilidades y equipo permanecen intactos. Recorrido de equipar/continuar/terminar/nueva aventura comprobado en terminal con dados reales.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -185,14 +196,14 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 298 pruebas ejecutadas sin fallos ni errores; conserva los 286 escenarios anteriores y añade 12 de continuidad, incluidos los 21 de integración real y 41 de roles sin cambios.
+- [x] Suite JUnit: 309 pruebas ejecutadas sin fallos ni errores; conserva los 298 escenarios anteriores, incluidos 21 de integración real y 41 de roles, y añade 11 de recompensa.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
 - [x] Auditar clases, paquetes, firmas, dependencias y referencias del repositorio.
 - [x] Comprobar compilación del código principal: `mvn compile` termina correctamente.
 - [x] Ejecutar las pruebas existentes con `mvn test`.
-- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 298 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
+- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 309 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
 - [x] Revisar `EventosHabilidad`: todas sus firmas actuales y overrides implementados reciben `EstadoHabilidad` y compilan en el código principal.
 - [x] Revisar y corregir las seis llamadas del borrador a `dispararHabilidades`: las lambdas reciben habilidad y estado y pasan ese estado al evento.
 - [x] Activar el auxiliar existente `dispararHabilidades` para usarlo desde ataque, recorriendo habilidad y estado juntos.
@@ -230,7 +241,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Conservar combatir() automático y añadir combatir(Scanner, PrintStream) con un bucle compartido. La narración muestra atacante, objetivo, fallo, crítico, contraataque y vida realmente perdida.
 - [x] Probar consola con dados controlados y flujos en memoria: inicio, decisión, entradas inválidas, victoria/derrota, mensaje de muerte simultánea, resurrección, reinicio, salida, cierre de entrada y equivalencia de ambos modos.
 - [x] Auditar las 14 clases de habilidades para la demo sobre main publicado 072758f: 13 con efectos y un borrador. Análisis en ANALISIS_HABILIDADES_DEMO.md; mvn clean test confirma 224 pruebas superadas, sin modificaciones de código.
-- [x] Confirmar partida inicial de aprendizaje: Aventurero y primer Lobo sin habilidades. La propuesta de asignarlas para demostración está descartada. No se añaden progresión, recompensas ni experiencia; su adquisición posterior queda por definir.
+- [x] Confirmar partida inicial de aprendizaje: Aventurero y primer Lobo sin habilidades ni equipo iniciales. La propuesta de asignar habilidades para demostración está descartada. La fase 5 solo añade la espada sin habilidades después de vencer al primer Lobo; sin progresión ni experiencia.
 - [x] Validar habilidades existentes exclusivamente con combatientes de prueba: 21 casos nuevos de eventos, atributos usados en cálculos, curación limitada, restauración del jugador vivo/muerto, estado/nivel, equipo y equivalencia de modos.
 - [x] Tras reproducir el defecto en 10 casos, convertir RolesModificadoresDanioTest en 41 regresiones de roles confirmados, condiciones originales, mismo tipo/instancia en ambos participantes, daño cero, crítico, fallo y contraataque; documentado en ANALISIS_ROLES_MODIFICADORES_DANIO.md.
 - [ ] Narración de habilidades aplazada expresamente por el autor; no añadir mensajes ni cambiar la interfaz en esta tarea.
@@ -241,7 +252,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [ ] Definir e implementar huir y usar objeto; no se ofrecen en la consola actual.
 - [ ] Definir e implementar inventario y adquisición/consumo de objetos.
 - [ ] Definir e implementar comercio mínimo si lo requiere el MVP.
-- [x] Confirmar e implementar la continuidad de fase 4: misma instancia del jugador, vida restante sin recuperación, Lobos nuevos, sin recompensas ni límite de encuentros; muerte/terminación voluntaria devuelve al inicio y nueva aventura crea otro jugador.
+- [x] Continuidad de fase 4 publicada en 6fc2a8d: misma instancia del jugador, vida restante sin recuperación, Lobos nuevos y sin límite de encuentros; muerte/terminación voluntaria devuelve al inicio y nueva aventura crea otro jugador. La fase 5 añade su primera recompensa fija.
+- [x] Implementar la Espada desgastada tras la primera victoria: ARMA, FUERZA +1, sin habilidades, aceptar/rechazar antes del menú actual, oferta única y descarte definitivo. Usar solo equipar y comprobar su resultado.
+- [x] Añadir 11 casos de RecompensaTest: oferta única/condicionada, no equipo inicial, +1 sin cambiar base ni vida, persistencia sin duplicar, rechazo, invalidación/EOF, aventura nueva sin espada, daño real 7→8, limpieza temporal y ranura ocupada sin sustitución.
 - [x] Añadir 12 casos de AventuraTest: identidad jugador/enemigos, vida actual/máxima, menús, muerte y muerte simultánea, entrada inválida/interrumpida y limpieza temporal con equipo y habilidades de prueba.
 - [x] Comprobar flujo en terminal con Dado real: primera victoria a 23/24, continuar a otro Lobo con 23/24, segunda victoria, terminar aventura, nueva aventura a 24/24, completar combate y salir con código 0. No se alteran tiradas ni atributos.
 - [x] Añadir y ejecutar 34 escenarios de EquipamientoTest y 8 de HabilidadesConEquipoTest por autorización expresa del autor.
@@ -297,7 +310,7 @@ Después de programar, informa de:
 - No existe un modificador de agilidad del turno: el +2 se aplica exclusivamente al cálculo de iniciativa del poseedor.
 - ¿Qué reglas concretas rigen huida, uso de objetos, inventario y comercio?
 - Confirmado: alFinalCombate solo del jugador, siempre, como limpieza incluso muerto; el enemigo no participa.
-- Confirmado en fase 4: tras victoria se permite continuar/terminar aventura/salir; no hay recompensas ni recuperación entre encuentros. Futuras ampliaciones necesitan reglas propias.
+- Confirmado: tras victoria se permite continuar/terminar aventura/salir, sin recuperación entre encuentros. Fase 5: una sola Espada desgastada tras la primera victoria, aceptación opcional y sin otras recompensas. Futuras ampliaciones necesitan reglas propias.
 - ¿Qué catálogo mínimo de enemigos y objetos quiere el autor para la primera demo?
 
 Si alguna de estas respuestas ya está expresada de forma inequívoca en código o pruebas del repositorio, documentarla con referencia a los archivos correspondientes. Si no, pedir una decisión concreta antes de implementarla.
