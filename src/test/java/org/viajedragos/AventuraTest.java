@@ -73,7 +73,7 @@ class AventuraTest {
 
     @Test
     void continuarConservaExactamenteVidaActualYMaxima() {
-        ejecutar("1\n1\n2\n3\n1\n0\n", new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
+        ejecutar("1\n1\n2\n3\n1\n2\n0\n", new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
         assertEquals(2, veces("Victoria."));
         assertEquals(2, veces("Vida final: Aventurero 30/48 | Lobo 0/18"));
         String segundo = texto().substring(texto().indexOf("Encuentro 2."));
@@ -105,7 +105,7 @@ class AventuraTest {
             }
         }, 1);
 
-        assertFalse(jugar(j, "1\n2\n3\n1\n0\n", new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO)));
+        assertFalse(jugar(j, "1\n2\n3\n1\n2\n0\n", new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO)));
         assertEquals(2, jugadores.size());
         assertSame(j, jugadores.get(0));
         assertSame(j, jugadores.get(1));
@@ -181,7 +181,7 @@ class AventuraTest {
 
     @Test
     void invalidosEnAmbosMenusNoCreanEncuentrosNiModificanVida() {
-        ejecutar("2\nx\n1\n1\n2\nx\n5\n\n3\n1\n0\n",
+        ejecutar("2\nx\n1\n1\n2\nx\n5\n\n3\n1\n2\n0\n",
                 new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
         assertEquals(5, veces("Entrada inválida"));
         assertEquals(2, veces("Comienza el combate"));
@@ -233,7 +233,7 @@ class AventuraTest {
             }
         };
 
-        assertFalse(jugar(j, "1\n2\n3\n1\n0\n", dados));
+        assertFalse(jugar(j, "1\n2\n3\n1\n2\n0\n", dados));
         assertEquals(2, veces("Victoria."));
         assertEquals(6, j.getVida());
         assertEquals(24, j.getVidaMaxima());

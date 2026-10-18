@@ -40,7 +40,8 @@ class CatalogoObjetosIntegracionTest {
     }
     private List<DefinicionArma> armas() {
         return List.of(new DefinicionArma(DefinicionArma.ID_ESPADA_DESGASTADA, "Espada del catálogo",
-                Map.of(Atributo.FUERZA, 3, Atributo.VELOCIDAD, -1)));
+                Map.of(Atributo.FUERZA, 3, Atributo.VELOCIDAD, -1)),
+                new DefinicionArma(DefinicionArma.ID_ESPADA_HIERRO, "Espada de hierro", Map.of(Atributo.FUERZA, 2)));
     }
     private RepositorioObjetos repositorio(List<DefinicionArma> armas, List<DefinicionPocion> pociones) {
         return new RepositorioObjetos() {
@@ -65,7 +66,7 @@ class CatalogoObjetosIntegracionTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16})
+    @ValueSource(ints = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17})
     void catalogoInvalidoSeRechazaSinIniciarNiCambiarAlJugador(int caso) {
         var inicial = new RepositorioObjetosMemoria();
         List<DefinicionArma> armas = inicial.obtenerArmas();
@@ -86,6 +87,7 @@ class CatalogoObjetosIntegracionTest {
             case 11 -> pociones = List.of(new DefinicionPocion("repetida", TipoPocion.PEQUENA, "Poción", 8),
                     new DefinicionPocion("repetida", TipoPocion.GRANDE, "Poción", 16));
             case 12 -> armas = List.of(new DefinicionArma("otro_id", "Espada desgastada", Map.of(Atributo.FUERZA, 1)));
+            case 17 -> armas = List.of(armas.getFirst());
         }
         RepositorioObjetos objetos = repositorio(armas, pociones);
         if (caso == 13) objetos = null;
@@ -156,7 +158,7 @@ class CatalogoObjetosIntegracionTest {
                 return 0;
             }
         };
-        assertFalse(app.jugarAventura(j, new Scanner("1\n" + (aceptar ? "1" : "2") + "\n3\n1\n0\n"), consola(),
+        assertFalse(app.jugarAventura(j, new Scanner("1\n" + (aceptar ? "1" : "2") + "\n3\n1\n2\n0\n"), consola(),
                 dados(1,1,1,1,6,1,6, 1,1,1,1,6,1,6), botin, enemigos, new Random(0), repo));
         assertArrayEquals(new int[]{1,1}, consultas);
         assertEquals(2, encuentros[0]);

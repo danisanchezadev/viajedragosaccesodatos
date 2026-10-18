@@ -154,7 +154,7 @@ class ExploracionTest {
     void inventarioRechazaAccionesSinModificarEstado() {
         Jugador j = jugador(13);
         j.agregarPocion(TipoPocion.GRANDE);
-        assertTrue(app.consultarInventario(j, new Scanner("2\nx\n0\n"), consola()));
+        assertTrue(app.consultarInventario(j, new Scanner("3\nx\n0\n"), consola()));
         assertEquals(2, texto().split("Entrada inválida", -1).length - 1);
         assertEquals(13, j.getVida());
         assertEquals(1, j.getCantidadPociones(TipoPocion.GRANDE));
@@ -197,7 +197,7 @@ class ExploracionTest {
                 return 0;
             }
         };
-        String entrada = "1\n1\n1\nx\n0\n2\n1\n3\n1\n1\n0\n0\n";
+        String entrada = "1\n1\n1\nx\n0\n2\n1\n3\n1\n2\n1\n0\n0\n";
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
                 app.jugarAventura(j, new Scanner(entrada), consola(), dados, azar, soloLobo(), new Random(0))));
         assertEquals(valores.length, usadas[0]);
@@ -247,7 +247,7 @@ class ExploracionTest {
             }
         };
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.jugarAventura(j,
-                new Scanner("1\n1\n3\n2\n1\n1\n1\n0\n2\n2\n0\n"), consola(), () -> {
+                new Scanner("1\n1\n3\n2\n1\n1\n2\n1\n0\n2\n2\n0\n"), consola(), () -> {
                     assertTrue(usadas[0] < tiradas.length, "El consumo no tira dados de ataque");
                     if (usadas[0] == 14) {
                         assertEquals(14, j.getVida(), "Se curó al llegar su acción del segundo combate");

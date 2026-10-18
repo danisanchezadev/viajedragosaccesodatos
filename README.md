@@ -16,6 +16,9 @@ Requiere JDK 23 y Maven. No utiliza persistencia ni servicios externos.
 7. Después del botín y de la oferta de espada aparece el menú de exploración:
    `1` revisa el inventario, `2` permite usar una poción, `3` continúa al siguiente
    encuentro, `4` termina la aventura y vuelve al inicio, y `0` sale del juego.
+8. Tras la segunda victoria real se ofrece la **Espada de hierro**, FUERZA +2:
+   `1` la guarda y `2` la deja atrás. Para equiparla, entra en inventario y elige
+   `2. Cambiar equipamiento`, selecciona ranura/pieza y confirma con `1`.
 
 El menú inicial ofrece `1. Nueva aventura` y `0. Salir`. Cada aventura crea un
 Aventurero con 48/48 de vida, sin habilidades ni equipamiento. Cada encuentro crea
@@ -61,6 +64,7 @@ No hay lectura de archivos, JDBC, JPA, frameworks ni persistencia en esta versi�
 La aventura carga una sola vez las definiciones de `RepositorioObjetos`:
 `obtenerArmas()` y `obtenerPociones()`. `RepositorioObjetosMemoria` devuelve listas
 inmutables con Espada desgastada (`espada_desgastada`, FUERZA +1, sin habilidades),
+Espada de hierro (`espada_hierro`, FUERZA +2, sin habilidades),
 Poción pequeña (`pocion_pequena`, 8 PS) y Poción grande (`pocion_grande`, 16 PS).
 
 `DefinicionArma` es un record con id, nombre y copia inmutable de bonificaciones.
@@ -80,8 +84,8 @@ app.ejecutar(entrada, salida, dados, azarBotin, repositorioEnemigos,
 No se necesita cambiar la lógica del combate ni la de consumo. Las firmas
 anteriores siguen disponibles y delegan en memoria. No hay consultas al repositorio
 en cada encuentro, menú o uso. Cada aventura nueva vuelve a cargar sus definiciones.
-Colecciones nulas, entradas nulas, ids repetidos entre cualquier categoría, espada
-ausente, tipos de poción repetidos o incompletos y datos inválidos impiden iniciar
+Colecciones nulas, entradas nulas, ids repetidos entre cualquier categoría, alguna
+de las dos espadas ausente, tipos de poción repetidos o incompletos y datos inválidos impiden iniciar
 la aventura y devuelven al menú inicial, sin objetos de respaldo.
 
 TipoPocion conserva sus métodos, nombres y 8/16 PS por compatibilidad. Son valores
@@ -99,7 +103,7 @@ la acción de combate y la oferta voluntaria única de espada tras la primera
 victoria real. La espada se identifica por id, independientemente de su nombre
 visible. El catálogo no genera botín ni ejecuta efectos.
 
-Limitaciones: solo los tres objetos actuales; sin catálogo de habilidades,
+Limitaciones: solo las dos espadas y dos pociones actuales; sin catálogo de habilidades,
 armaduras, inventario genérico, persistencia ni tecnologías externas. El sistema
 existente de equipo con habilidades permanece intacto. Archivos/JDBC/JPA podrán
 implementar este contrato posteriormente; no están implementados aquí.
@@ -135,7 +139,59 @@ La espada sigue siendo una elección voluntaria en la consola normal.
 La espada permanece equipada y su bonificación no se acumula. La fuerza base
 sigue siendo 6 y la efectiva pasa a 7. Equiparla no recupera vida. Las entradas
 inválidas repiten la elección; cerrar la entrada durante la oferta termina la
-sesión sin equiparla. No hay inventario de armas ni sustitución de equipo.
+sesión sin equiparla. Rechazar no guarda la espada en el inventario de equipamiento;
+su oferta y rechazo no se modifican al añadir la segunda espada.
+
+## Espada de hierro e intercambio
+
+Después de la segunda victoria real de cada aventura se ofrece una única Espada
+de hierro: ARMA, FUERZA +2, sin habilidades. Huidas y derrotas no cuentan como
+victorias. La oferta se realiza una sola vez, sin azar adicional: `1` guarda la
+pieza mediante agregarEquipo y `2` la deja atrás definitivamente. Guardarla no
+equipa, no reemplaza la espada anterior ni modifica atributos. El cierre de
+entrada interrumpe la sesión sin conceder la pieza.
+
+En inventario, `2. Cambiar equipamiento` muestra todas las ranuras, incluidas
+las vacías. Se selecciona una ranura, una pieza guardada compatible y se confirma
+con `1`; `0` permite cancelar. Si hay pieza equipada, se muestra la comparación
+existente antes de confirmar. Si está vacía, se equipa directamente la guardada.
+
+Jugador.equiparDesdeInventario(TipoEquipo, int) recibe el índice de lista desde
+cero y valida límites y compatibilidad. Tras éxito retira solo esa entrada,
+conservando duplicados, y añade la pieza anterior al final del inventario. Se
+conservan ambas identidades, sin copiar piezas ni duplicar efectos. El equipo
+seleccionado permanece en los encuentros posteriores; una aventura nueva empieza
+sin equipo guardado ni equipado.
+
+Combatiente.cambiarEquipoSeguro es un auxiliar protegido: reutiliza equipar y
+desequipar sin cambiar sus reglas. Si devuelven fallo o lanzan RuntimeException,
+restaura las ranuras, atributos, vida y estados originales de habilidades antes
+de informar del fallo; el inventario no se modifica. La recuperación no vuelve
+a ejecutar efectos que podrían fallar de nuevo. No se ejecutan eventos de combate.
+
+Al desaparecer la última fuente de una habilidad de equipo se retira primero su
+efecto temporal activo y después se elimina la habilidad. Las habilidades que
+siguen aprendidas o concedidas por otra pieza conservan su efecto, nivel y estado.
+La limpieza reutiliza la misma operación que el cierre de combate de Instinto de
+supervivencia, Ímpetu, Primer impulso, Furia contenida y Rabia; no simula un evento
+de fin de combate. Cada habilidad consulta su indicador/contador real, por lo que
+limpiar un efecto inactivo no resta bonificaciones.
+
+El intercambio guarda también los indicadores y contadores de EstadoHabilidad. Si
+falla después de limpiar, restaura tanto los atributos como dichos indicadores;
+la curación o limpieza posterior retira el efecto exactamente una vez. Caso
+corregido: vida 1/100, base 6, arma +1 con Instinto, poción pequeña e intercambio
+por arma +2 sin habilidad; la fuerza efectiva queda en 8, no en 11, y el siguiente
+combate no deja residuos. No cambian los valores de curación ni sus eventos.
+
+Los datos temporales de esas cinco habilidades pertenecen al EstadoHabilidad de
+cada combatiente. Una misma instancia externa de Habilidad puede concederse a
+dos personajes sin compartir activaciones ni contadores. Cada personaje conserva
+una sola entrada por clase, con sus niveles aprendidos y contribuciones de equipo.
+No se copian habilidades ni cambian sus referencias, fórmulas o eventos. Las llamadas
+directas a eventos deben reutilizar el estado correspondiente, como hace el motor.
+La manipulación directa del mapa sigue siendo un API de bajo nivel: no debe insertarse
+el mismo EstadoHabilidad mutable en dos personajes.
 
 ## Botín de pociones
 
@@ -168,7 +224,49 @@ Continuar inicia directamente otro combate; no hay tiradas de mazmorra.
 Revisar inventario muestra únicamente las pociones disponibles, sus cantidades y
 su recuperación máxima. Si no hay, indica «No tienes consumibles». También muestra
 el equipo realmente equipado, sus bonificaciones y las habilidades que otorgue,
-sin volver a aplicar efectos. `0` vuelve a exploración. Consultar no cambia el estado.
+sin volver a aplicar efectos. Añade la sección EQUIPAMIENTO GUARDADO, con ranuras,
+nombres, bonificaciones y habilidades de las piezas almacenadas. Consultar no cambia el estado.
+
+El inventario ofrece `1. Comparar equipamiento`, `2. Cambiar equipamiento` y `0. Volver a exploración`.
+Para comparar se elige primero una pieza equipada, numerada en orden de TipoEquipo,
+y después una guardada de la misma ranura. Las categorías incompatibles no aparecen
+en esa selección. `0` en la selección de guardada vuelve a la equipada; `0` en la
+equipada vuelve al inventario. Tras comparar se puede elegir otra candidata o volver.
+Inventarios vacíos, ausencia de equipo o de piezas compatibles se explican con
+mensajes. Entradas inválidas repiten la elección; el cierre de entrada termina
+la sesión sin modificar el personaje.
+
+Jugador almacena el equipo en una List<Equipo> independiente de las ranuras y las
+pociones. agregarEquipo conserva la instancia y admite duplicados sin límite de
+capacidad, peso ni espacios. getInventarioEquipo devuelve una vista no modificable.
+Guardar no equipa ni aplica efectos; desequipar tampoco incorpora automáticamente
+la pieza a esa lista. El intercambio explícito sí conserva la pieza anterior;
+no hay descarte de piezas ni inventario genérico.
+Una nueva aventura crea un jugador con esa lista vacía.
+
+La comparación reutiliza Equipo.compararCon: ACTUAL es la equipada, NUEVO la
+guardada y DIFERENCIA = nueva - actual. Muestra la unión de atributos en orden de
+Atributo, sin modificar equipo, atributos, habilidades, cantidades ni piezas.
+La firma compararCon(Equipo) sigue disponible y produce salida sin colores;
+la sobrecarga compararCon(Equipo, PrintStream, boolean) permite elegir salida y ANSI.
+
+Los colores están desactivados por defecto. Solo se colorean los valores de
+DIFERENCIA: positivos en verde, negativos en rojo y cero sin color. Cada valor
+coloreado lleva restauración inmediata; los espacios de alineación y las demás
+columnas permanecen normales. Para una consola que admita ANSI, se puede habilitar:
+
+```shell
+java -Dviajedragos.ansi=true -cp target/classes org.viajedragos.app
+```
+
+En IntelliJ se utiliza `-Dviajedragos.ansi=true` en las opciones de la VM. El flujo
+de aventura solo aplica esa opción a System.out; una salida arbitraria no recibe
+ANSI automáticamente. Las pruebas pueden habilitar/deshabilitar explícitamente
+el booleano de consultarInventario. No se detecta soporte ANSI ni se asume que exista.
+
+**Limitaciones:** solo la Espada de hierro tiene la nueva oferta para guardar.
+La Espada desgastada mantiene su oferta de equipar/rechazar. No hay tiendas,
+cofres, economía, botín aleatorio de equipo, nuevas armaduras ni habilidades.
 
 Usar objeto conserva las opciones fijas `1. Poción pequeña`, `2. Poción grande`
 y `0. Cancelar`, incluso con cantidades cero. Un uso correcto recupera vida sin
@@ -288,7 +386,7 @@ las pruebas de integración, sin asignarlas a la demo ni añadir narración.
 restauración, niveles y equipo. `RolesModificadoresDanioTest` comprueba los roles
 confirmados: Caparazón, Defensa perfecta y Guardia férrea solo en defensa;
 Castigo al torpe y Golpe certero solo en ataque. Incluye condiciones de activación,
-instancias compartidas y reglas especiales. La suite completa pasa con 501 pruebas.
+instancias compartidas y reglas especiales. La suite completa pasa con 624 pruebas.
 El análisis y la corrección están en `ANALISIS_ROLES_MODIFICADORES_DANIO.md`.
 
 `AventuraTest` añade 12 casos de continuidad: identidad del jugador, enemigos
@@ -309,7 +407,8 @@ La Espada desgastada está publicada en `ec9dc46` y el botín de pociones en
 publicados en `e363c95`. El uso de pociones durante el combate está publicado en
 `f97e7fc`. La huida y la oferta de espada tras la primera victoria real están
 publicadas en `40463bd`. El catálogo de enemigos y el equilibrio inicial están
-publicados en `a630e26`. El catálogo de objetos es el cambio local actual;
+publicados en `a630e26`. El catálogo de objetos está publicado en `d796ffc`.
+El inventario, la comparación y la obtención/intercambio son cambios locales actuales;
 no se ha hecho commit ni push de esta fase.
 
 `InventarioPocionesTest` añade 8 casos de cantidades, datos de recuperación,
@@ -355,7 +454,7 @@ y dos escenarios de RecompensaTest que arrancan aventuras adaptan vida 24 a 48
 y secuencias letales al ajuste autorizado; no cambian los datos de los jugadores
 construidos expresamente por otros escenarios. Ninguna prueba se elimina o deshabilita.
 
-La fase actual conserva sin modificar las 452 pruebas anteriores y añade 49:
+La fase del catálogo de objetos conservó sin modificar las 452 pruebas anteriores y añadió 49:
 18 en RepositorioObjetosTest y 31 en CatalogoObjetosIntegracionTest. Comprueban
 datos/ids/validación, colecciones protegidas, armas independientes, repositorios
 alternativos, carga una vez por aventura, inventario separado, espada voluntaria
@@ -363,3 +462,44 @@ persistente y única, consumo con los valores efectivos en ambos menús, curaci�
 parcial/completa, eventos/estado/nivel, Instinto con equipo, modo automático y
 aventura nueva. Resultado real de `mvn clean test`: BUILD SUCCESS; 501 pruebas,
 0 fallos, 0 errores y 0 omitidas. Se recompilan 41 fuentes principales y 35 de pruebas.
+
+La fase de inventario y comparación conservó las 501 pruebas anteriores sin modificarlas y añadió 37:
+InventarioEquipoTest (8), ComparacionEquipoTest (9) y ComparacionInventarioTest (20).
+Comprueban capacidad sin tope artificial (hasta 10.000 inserciones), duplicados,
+identidad de instancias, protección de colecciones, categorías, navegación/cierre,
+ausencia de efectos al comparar, orden y diferencias, ANSI limitado a su columna,
+activación explícita en la aventura y continuidad sin cambiar las recompensas.
+Resultado real final: `mvn clean test`, BUILD SUCCESS; 538 pruebas, 0 fallos,
+0 errores, 0 omitidas; 41 fuentes principales y 38 archivos de pruebas recompilados.
+
+La fase de obtención/intercambio conserva los 538 casos y añade 34: 15 en
+IntercambioEquipoTest, 18 en ObtencionCambioEquipoTest y un caso de catálogo sin
+espada de hierro. Se adaptan entradas para rechazar la segunda recompensa en los
+escenarios anteriores y el inválido de inventario pasa de 2 a 3. Se conserva toda
+aserción previa salvo el tamaño del catálogo de armas, que pasa justificadamente
+de una a dos; se añaden comprobaciones de la nueva definición. Los repositorios
+alternativos deben proporcionar también espada_hierro, sin respaldos silenciosos.
+Se prueban fallos parciales de aplicar/retirar efectos y retornos falsos, identidad
+de piezas/estados, habilidades aprendidas y compartidas, cancelación/EOF, equipar
+en vacío, ofertas únicas, huida/muerte simultánea y continuidad/reinicio.
+Resultado final: mvn clean test, BUILD SUCCESS; 572 pruebas, 0 fallos, 0 errores,
+0 omitidas; 41 fuentes principales y 40 archivos de pruebas recompilados.
+
+La corrección posterior del efecto temporal persistente conserva intactos los
+572 casos y añade 29: RetiradaEfectosTemporalesTest (26) y
+CancelacionEfectoTemporalTest (3). Incluyen el defecto exacto, cinco habilidades
+activas/inactivas, fallos tras aplicar/retirar, indicadores internos restaurados,
+vida/base/equipo/estados, habilidad aprendida/compartida, clave equivalente de otra
+instancia, cancelación y repetición sin acumulación. Resultado final de
+`mvn clean test`: BUILD SUCCESS; 601 pruebas, 0 fallos, 0 errores y 0 omitidas;
+41 fuentes principales y 42 archivos de pruebas recompilados.
+
+El aislamiento posterior del estado temporal conserva los 601 casos y añade 23
+en AislamientoHabilidadesTest. Comprueba la misma instancia externa entre dos
+combatientes, las cinco habilidades, aprendizaje y equipo, varias piezas, limpieza
+independiente, ataques reales, intercambio exitoso y fallido, restauración de vida,
+atributos y estados, y ciclos sin acumulación. Se adapta solo la preparación de
+ImpetuTest y PrimerImpulsoTest para conservar el mismo EstadoHabilidad entre eventos;
+no se eliminan casos ni se cambian sus aserciones. Resultado de mvn clean test:
+BUILD SUCCESS; 624 pruebas, 0 fallos, 0 errores y 0 omitidas; 41 fuentes principales
+y 43 archivos de pruebas recompilados. Sin cambios de disparo ni secuencia de combate.

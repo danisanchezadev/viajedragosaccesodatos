@@ -12,7 +12,6 @@ public class FuriaContenida extends Habilidad {
         super("Furia contenida");
     }
 
-    private boolean activo = false;
     private int nivel = 2;
 
 
@@ -21,20 +20,25 @@ public class FuriaContenida extends Habilidad {
 
 
 
-        if(!activo && contexto.getDanioFinal() > 0){
+        if(!estado.isEfectoTemporalActivo() && contexto.getDanioFinal() > 0){
 
-            activo = true;
+            estado.setEfectoTemporalActivo(true);
             contexto.getDefensor().aumentarAtributo(Atributo.FUERZA, nivel);
         }
     }
 
     @Override
     public void alFinalCombate(Combatiente portador, Combatiente oponente, EstadoHabilidad estado) {
+        retirarEfectosTemporales(portador, estado);
+    }
 
-        if (activo) {
+    @Override
+    public void retirarEfectosTemporales(Combatiente portador, EstadoHabilidad estado) {
+
+        if (estado.isEfectoTemporalActivo()) {
 
             portador.setFuerza(portador.getAtributoBase(Atributo.FUERZA) - nivel);
-            activo = false;
+            estado.setEfectoTemporalActivo(false);
         }
     }
 }

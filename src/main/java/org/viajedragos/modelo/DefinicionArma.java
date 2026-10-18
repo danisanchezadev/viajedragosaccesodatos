@@ -11,6 +11,7 @@ import java.util.Objects;
 
 public record DefinicionArma(String id, String nombre, Map<Atributo, Integer> bonificaciones) {
     public static final String ID_ESPADA_DESGASTADA = "espada_desgastada";
+    public static final String ID_ESPADA_HIERRO = "espada_hierro";
 
     public DefinicionArma {
         Objects.requireNonNull(id, "El identificador es obligatorio");

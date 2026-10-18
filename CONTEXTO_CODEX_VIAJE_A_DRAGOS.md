@@ -168,7 +168,7 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 
 ### 3.12 Catálogo de objetos autorizado
 
-- Implementación local sobre main a630e26. Cuatro tipos nuevos: DefinicionArma y DefinicionPocion (records en modelo), RepositorioObjetos y RepositorioObjetosMemoria (catalogo). Sin persistencia ni nuevas mecánicas.
+- Publicado en main d796ffc, desarrollado sobre a630e26. Cuatro tipos nuevos: DefinicionArma y DefinicionPocion (records en modelo), RepositorioObjetos y RepositorioObjetosMemoria (catalogo). Sin persistencia ni nuevas mecánicas.
 - Contrato exclusivo List<DefinicionArma> obtenerArmas() / List<DefinicionPocion> obtenerPociones(). Listas de memoria inmutables. Datos: espada_desgastada/Espada desgastada/FUERZA +1, pocion_pequena/PEQUENA/8 PS y pocion_grande/GRANDE/16 PS. Los nombres y curación iniciales de pociones proceden de TipoPocion, sin duplicar sus valores.
 - DefinicionArma guarda id, nombre y copia inmutable del mapa de bonificaciones. CrearArma genera una Arma nueva, ranura ARMA y habilidades vacías. Se admiten penalizaciones, se rechaza VIDA igual que en Equipo. DefinicionPocion guarda id, tipo, nombre y recuperación positiva. No guardan cantidades, personajes ni habilidades mutables.
 - Jugador conserva ambos constructores anteriores y admite uno adicional con List<DefinicionPocion>. configurarPociones valida/copia el conjunto completo antes de reemplazarlo, sin modificar inventario; getDefinicionPocion devuelve su record inmutable. Se necesitan ambos tipos, ids únicos y una definición por tipo. La configuración pertenece al jugador, sin global mutable ni repositorios en el motor.
@@ -178,6 +178,47 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - Oferta única tras primera victoria real, aceptación/rechazo, ranuras, botín 50/20 independiente, continuidad, huida y reglas del combate intactas. Solo cambian consultas de datos en el menú de Combate, sin dependencia de RepositorioObjetos. Equipar pasa por Combatiente.equipar; no se duplican efectos.
 - Repositorios de archivos/JDBC/JPA podrán devolver estos mismos records mediante el contrato; no existen aún. Sin nuevos objetos, inventario genérico ni catálogo de habilidades. El equipo existente que concede habilidades sigue funcionando; externalizarlas requiere otra fase.
 - Pruebas: 18 de catálogo y 31 de integración añadidas, con 452 anteriores intactas; mvn clean test confirma 501, sin fallos/errores/omitidas, 41 fuentes principales y 35 de pruebas. Datos alternativos de espada y pociones, validación, instantáneas, consumo dentro/fuera, estados/eventos y equipo probados.
+
+### 3.13 Inventario de equipamiento y comparación autorizados
+
+- Cambios locales sobre d796ffc. Jugador añade List<Equipo> privada, agregarEquipo y getInventarioEquipo (vista no modificable). Sin límite de capacidad/peso/espacios; admite piezas repetidas y mantiene identidad y orden de inserción. Rechaza null. No modifica pociones ni ranuras, no aplica efectos y no realiza traslados automáticos entre inventario y equipo equipado.
+- consultarInventario conserva firma anterior y añade sobrecarga con boolean coloresAnsi. Muestra consumibles, equipo equipado y equipamiento guardado con sus bonificaciones/habilidades; opciones 1 comparar y 0 volver. Comparación: seleccionar equipada por orden de TipoEquipo, seleccionar guardada filtrando la misma ranura. 0 en guardada vuelve a equipada, 0 en equipada vuelve al inventario. Tras cada comparación sigue la selección de guardadas. Vacíos/incompatibles se informan sin error; inválidos repiten y EOF interrumpe como antes.
+- Se reutiliza Equipo.compararCon. Firma anterior conservada y delegada a compararCon(Equipo, PrintStream, boolean) sin colores. Único cálculo existente: nueva menos actual, unión de claves con EnumSet para ordenar por Atributo. Comparar es informativo; no cambia atributos, equipo, habilidades, pociones ni lista guardada.
+- ANSI solo en valores DIFERENCIA: verde positivo, rojo negativo, cero normal, reset inmediato por valor y alineación equivalente. Sin colores en otras columnas/menús. Desactivado por defecto; activar con VM -Dviajedragos.ansi=true para el flujo hacia System.out. Un PrintStream arbitrario no se considera compatible automáticamente; pruebas/llamadores de la sobrecarga eligen el booleano explícito. Sin librerías ni sistema general de estilos.
+- Al cerrar 3.13 no se concedía equipo guardado ni había intercambio; esa limitación queda ampliada por 3.14. La Espada desgastada conserva su oferta original y rechazo sin almacenarla. Combate y las operaciones originales equipar/desequipar permanecen intactos.
+- Suite real: 538 pruebas, 0 fallos/errores/omitidas, BUILD SUCCESS; 501 anteriores intactas y 37 nuevas (8 inventario, 9 comparador, 20 consola/integración). Recompiladas 41 fuentes principales y 38 archivos de pruebas. Sin commit ni push.
+
+### 3.14 Obtención e intercambio autorizados
+
+- Se continúa sobre los cambios locales de 3.13, comprobados antes de editar, sin reconstruirlos ni sobrescribirlos. Base publicada d796ffc; no se realiza commit ni push.
+- Nueva definición espada_hierro/Espada de hierro, ARMA y FUERZA +2, sin habilidades. Memoria contiene dos armas y dos pociones. El catálogo de aventura requiere ambas espadas por id; repositorios alternativos deben proporcionarlas y siguen rechazándose datos incompletos sin respaldo.
+- Un contador local de victorias definitivas ofrece hierro únicamente cuando alcanza dos, después del botín. Huir/perder/muerte simultánea no suman. Oferta única: 1 guardar mediante agregarEquipo, 2 dejar atrás; inválidos repiten, EOF interrumpe sin obtener la pieza. Guardar no equipa ni modifica atributos. La espada desgastada conserva su primera oferta original.
+- Inventario: 1 comparar, 2 cambiar, 0 volver. Cambio: elegir una de todas las ranuras (incluidas vacías), elegir solo una pieza compatible guardada y confirmar con 1 o cancelar con 0. Comparación existente antes de confirmar si hay pieza actual. Tras éxito se vuelve al inventario; vacíos/incompatibles e inválidos se informan. EOF no confirma.
+- Jugador.equiparDesdeInventario(TipoEquipo, int) usa índice global de lista desde cero; rechaza índices inválidos/incompatibles sin cambios. Tras equipar con éxito elimina solo esa entrada y añade la pieza anterior al final, preservando identidades y duplicados. En vacío no hay pieza anterior. Sin límite de inventario ni descarte automático.
+- Combatiente añade cambiarEquipoSeguro protegido, sin modificar equipar/desequipar ni sus efectos. Conserva instantáneas de ranuras, modificadores, base, vida y mapa/valores de EstadoHabilidad. Ante false/RuntimeException restaura estado e identidades, sin ejecutar otra retirada/aplicación potencialmente fallida. Solo tras éxito cambia la lista de Jugador. No se modifican eventos, combate, habilidades ni algoritmo de compararCon.
+- Suite real: 572 casos, 0 fallos/errores/omitidas, BUILD SUCCESS; 538 anteriores y 34 nuevos. Ajustes previos limitados a responder la nueva oferta, cambiar un inválido de 2 a 3 y ampliar la expectativa de catálogo de una a dos armas. Pruebas de restauración antes/después de efectos, habilidad retirada/restaurada, slots vacíos, identidad, continuidad y nueva aventura. Compiladas 41 fuentes principales y 40 archivos de pruebas.
+- Siguen fuera de alcance tiendas, cofres, monedas, aleatoriedad de equipo, otras piezas o habilidades y persistencia. No se habilitan objetos ni cambios de equipo durante el combate.
+
+### 3.15 Corrección de retirada de efectos temporales
+
+- La auditoría de 3.14 reprodujo Instinto activado al curarse fuera de combate: quitar su única pieza eliminaba la habilidad y dejaba FUERZA +3 sin limpieza futura. La corrección está autorizada y no altera fórmulas ni pociones.
+- Habilidad añade retirarEfectosTemporales(Combatiente, EstadoHabilidad), por defecto vacía, y guardarEstadoTemporal(), que devuelve un Runnable para restaurar únicamente sus indicadores internos. No se añaden eventos ni se simula alFinalCombate al desequipar.
+- InstintoSupervivencia, Impetu, PrimerImpulso, FuriaContenida y Rabia extraen su limpieza anterior a la nueva operación; alFinalCombate delega en ella. Conservan magnitudes y niveles internos. La limpieza inactiva es inocua. En la corrección posterior de 3.16 sus booleanos y contador se trasladan a EstadoHabilidad.
+- Combatiente.quitarHabilidadEquipo limpia exclusivamente antes de eliminar la última fuente no aprendida. Usa la instancia realmente almacenada, ya que la igualdad por clase permite recibir otra instancia como argumento. Si sigue aprendida o equipada por otra pieza, mantiene efecto/estado y solo descuenta la contribución retirada.
+- cambiarEquipoSeguro amplía sus instantáneas con restauraciones internas por identidad de las habilidades existentes y las del equipo nuevo. Ante fallo restaura también esos indicadores después de atributos y EstadoHabilidad; de otro modo el siguiente cierre o curación no podría limpiar el efecto recuperado.
+- Caso exacto corregido: fuerza base vuelve a 6, efectiva 8 con arma +2, sin habilidad residual y sin restos tras otro combate. 29 regresiones nuevas (26 retirada, 3 cancelación); 572 pruebas anteriores intactas. mvn clean test: 601, 0 fallos/errores/omitidas, BUILD SUCCESS. Sin cambios de menús, catálogos, dados, botín, huida ni reglas de combate.
+- Cualquier futura habilidad temporal deberá definir su limpieza y mantener sus datos por combatiente; las habilidades sin ese estado conservan operaciones vacías. El aislamiento posterior se describe en 3.16.
+
+### 3.16 Aislamiento del estado temporal entre combatientes
+
+- Defecto reproducido: compartir una instancia de Instinto entre dos personajes compartía también activo; uno no recibía la mejora y podía restar fuerza inexistente al desequipar.
+- Se aísla el estado, sin clonar habilidades: EstadoHabilidad incorpora efectoTemporalActivo y acumulacionesTemporales. Las cinco implementaciones temporales usan exclusivamente el estado recibido, que los métodos de aprendizaje/equipamiento crean por combatiente. Se conservan niveles internos, condiciones, magnitudes y fórmulas.
+- La identidad de Habilidad puede compartirse sin interferencias temporales. equals/hashCode por clase y las claves/referencias del equipo se mantienen: varias piezas siguen contribuyendo a una única entrada dentro del personaje.
+- cambiarEquipoSeguro copia y restaura también los datos temporales de los mismos EstadoHabilidad. La copia de seguridad no repite efectos y conserva las identidades originales; guardarEstadoTemporal sigue disponible por compatibilidad para extensiones, pero las cinco habilidades actuales ya no almacenan indicadores en su instancia.
+- No se modifican dispararHabilidades, EventosHabilidad, Combate, Equipo, Jugador, turnos, menús, catálogos ni recompensas. agregarHabilidad conserva su comportamiento previo (no incorpora entradas nuevas); aprenderHabilidad y agregarHabilidadEquipo son las operaciones de alta utilizadas.
+- Las llamadas directas a eventos deben reutilizar el EstadoHabilidad de su entrada. El mapa y setHabilidades conservan su API previo de bajo nivel; insertar manualmente el mismo EstadoHabilidad en dos personajes no forma parte del aislamiento de referencias Habilidad y debe evitarse.
+- 23 casos nuevos en AislamientoHabilidadesTest: reproducción exacta, cinco habilidades, activa/inactiva, aprendizaje/equipo, varias piezas, intercambio/restauración, contador por atacante y ciclos. Los 601 casos anteriores permanecen; ImpetuTest y PrimerImpulsoTest adaptan únicamente su preparación para reutilizar el estado entre eventos, con todas sus aserciones conservadas.
+- Verificación real: mvn clean test, BUILD SUCCESS; 624 pruebas, 0 fallos/errores/omitidas; 41 fuentes principales y 43 archivos de pruebas. Sin commit ni push.
 
 ## 4. Habilidades
 
@@ -250,9 +291,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 18 de octubre de 2026. Base publicada a630e26, catálogo de enemigos y equilibrio de vida inicial 48/48. Implementación local del catálogo de objetos de 3.12. Sin commit ni push de esta fase.
+> **Estado:** 18 de octubre de 2026. Base publicada d796ffc. Cambios locales de inventario/comparación, obtención/intercambio y corrección de efectos temporales (3.13–3.15). Sin commit ni push.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 41 fuentes principales y 35 archivos de pruebas recompilados; 501 pruebas, 0 fallos, 0 errores, 0 omitidas. Las 452 anteriores se conservan sin cambios y se añaden 49. Equilibrio reproducido: 94,02 % de cuatro victorias. Cambios productivos: cuatro tipos nuevos, Jugador, app y consultas de presentación de pociones en Combate. Sin cambios de reglas, habilidades, equipamiento ni dados.
+> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 41 fuentes principales y 43 archivos de pruebas recompilados; 624 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 601 casos anteriores y se añaden 23 según 3.16. Limpieza y restauración temporal aisladas por EstadoHabilidad, sin cambios de fórmulas, disparo ni mecánicas.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -266,14 +307,14 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 501 pruebas ejecutadas sin fallos ni errores; 452 anteriores intactas y 49 nuevas de catálogo de objetos/integración, sin pruebas eliminadas ni deshabilitadas.
+- [x] Suite JUnit: 624 pruebas ejecutadas sin fallos ni errores; 601 casos anteriores y 23 nuevos de aislamiento temporal, sin pruebas eliminadas ni deshabilitadas. Solo se adapta la preparación de dos archivos anteriores según 3.16.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
 - [x] Auditar clases, paquetes, firmas, dependencias y referencias del repositorio.
 - [x] Comprobar compilación del código principal: `mvn compile` termina correctamente.
 - [x] Ejecutar las pruebas existentes con `mvn test`.
-- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 501 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
+- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 624 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
 - [x] Revisar `EventosHabilidad`: todas sus firmas actuales y overrides implementados reciben `EstadoHabilidad` y compilan en el código principal.
 - [x] Revisar y corregir las seis llamadas del borrador a `dispararHabilidades`: las lambdas reciben habilidad y estado y pasan ese estado al evento.
 - [x] Activar el auxiliar existente `dispararHabilidades` para usarlo desde ataque, recorriendo habilidad y estado juntos.
@@ -321,6 +362,11 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Ajustar únicamente la vida inicial de consola 24 a 48 PS tras simulación del motor real: 94,02 % de cuatro victorias en 10.000 sesiones, sin consumibles y con espada desde el segundo.
 - [x] Catálogo de objetos autorizado: espada y dos pociones, records inmutables y repositorio sustituible; valores efectivos por jugador y validación antes del primer encuentro según 3.12.
 - [x] Verificar compatibilidad con espada única, equipo, botín, curación, ambos menús, eventos y continuidad sin modificar las 452 pruebas anteriores.
+- [x] Inventario de equipamiento ilimitado y encapsulado, duplicados/instancias conservados y separado de pociones/ranuras según 3.13.
+- [x] Comparar desde inventario por ranura, reutilizando compararCon y manteniendo el personaje intacto; ANSI opcional limitado a diferencias, navegación y EOF probados.
+- [x] Obtener hierro tras segunda victoria, guardar/rechazar, equipar e intercambiar con recuperación segura, según autorización 3.14.
+- [x] Corregir el efecto temporal persistente al perder la última fuente de una habilidad; conservar aprendidas/compartidas y recuperar indicadores internos tras fallos según 3.15.
+- [x] Aislar el estado temporal de las cinco habilidades entre combatientes mediante EstadoHabilidad, conservando claves, referencias y disparo secuencial; 23 regresiones según 3.16.
 - [ ] Crear catálogo de habilidades cuando se solicite; no se añade en esta fase.
 - [x] Implementar Atacar desde el menú en su momento real de acción.
 - [x] Implementar huida directa con dos dados y velocidad efectiva, empate fallido, sin ataque por intento. Éxito limpia y vuelve a exploración; fallo consume acción y conserva la acción enemiga pendiente.

@@ -34,12 +34,13 @@ public class PrimerImpulsoTest {
         //jugador.setIniciativa(jugador.getIniciativa() + nivel);
 
         PrimerImpulso pi = new PrimerImpulso(nivel);
+        EstadoHabilidad estado = new EstadoHabilidad(true, 0, nivel);
 
-        pi.alInicioCombate(jugador, new Enemigo(), new EstadoHabilidad(true, 0, nivel));
+        pi.alInicioCombate(jugador, new Enemigo(), estado);
 
         assertEquals(iniciativaAumentada, jugador.getIniciativa());
 
-        pi.alFinalCombate(jugador, new Enemigo(), new EstadoHabilidad(true, 0, nivel));
+        pi.alFinalCombate(jugador, new Enemigo(), estado);
 
         assertEquals(6, jugador.getIniciativa());
     }

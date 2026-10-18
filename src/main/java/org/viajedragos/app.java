@@ -1,6 +1,7 @@
 package org.viajedragos;
 
 import org.viajedragos.arma.Arma;
+import org.viajedragos.arma.Equipo;
 import org.viajedragos.catalogo.RepositorioObjetos;
 import org.viajedragos.catalogo.RepositorioObjetosMemoria;
 import org.viajedragos.modelo.DefinicionArma;
@@ -114,6 +115,7 @@ public class app {
             return true;
         }
         DefinicionArma espada = null;
+        DefinicionArma espadaHierro = null;
         try {
             List<DefinicionArma> armas = List.copyOf(objetos.obtenerArmas());
             List<DefinicionPocion> pociones = List.copyOf(objetos.obtenerPociones());
@@ -123,6 +125,7 @@ public class app {
                     throw new IllegalArgumentException("Identificadores repetidos");
                 }
                 if (arma.id().equals(DefinicionArma.ID_ESPADA_DESGASTADA)) espada = arma;
+                if (arma.id().equals(DefinicionArma.ID_ESPADA_HIERRO)) espadaHierro = arma;
             }
             for (DefinicionPocion pocion : pociones) {
                 if (!identificadores.add(pocion.id())) {
@@ -130,6 +133,7 @@ public class app {
                 }
             }
             if (espada == null) throw new IllegalArgumentException("Falta la Espada desgastada");
+            if (espadaHierro == null) throw new IllegalArgumentException("Falta la Espada de hierro");
             jugador.configurarPociones(pociones);
         } catch (IllegalArgumentException | NullPointerException datosInvalidos) {
             salida.println("El catálogo de objetos no es válido o está incompleto. No se inicia la aventura.");
@@ -137,6 +141,7 @@ public class app {
         }
         int encuentro = 1;
         boolean espadaOfrecida = false;
+        int victorias = 0;
         while (true) {
             Enemigo enemigo = seleccionarEnemigo(catalogo, azarEncuentros);
             salida.printf("%nEncuentro %d.%n", encuentro);
@@ -158,12 +163,14 @@ public class app {
             }
 
             if (resultado == ResultadoCombate.ENEMIGO_MUERE) {
+                victorias++;
                 // Solo una vez tras la resolución definitiva, fuera de los menús.
                 obtenerBotin(jugador, azarBotin, salida);
                 if (!espadaOfrecida) {
                     espadaOfrecida = true;
                     if (!ofrecerEspada(jugador, entrada, salida, espada)) return false;
                 }
+                if (victorias == 2 && !ofrecerArmaGuardada(jugador, entrada, salida, espadaHierro)) return false;
             } else if (resultado == ResultadoCombate.JUGADOR_HUYE) {
                 salida.println("Regresas a exploración sin recompensas. Conservas tu personaje y sus pertenencias.");
             }
@@ -182,7 +189,8 @@ public class app {
                 }
                 if (opcion.equals("3")) break;
                 if (opcion.equals("1")) {
-                    if (!consultarInventario(jugador, entrada, salida)) return false;
+                    if (!consultarInventario(jugador, entrada, salida,
+                            salida == System.out && Boolean.getBoolean("viajedragos.ansi"))) return false;
                 } else if (opcion.equals("2")) {
                     if (!usarObjeto(jugador, entrada, salida)) return false;
                 } else {
@@ -226,6 +234,10 @@ public class app {
     }
 
     static boolean consultarInventario(Jugador jugador, Scanner entrada, PrintStream salida) {
+        return consultarInventario(jugador, entrada, salida, false);
+    }
+
+    static boolean consultarInventario(Jugador jugador, Scanner entrada, PrintStream salida, boolean coloresAnsi) {
         cabecera("INVENTARIO", salida);
         salida.println("CONSUMIBLES");
         boolean tienePociones = false;
@@ -250,12 +262,144 @@ public class app {
             equipo.getHabilidadesOtorgadas().forEach((habilidad, nivel) ->
                     salida.printf("    %s: nivel otorgado %d%n", habilidad.getNombre(), nivel));
         }
-        salida.printf("%n0. Volver a exploración%n");
+        salida.printf("%nEQUIPAMIENTO GUARDADO%n");
+        if (jugador.getInventarioEquipo().isEmpty()) salida.println("  No tienes equipamiento guardado");
+        for (Equipo equipo : jugador.getInventarioEquipo()) {
+            salida.printf("  %s: %s%n", equipo.getTipoEquipo().getNombre(), equipo.getNombre());
+            equipo.getBonificaciones().forEach((atributo, cantidad) ->
+                    salida.printf("    %s %+d%n", atributo, cantidad));
+            equipo.getHabilidadesOtorgadas().forEach((habilidad, nivel) ->
+                    salida.printf("    %s: nivel otorgado %d%n", habilidad.getNombre(), nivel));
+        }
         while (true) {
+            salida.printf("%n1. Comparar equipamiento%n2. Cambiar equipamiento%n0. Volver a exploración%n");
             String opcion = leerOpcion(entrada, salida);
             if (opcion == null) return false;
             if (opcion.equals("0")) return true;
-            salida.println("Entrada inválida. Escribe 0 para volver.");
+            if (opcion.equals("1")) {
+                if (!compararEquipamiento(jugador, entrada, salida, coloresAnsi)) return false;
+            } else if (opcion.equals("2")) {
+                if (!cambiarEquipamiento(jugador, entrada, salida, coloresAnsi)) return false;
+            } else {
+                salida.println("Entrada inválida. Escribe 1, 2 o 0 para volver.");
+            }
+        }
+    }
+
+    private static boolean compararEquipamiento(Jugador jugador, Scanner entrada, PrintStream salida,
+                                                boolean coloresAnsi) {
+        if (jugador.getEquipoEquipado().isEmpty()) {
+            salida.println("No tienes equipo equipado para comparar.");
+            return true;
+        }
+        if (jugador.getInventarioEquipo().isEmpty()) {
+            salida.println("No tienes equipamiento guardado para comparar.");
+            return true;
+        }
+        List<Equipo> equipados = java.util.Arrays.stream(TipoEquipo.values())
+                .map(tipo -> jugador.getEquipoEquipado().get(tipo)).filter(java.util.Objects::nonNull).toList();
+        while (true) {
+            cabecera("COMPARAR - PIEZA EQUIPADA", salida);
+            for (int i = 0; i < equipados.size(); i++) {
+                Equipo equipo = equipados.get(i);
+                salida.printf("%d. %s: %s%n", i + 1, equipo.getTipoEquipo().getNombre(), equipo.getNombre());
+            }
+            salida.println("0. Volver al inventario");
+            int indice = leerIndiceEquipo(entrada, salida, equipados.size());
+            if (indice == -1) return false;
+            if (indice == 0) return true;
+            Equipo actual = equipados.get(indice - 1);
+            List<Equipo> compatibles = jugador.getInventarioEquipo().stream()
+                    .filter(equipo -> equipo.getTipoEquipo() == actual.getTipoEquipo()).toList();
+            if (compatibles.isEmpty()) {
+                salida.println("No tienes piezas guardadas compatibles con la ranura "
+                        + actual.getTipoEquipo().getNombre() + ".");
+                continue;
+            }
+            while (true) {
+                cabecera("COMPARAR - PIEZA GUARDADA", salida);
+                salida.printf("Pieza actual: %s (%s)%n", actual.getNombre(), actual.getTipoEquipo().getNombre());
+                for (int i = 0; i < compatibles.size(); i++) {
+                    salida.printf("%d. %s%n", i + 1, compatibles.get(i).getNombre());
+                }
+                salida.println("0. Volver a la selección de pieza equipada");
+                int nueva = leerIndiceEquipo(entrada, salida, compatibles.size());
+                if (nueva == -1) return false;
+                if (nueva == 0) break;
+                Equipo elegido = compatibles.get(nueva - 1);
+                salida.printf("Actual: %s | Nuevo: %s%n", actual.getNombre(), elegido.getNombre());
+                actual.compararCon(elegido, salida, coloresAnsi);
+            }
+        }
+    }
+
+    private static boolean cambiarEquipamiento(Jugador jugador, Scanner entrada, PrintStream salida,
+                                               boolean coloresAnsi) {
+        if (jugador.getInventarioEquipo().isEmpty()) {
+            salida.println("No tienes equipamiento guardado para cambiar.");
+            return true;
+        }
+        TipoEquipo[] ranuras = TipoEquipo.values();
+        while (true) {
+            cabecera("CAMBIAR - RANURA", salida);
+            for (int i = 0; i < ranuras.length; i++) {
+                Equipo actual = jugador.getEquipoEquipado().get(ranuras[i]);
+                salida.printf("%d. %s: %s%n", i + 1, ranuras[i].getNombre(),
+                        actual == null ? "Sin equipo" : actual.getNombre());
+            }
+            salida.println("0. Volver al inventario");
+            int ranura = leerIndiceEquipo(entrada, salida, ranuras.length);
+            if (ranura == -1) return false;
+            if (ranura == 0) return true;
+            TipoEquipo tipo = ranuras[ranura - 1];
+            List<Integer> compatibles = new java.util.ArrayList<>();
+            for (int i = 0; i < jugador.getInventarioEquipo().size(); i++) {
+                if (jugador.getInventarioEquipo().get(i).getTipoEquipo() == tipo) compatibles.add(i);
+            }
+            if (compatibles.isEmpty()) {
+                salida.println("No tienes piezas guardadas compatibles con la ranura " + tipo.getNombre() + ".");
+                continue;
+            }
+            salida.println("Selecciona una pieza guardada:");
+            for (int i = 0; i < compatibles.size(); i++) {
+                salida.printf("%d. %s%n", i + 1, jugador.getInventarioEquipo().get(compatibles.get(i)).getNombre());
+            }
+            salida.println("0. Volver a la selección de ranura");
+            int pieza = leerIndiceEquipo(entrada, salida, compatibles.size());
+            if (pieza == -1) return false;
+            if (pieza == 0) continue;
+            int indice = compatibles.get(pieza - 1);
+            Equipo nueva = jugador.getInventarioEquipo().get(indice);
+            Equipo actual = jugador.getEquipoEquipado().get(tipo);
+            if (actual != null) {
+                salida.printf("Actual: %s | Nuevo: %s%n", actual.getNombre(), nueva.getNombre());
+                actual.compararCon(nueva, salida, coloresAnsi);
+            }
+            salida.printf("¿Equipar %s?%n1. Confirmar%n0. Cancelar%n", nueva.getNombre());
+            int confirmar = leerIndiceEquipo(entrada, salida, 1);
+            if (confirmar == -1) return false;
+            if (confirmar == 0) continue;
+            if (jugador.equiparDesdeInventario(tipo, indice)) {
+                salida.printf("%s equipada. %s%n", nueva.getNombre(), actual == null
+                        ? "La pieza deja el inventario." : "La pieza anterior pasa al inventario.");
+                return true;
+            }
+            salida.println("No se ha podido cambiar el equipo. Se conserva el estado anterior.");
+        }
+    }
+
+    // -1 indica fin de entrada; 0 vuelve al menú anterior.
+    private static int leerIndiceEquipo(Scanner entrada, PrintStream salida, int cantidad) {
+        while (true) {
+            String opcion = leerOpcion(entrada, salida);
+            if (opcion == null) return -1;
+            try {
+                int indice = Integer.parseInt(opcion);
+                if (indice >= 0 && indice <= cantidad) return indice;
+            } catch (NumberFormatException invalida) {
+                // Un texto no numérico o fuera del rango de int no termina la navegación.
+            }
+            salida.printf("Entrada inválida. Escribe un número entre 0 y %d.%n", cantidad);
         }
     }
 
@@ -312,6 +456,29 @@ public class app {
     static boolean ofrecerEspada(Jugador jugador, Scanner entrada, PrintStream salida) {
         return ofrecerEspada(jugador, entrada, salida,
                 new RepositorioObjetosMemoria().obtenerArmas().getFirst());
+    }
+
+    private static boolean ofrecerArmaGuardada(Jugador jugador, Scanner entrada, PrintStream salida,
+                                              DefinicionArma definicion) {
+        Arma arma = definicion.crearArma();
+        salida.printf("Has encontrado una %s.%n", arma.getNombre());
+        arma.getBonificaciones().forEach((atributo, cantidad) -> salida.printf("%s %+d%n", atributo, cantidad));
+        salida.println("1. Guardar en el inventario");
+        salida.println("2. Dejarla atrás");
+        while (true) {
+            String opcion = leerOpcion(entrada, salida);
+            if (opcion == null) return false;
+            if (opcion.equals("1")) {
+                jugador.agregarEquipo(arma);
+                salida.printf("%s guardada en el inventario.%n", arma.getNombre());
+                return true;
+            }
+            if (opcion.equals("2")) {
+                salida.printf("Dejas atrás la %s.%n", arma.getNombre());
+                return true;
+            }
+            salida.println("Entrada inválida. Escribe 1 o 2.");
+        }
     }
 
     static boolean ofrecerEspada(Jugador jugador, Scanner entrada, PrintStream salida, DefinicionArma definicion) {

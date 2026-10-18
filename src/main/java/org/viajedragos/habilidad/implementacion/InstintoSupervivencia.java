@@ -12,8 +12,6 @@ public class InstintoSupervivencia extends Habilidad {
         super("Instinto de supervivencia");
     }
 
-    private boolean activo = false;
-
     private double obtenerPorcentajeVida(Combatiente portador) {
 
         int vidaActual = portador.getVida();
@@ -22,30 +20,35 @@ public class InstintoSupervivencia extends Habilidad {
         return (double) (vidaActual * 100) / vidaMaxima;
     }
 
-    private void modificarFuerza(Combatiente combatiente) {
+    private void modificarFuerza(Combatiente combatiente, EstadoHabilidad estado) {
 
         double porcentaje = obtenerPorcentajeVida(combatiente);
 
-        if (porcentaje <= 30 && !activo) {
+        if (porcentaje <= 30 && !estado.isEfectoTemporalActivo()) {
             combatiente.setFuerza(combatiente.getAtributoBase(Atributo.FUERZA) + 3);
-            activo = true;
-        } else if (porcentaje > 30 && activo) {
+            estado.setEfectoTemporalActivo(true);
+        } else if (porcentaje > 30 && estado.isEfectoTemporalActivo()) {
             combatiente.setFuerza(combatiente.getAtributoBase(Atributo.FUERZA) - 3);
-            activo = false;
+            estado.setEfectoTemporalActivo(false);
         }
     }
 
     @Override
     public void alInicioCombate(Combatiente portador, Combatiente oponente, EstadoHabilidad estado) {
 
-        modificarFuerza(portador);
+        modificarFuerza(portador, estado);
     }
 
     @Override
     public void alFinalCombate(Combatiente portador, Combatiente oponente, EstadoHabilidad estado) {
+        retirarEfectosTemporales(portador, estado);
+    }
 
-        if (activo) {
-            activo = false;
+    @Override
+    public void retirarEfectosTemporales(Combatiente portador, EstadoHabilidad estado) {
+
+        if (estado.isEfectoTemporalActivo()) {
+            estado.setEfectoTemporalActivo(false);
             portador.setFuerza(portador.getAtributoBase(Atributo.FUERZA) - 3);
         }
     }
@@ -53,14 +56,14 @@ public class InstintoSupervivencia extends Habilidad {
     @Override
     public void alRecibirDanio(ContextoAtaque contexto, EstadoHabilidad estado) {
 
-        modificarFuerza(contexto.getDefensor());
+        modificarFuerza(contexto.getDefensor(), estado);
 
     }
 
     @Override
     public void alCurarse(Combatiente combatiente, EstadoHabilidad estado) {
 
-        modificarFuerza(combatiente);
+        modificarFuerza(combatiente, estado);
     }
 }
 

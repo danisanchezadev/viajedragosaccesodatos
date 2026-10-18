@@ -8,11 +8,36 @@ import java.util.List;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.HashSet;
+import java.util.ArrayList;
+import org.viajedragos.arma.Equipo;
+import org.viajedragos.arma.TipoEquipo;
 
 public class Jugador extends Combatiente{
 
     private final Map<TipoPocion, Integer> inventarioPociones = new EnumMap<>(TipoPocion.class);
     private Map<TipoPocion, DefinicionPocion> definicionesPociones;
+    private final List<Equipo> inventarioEquipo = new ArrayList<>();
+
+    public void agregarEquipo(Equipo equipo) {
+        inventarioEquipo.add(Objects.requireNonNull(equipo, "El equipo no puede ser null"));
+    }
+
+    public List<Equipo> getInventarioEquipo() {
+        return Collections.unmodifiableList(inventarioEquipo);
+    }
+
+    // Índice de la lista, desde cero: solo se retira esa entrada, incluso si está repetida.
+    public boolean equiparDesdeInventario(TipoEquipo tipo, int indice) {
+        Objects.requireNonNull(tipo, "La ranura no puede ser null");
+        if (indice < 0 || indice >= inventarioEquipo.size()) return false;
+        Equipo nuevo = inventarioEquipo.get(indice);
+        if (nuevo.getTipoEquipo() != tipo) return false;
+        Equipo anterior = getEquipoEquipado().get(tipo);
+        if (!cambiarEquipoSeguro(nuevo)) return false;
+        inventarioEquipo.remove(indice);
+        if (anterior != null) inventarioEquipo.add(anterior);
+        return true;
+    }
 
     public Jugador(String nombre, String descripcion, int fuerza, int resistencia, int iniciativa, int agilidad, int velocidad, int vida, int vidaMaxima) {
         this(nombre, descripcion, fuerza, resistencia, iniciativa, agilidad, velocidad, vida, vidaMaxima,

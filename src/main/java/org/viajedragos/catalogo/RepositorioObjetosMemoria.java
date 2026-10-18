@@ -9,7 +9,8 @@ import java.util.Map;
 
 public class RepositorioObjetosMemoria implements RepositorioObjetos {
     private final List<DefinicionArma> armas = List.of(new DefinicionArma(
-            DefinicionArma.ID_ESPADA_DESGASTADA, "Espada desgastada", Map.of(Atributo.FUERZA, 1)));
+            DefinicionArma.ID_ESPADA_DESGASTADA, "Espada desgastada", Map.of(Atributo.FUERZA, 1)),
+            new DefinicionArma(DefinicionArma.ID_ESPADA_HIERRO, "Espada de hierro", Map.of(Atributo.FUERZA, 2)));
     private final List<DefinicionPocion> pociones = List.of(
             new DefinicionPocion("pocion_pequena", TipoPocion.PEQUENA,
                     TipoPocion.PEQUENA.getNombre(), TipoPocion.PEQUENA.getRecuperacionPS()),

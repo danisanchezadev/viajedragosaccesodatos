@@ -5,6 +5,9 @@ public class EstadoHabilidad {
     private boolean aprendida;
     private int vecesEquipada;
     private int nivel;
+    // Estos datos pertenecen a la entrada del combatiente, no a la instancia de Habilidad.
+    private boolean efectoTemporalActivo;
+    private int acumulacionesTemporales;
 
     public EstadoHabilidad(boolean aprendida, int vecesEquipada, int nivel) {
         this.aprendida = aprendida;
@@ -14,6 +17,31 @@ public class EstadoHabilidad {
 
     public EstadoHabilidad() {
         this(false, 0, 1);
+    }
+
+    public EstadoHabilidad(EstadoHabilidad anterior) {
+        this(anterior.aprendida, anterior.vecesEquipada, anterior.nivel);
+        efectoTemporalActivo = anterior.efectoTemporalActivo;
+        acumulacionesTemporales = anterior.acumulacionesTemporales;
+    }
+
+    public boolean isEfectoTemporalActivo() {
+        return efectoTemporalActivo;
+    }
+
+    public void setEfectoTemporalActivo(boolean efectoTemporalActivo) {
+        this.efectoTemporalActivo = efectoTemporalActivo;
+    }
+
+    public int getAcumulacionesTemporales() {
+        return acumulacionesTemporales;
+    }
+
+    public void setAcumulacionesTemporales(int acumulacionesTemporales) {
+        if (acumulacionesTemporales < 0) {
+            throw new IllegalArgumentException("Las acumulaciones temporales no pueden ser negativas");
+        }
+        this.acumulacionesTemporales = acumulacionesTemporales;
     }
 
     public boolean isAprendida() {

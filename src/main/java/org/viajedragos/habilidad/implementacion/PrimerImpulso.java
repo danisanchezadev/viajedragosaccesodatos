@@ -8,7 +8,6 @@ import org.viajedragos.modelo.Combatiente;
 public class PrimerImpulso extends Habilidad {
 
     private int nivel = 3;
-    private boolean activo;
 
     public PrimerImpulso(int nivel){
         super("Primer impulso");
@@ -17,18 +16,23 @@ public class PrimerImpulso extends Habilidad {
 
     @Override
     public void alInicioCombate(Combatiente portador, Combatiente oponente, EstadoHabilidad estado) {
-        if (activo) {
+        if (estado.isEfectoTemporalActivo()) {
             return;
         }
         portador.setIniciativa(portador.getAtributoBase(Atributo.INICIATIVA) + nivel);
-        activo = true;
+        estado.setEfectoTemporalActivo(true);
     }
 
     @Override
     public void alFinalCombate(Combatiente portador, Combatiente oponente, EstadoHabilidad estado) {
-        if (activo) {
+        retirarEfectosTemporales(portador, estado);
+    }
+
+    @Override
+    public void retirarEfectosTemporales(Combatiente portador, EstadoHabilidad estado) {
+        if (estado.isEfectoTemporalActivo()) {
             portador.setIniciativa(portador.getAtributoBase(Atributo.INICIATIVA) - nivel);
-            activo = false;
+            estado.setEfectoTemporalActivo(false);
         }
     }
 }

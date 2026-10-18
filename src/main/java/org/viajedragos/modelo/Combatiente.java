@@ -195,6 +195,52 @@ public abstract class Combatiente {
         return habilidades;
     }
 
+    // El intercambio reutiliza las operaciones normales, restaurando su estado si fallan.
+    protected boolean cambiarEquipoSeguro(Equipo nuevo) {
+        TipoEquipo tipo = nuevo.getTipoEquipo();
+        var ranurasAntes = new EnumMap<>(equipoEquipado);
+        var modificadoresAntes = new EnumMap<>(modificadoresEquipo);
+        var baseAntes = new EnumMap<>(atributosBase);
+        int vidaAntes = vida;
+        int maximaAntes = vidaMaxima;
+        var mapaAntes = habilidades;
+        var habilidadesAntes = new HashMap<>(habilidades);
+        var estadosAntes = new java.util.IdentityHashMap<EstadoHabilidad, EstadoHabilidad>();
+        habilidades.values().forEach(estado -> estadosAntes.put(estado,
+                new EstadoHabilidad(estado)));
+        var instancias = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Habilidad, Boolean>());
+        instancias.addAll(habilidades.keySet());
+        instancias.addAll(nuevo.getHabilidadesOtorgadas().keySet());
+        var restauracionesTemporales = instancias.stream().map(Habilidad::guardarEstadoTemporal).toList();
+        try {
+            if ((!equipoEquipado.containsKey(tipo) || desequipar(tipo)) && equipar(nuevo)) return true;
+        } catch (RuntimeException falloEfectos) {
+            // No se intentan efectos inversos: podrían volver a fallar o retirar otras contribuciones.
+        }
+        equipoEquipado.clear();
+        equipoEquipado.putAll(ranurasAntes);
+        modificadoresEquipo.clear();
+        modificadoresEquipo.putAll(modificadoresAntes);
+        atributosBase.clear();
+        atributosBase.putAll(baseAntes);
+        vida = vidaAntes;
+        vidaMaxima = maximaAntes;
+        habilidades = mapaAntes;
+        if (!habilidades.equals(habilidadesAntes)) {
+            habilidades.clear();
+            habilidades.putAll(habilidadesAntes);
+        }
+        estadosAntes.forEach((estado, anterior) -> {
+            estado.setAprendida(anterior.isAprendida());
+            estado.setVecesEquipada(anterior.getVecesEquipada());
+            estado.setNivel(anterior.getNivel());
+            estado.setEfectoTemporalActivo(anterior.isEfectoTemporalActivo());
+            estado.setAcumulacionesTemporales(anterior.getAcumulacionesTemporales());
+        });
+        restauracionesTemporales.forEach(Runnable::run);
+        return false;
+    }
+
     public void setHabilidades(Map<Habilidad, EstadoHabilidad> setHabilidades) {
         this.habilidades = setHabilidades;
     }
@@ -297,6 +343,13 @@ public abstract class Combatiente {
 
         int equiposRestantes = estado.getVecesEquipada() - 1;
         if (!estado.isAprendida() && equiposRestantes == 0) {
+            // La igualdad es por clase: el argumento puede ser otra instancia sin el efecto activo.
+            for (Habilidad propia : habilidades.keySet()) {
+                if (propia.equals(habilidad)) {
+                    propia.retirarEfectosTemporales(this, estado);
+                    break;
+                }
+            }
             estado.setVecesEquipada(0);
             eliminarHabilidad(habilidad);
             return;

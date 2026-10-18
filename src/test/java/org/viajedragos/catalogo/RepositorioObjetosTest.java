@@ -20,13 +20,20 @@ class RepositorioObjetosTest {
     @Test
     void catalogoInicialExactoSinEstadoDeJugadores() {
         var repo = new RepositorioObjetosMemoria();
-        assertEquals(1, repo.obtenerArmas().size());
+        assertEquals(2, repo.obtenerArmas().size());
         var espada = repo.obtenerArmas().getFirst();
         assertEquals("espada_desgastada", espada.id());
         assertEquals("Espada desgastada", espada.nombre());
         assertEquals(Map.of(Atributo.FUERZA, 1), espada.bonificaciones());
         assertEquals(TipoEquipo.ARMA, espada.crearArma().getTipoEquipo());
         assertTrue(espada.crearArma().getHabilidadesOtorgadas().isEmpty());
+        var hierro = repo.obtenerArmas().get(1);
+        assertEquals("espada_hierro", hierro.id());
+        assertEquals("Espada de hierro", hierro.nombre());
+        assertEquals(Map.of(Atributo.FUERZA, 2), hierro.bonificaciones());
+        assertEquals(TipoEquipo.ARMA, hierro.crearArma().getTipoEquipo());
+        assertTrue(hierro.crearArma().getHabilidadesOtorgadas().isEmpty());
+        assertNotSame(hierro.crearArma(), hierro.crearArma());
         assertEquals(2, repo.obtenerPociones().size());
         assertEquals(new DefinicionPocion("pocion_pequena", TipoPocion.PEQUENA, "Poción pequeña", 8),
                 repo.obtenerPociones().get(0));

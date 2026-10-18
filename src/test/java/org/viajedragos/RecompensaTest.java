@@ -117,7 +117,7 @@ class RecompensaTest {
             }
         };
 
-        assertFalse(jugar(j, "1\n1\n3\n1\n3\n1\n0\n", dados));
+        assertFalse(jugar(j, "1\n1\n3\n1\n2\n3\n1\n0\n", dados));
         assertEquals(3, veces("Victoria."));
         assertEquals(1, veces("Has encontrado una Espada desgastada"));
         assertEquals(1, veces("1. Equipar Espada desgastada"));
@@ -130,7 +130,7 @@ class RecompensaTest {
     void rechazoNoAlteraPersonajeNiPermiteRecuperarLaEspadaDespues() {
         Jugador j = jugador();
         Map<Atributo, Integer> modificadores = new EnumMap<>(j.getModificadoresEquipo());
-        assertFalse(jugar(j, "1\n2\n3\n1\n0\n", new Dados(VICTORIA, VICTORIA)));
+        assertFalse(jugar(j, "1\n2\n3\n1\n2\n0\n", new Dados(VICTORIA, VICTORIA)));
         assertEquals(2, veces("Victoria."));
         assertEquals(1, veces("Has encontrado una Espada desgastada"));
         assertEquals(1, veces("2. Rechazar Espada desgastada"));
@@ -264,7 +264,7 @@ class RecompensaTest {
                 assertEquals(6, j.getVida());
             }
         };
-        assertFalse(jugar(j, "1\n1\n3\n1\n0\n", dados));
+        assertFalse(jugar(j, "1\n1\n3\n1\n2\n0\n", dados));
         assertEquals(6, j.getAtributoBase(Atributo.FUERZA));
         assertEquals(7, j.getFuerza());
         assertEquals(2, j.getAgilidad());
@@ -348,7 +348,7 @@ class RecompensaTest {
                 return 0;
             }
         };
-        String entrada = "3\n3\n1\n" + (equipar ? "1" : "2") + "\n3\n1\n0\n";
+        String entrada = "3\n3\n1\n" + (equipar ? "1" : "2") + "\n3\n1\n2\n0\n";
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
                 app.jugarAventura(j, new Scanner(entrada), consola(), dados, azar, soloLobo(), new Random(0))));
         dados.comprobarConsumo();
@@ -383,7 +383,7 @@ class RecompensaTest {
             }
         };
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(j, new Scanner("1\n2\n3\n3\n3\n1\n0\n"), consola(), dados, azar, soloLobo(), new Random(0))));
+                app.jugarAventura(j, new Scanner("1\n2\n3\n3\n3\n1\n2\n0\n"), consola(), dados, azar, soloLobo(), new Random(0))));
         dados.comprobarConsumo();
         assertEquals(4, botin[0]);
         assertEquals(1, veces("Has encontrado una Espada desgastada"));

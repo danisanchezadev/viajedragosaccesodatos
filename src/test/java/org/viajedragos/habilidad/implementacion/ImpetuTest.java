@@ -22,6 +22,7 @@ public class ImpetuTest {
         ContextoAtaque contexto = new ContextoAtaque(jugador, enemigo);
 
         Impetu impetu = new Impetu();
+        EstadoHabilidad estado = new EstadoHabilidad(true, 0, 1);
 
         //estado inical
 
@@ -42,7 +43,7 @@ public class ImpetuTest {
 
             contexto.setDanioFinal(1);
 
-            impetu.alHacerDanio(contexto, new EstadoHabilidad(true, 0, 1));
+            impetu.alHacerDanio(contexto, estado);
 
             int aumetnoEsperado = Math.min(i,3);
 
@@ -52,7 +53,7 @@ public class ImpetuTest {
 
         //Agilidad debe volver a su valor de inicio del combate al finalizarlo.
 
-        impetu.alFinalCombate(jugador,enemigo, new EstadoHabilidad(true, 0, 1));
+        impetu.alFinalCombate(jugador,enemigo, estado);
 
         System.out.println("Ahora evalumos si la agilidad vuelve a su estado inicial: " + jugador.getAgilidad() + ".");
 

@@ -7,31 +7,34 @@ import org.viajedragos.modelo.Combatiente;
 
 public class Rabia extends Habilidad {
 
-    private boolean activa;
-
     public Rabia() {
         super("Rabia");
     }
 
     @Override
     public void alInicioCombate(Combatiente portador, Combatiente oponente, EstadoHabilidad estado) {
-        if (activa) {
+        if (estado.isEfectoTemporalActivo()) {
             return;
         }
         portador.aumentarAtributo(Atributo.FUERZA, 2);
         portador.setAgilidad(portador.getAtributoBase(Atributo.AGILIDAD) + 1);
         portador.setResistencia(portador.getAtributoBase(Atributo.RESISTENCIA) - 1);
-        activa = true;
+        estado.setEfectoTemporalActivo(true);
     }
 
     @Override
     public void alFinalCombate(Combatiente portador, Combatiente oponente, EstadoHabilidad estado) {
-        if (!activa) {
+        retirarEfectosTemporales(portador, estado);
+    }
+
+    @Override
+    public void retirarEfectosTemporales(Combatiente portador, EstadoHabilidad estado) {
+        if (!estado.isEfectoTemporalActivo()) {
             return;
         }
         portador.setFuerza(portador.getAtributoBase(Atributo.FUERZA) - 2);
         portador.setAgilidad(portador.getAtributoBase(Atributo.AGILIDAD) - 1);
         portador.setResistencia(portador.getAtributoBase(Atributo.RESISTENCIA) + 1);
-        activa = false;
+        estado.setEfectoTemporalActivo(false);
     }
 }

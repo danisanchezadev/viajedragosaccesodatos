@@ -118,7 +118,7 @@ class BotinPocionesTest {
                 assertEquals(7, j.getFuerza());
             }
         };
-        assertFalse(jugar(j, "1\n1\n3\n1\n3\n1\n0\n", dados, azar));
+        assertFalse(jugar(j, "1\n1\n3\n1\n2\n3\n1\n0\n", dados, azar));
         azar.comprobarConsumo();
         assertEquals(3, j.getCantidadPociones(TipoPocion.PEQUENA));
         assertEquals(2, j.getCantidadPociones(TipoPocion.GRANDE));
@@ -251,7 +251,7 @@ class BotinPocionesTest {
     void botinNoAlteraLaOfertaUnicaDeEspadaNiSuAceptacionORechazo(boolean equipar) {
         Jugador j = jugador();
         AzarBotin azar = new AzarBotin(0, 0, 0, 0);
-        assertFalse(jugar(j, "1\n" + (equipar ? "1" : "2") + "\n3\n1\n0\n",
+        assertFalse(jugar(j, "1\n" + (equipar ? "1" : "2") + "\n3\n1\n2\n0\n",
                 new Dados(VICTORIA, VICTORIA), azar));
         azar.comprobarConsumo();
         assertEquals(1, veces("Has encontrado una Espada desgastada"));

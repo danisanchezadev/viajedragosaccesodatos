@@ -8,12 +8,10 @@ import org.viajedragos.modelo.Combatiente;
 
 public class Impetu extends Habilidad {
 
-    private int contadorAgilidad;
     private static final int MAXIMO_CONTADOR = 3;
 
     public Impetu(){
         super("Ímpetu");
-        this.contadorAgilidad = 0;
     }
 
     @Override
@@ -21,9 +19,9 @@ public class Impetu extends Habilidad {
 
         int agilidad = contexto.getAtacante().getAtributoBase(Atributo.AGILIDAD);
 
-        if(contexto.getDanioFinal() > 0 && contadorAgilidad < MAXIMO_CONTADOR){
+        if(contexto.getDanioFinal() > 0 && estado.getAcumulacionesTemporales() < MAXIMO_CONTADOR){
 
-            contadorAgilidad += 1;
+            estado.setAcumulacionesTemporales(estado.getAcumulacionesTemporales() + 1);
 
             contexto.getAtacante().setAgilidad(agilidad + 1);
 
@@ -32,13 +30,18 @@ public class Impetu extends Habilidad {
 
     @Override
     public void alFinalCombate(Combatiente portador, Combatiente oponente, EstadoHabilidad estado) {
+        retirarEfectosTemporales(portador, estado);
+    }
+
+    @Override
+    public void retirarEfectosTemporales(Combatiente portador, EstadoHabilidad estado) {
 
         //Como la agilidad habrá subido tantos puntos como el contador,
         //resto el contador y se quedará en la agilidad que tiene como atributo
 
-        portador.setAgilidad(portador.getAtributoBase(Atributo.AGILIDAD) - contadorAgilidad);
+        portador.setAgilidad(portador.getAtributoBase(Atributo.AGILIDAD) - estado.getAcumulacionesTemporales());
 
-        contadorAgilidad = 0;
+        estado.setAcumulacionesTemporales(0);
 
     }
 }

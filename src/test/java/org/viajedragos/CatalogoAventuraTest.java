@@ -104,7 +104,7 @@ class CatalogoAventuraTest {
                 return new int[]{2,2,3}[selecciones++];
             }
         };
-        assertFalse(jugar(j, repo, azar, "1\n3\n3\n1\n1\n3\n1\n1\n0\n0\n",
+        assertFalse(jugar(j, repo, azar, "1\n3\n3\n1\n1\n3\n1\n2\n1\n0\n0\n",
                 1,1,1,1,4,2,1,2,1,6,6,1, 1,1,1,1,6,1,6, 1,1,1,1,6,1,6));
         assertEquals(1, consultas[0]);
         assertEquals(3, selecciones);

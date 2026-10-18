@@ -1,5 +1,7 @@
 package org.viajedragos.habilidad;
 
+import org.viajedragos.modelo.Combatiente;
+
 public abstract class Habilidad implements EventosHabilidad {
 
     private final String nombre;
@@ -10,6 +12,16 @@ public abstract class Habilidad implements EventosHabilidad {
 
     public String getNombre() {
         return nombre;
+    }
+
+    // Limpieza del efecto propio; no representa un evento de final de combate.
+    public void retirarEfectosTemporales(Combatiente portador, EstadoHabilidad estado) {
+    }
+
+    // Compatibilidad para extensiones con datos internos: las habilidades temporales
+    // actuales usan EstadoHabilidad, cuya copia completa guarda Combatiente.
+    public Runnable guardarEstadoTemporal() {
+        return () -> {};
     }
 
     @Override
