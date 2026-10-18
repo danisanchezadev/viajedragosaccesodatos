@@ -152,7 +152,16 @@ public abstract class Combatiente {
     }
 
     public int getVidaMaxima() {
-        return vidaMaxima;
+        return Math.max(0, Math.addExact(vidaMaxima, modificadoresEquipo.getOrDefault(Atributo.VIDA, 0)));
+    }
+
+    public int getVidaMaximaBase() { return vidaMaxima; }
+
+    public void modificarVidaMaximaEquipo(int cantidad) {
+        int modificador = Math.addExact(modificadoresEquipo.getOrDefault(Atributo.VIDA, 0), cantidad);
+        int maxima = Math.max(0, Math.addExact(vidaMaxima, modificador));
+        modificadoresEquipo.put(Atributo.VIDA, modificador);
+        if (vida > maxima) vida = maxima;
     }
 
     public void setVidaMaxima(int vidaMaxima) {
@@ -222,7 +231,11 @@ public abstract class Combatiente {
         try {
             if (nuevo == null) {
                 if (desequipar(tipo) && !equipoEquipado.containsKey(tipo)) return true;
-            } else if ((!equipoEquipado.containsKey(tipo) || desequipar(tipo)) && equipar(nuevo)) return true;
+            } else if ((!equipoEquipado.containsKey(tipo) || desequipar(tipo)) && equipar(nuevo)) {
+                // El intercambio es una operación: no perder vida por un máximo intermedio menor.
+                vida = Math.min(vidaAntes, getVidaMaxima());
+                return true;
+            }
         } catch (RuntimeException falloEfectos) {
             // No se intentan efectos inversos: podrían volver a fallar o retirar otras contribuciones.
         }
@@ -267,8 +280,8 @@ public abstract class Combatiente {
 
         vida += curacion;
 
-        if (vida > vidaMaxima) {
-            vida = vidaMaxima;
+        if (vida > getVidaMaxima()) {
+            vida = getVidaMaxima();
         }
 
         for (Map.Entry<Habilidad, EstadoHabilidad> hab : habilidades.entrySet()) {

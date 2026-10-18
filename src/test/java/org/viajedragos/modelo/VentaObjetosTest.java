@@ -134,7 +134,8 @@ class VentaObjetosTest {
     @Test
     void dosDefinicionesDeArmaIndistinguiblesSeRechazan() {
         Jugador j = jugador();
-        var arma = espada().crearArma();
+        // La compatibilidad estructural se conserva solo para piezas antiguas sin ID.
+        var arma = new Arma(espada().nombre(), TipoEquipo.ARMA, espada().bonificaciones(), Map.of());
         j.agregarEquipo(arma);
         var alternativa = new DefinicionArma("otra", espada().nombre(), espada().bonificaciones());
         assertFalse(j.venderEquipo(arma, false, () -> List.of(

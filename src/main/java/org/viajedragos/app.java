@@ -8,6 +8,7 @@ import org.viajedragos.catalogo.ConfiguracionRepositorios;
 import org.viajedragos.catalogo.RepositorioTienda;
 import org.viajedragos.modelo.DefinicionArma;
 import org.viajedragos.modelo.DefinicionPocion;
+import org.viajedragos.modelo.DefinicionEquipo;
 import org.viajedragos.arma.TipoEquipo;
 import org.viajedragos.combate.Combate;
 import org.viajedragos.combate.Dado;
@@ -201,6 +202,7 @@ public class app {
         try {
             List<DefinicionArma> armas = List.copyOf(objetos.obtenerArmas());
             List<DefinicionPocion> pociones = List.copyOf(objetos.obtenerPociones());
+            List<DefinicionEquipo> equipos = List.copyOf(objetos.obtenerEquipamiento());
             var identificadores = new HashSet<String>();
             for (DefinicionArma arma : armas) {
                 if (!identificadores.add(arma.id())) {
@@ -209,6 +211,9 @@ public class app {
                 if (arma.id().equals(DefinicionArma.ID_ESPADA_DESGASTADA)) espada = arma;
                 if (arma.id().equals(DefinicionArma.ID_ESPADA_HIERRO)) espadaHierro = arma;
             }
+            for (DefinicionEquipo equipo : equipos) {
+                if (!identificadores.add(equipo.id())) throw new IllegalArgumentException("Identificadores repetidos entre objetos");
+            }
             for (DefinicionPocion pocion : pociones) {
                 if (!identificadores.add(pocion.id())) {
                     throw new IllegalArgumentException("Identificadores repetidos entre objetos");
@@ -216,8 +221,8 @@ public class app {
             }
             if (espada == null) throw new IllegalArgumentException("Falta la Espada desgastada");
             if (espadaHierro == null) throw new IllegalArgumentException("Falta la Espada de hierro");
-            if (tienda == null) tienda = ConfiguracionRepositorios.tienda(armas, pociones);
-            var productos = RepositorioTienda.validarProductos(tienda.obtenerTodos(), armas, pociones);
+            if (tienda == null) tienda = ConfiguracionRepositorios.tienda(armas, pociones, equipos);
+            var productos = RepositorioTienda.validarProductos(tienda.obtenerTodos(), armas, pociones, equipos);
             for (var producto : productos) {
                 if (!tienda.buscarPorId(producto.id()).filter(producto::equals).isPresent()) {
                     throw new IllegalArgumentException("El índice comercial no coincide con el catálogo");
@@ -530,6 +535,7 @@ public class app {
                 + "/" + jugador.getExperienciaNecesaria());
         panel.linea("Puntos pendientes: " + jugador.getPuntosPendientes());
         panel.linea("Oro: " + jugador.getOro() + " monedas");
+        panel.linea("Vida: " + jugador.getVida() + "/" + jugador.getVidaMaxima() + " PS");
         panel.columnas("Fuerza: " + jugador.getFuerza(), "Resistencia: " + jugador.getResistencia());
         panel.columnas("Iniciativa: " + jugador.getIniciativa(), "Agilidad: " + jugador.getAgilidad());
         panel.linea("Velocidad: " + jugador.getVelocidad());
@@ -551,8 +557,8 @@ public class app {
         if (jugador.getEquipoEquipado().isEmpty()) panel.linea("No tienes equipo equipado");
         for (TipoEquipo ranura : TipoEquipo.values()) {
             var equipo = jugador.getEquipoEquipado().get(ranura);
-            if (equipo == null) continue;
-            mostrarEquipo(panel, equipo);
+            if (equipo == null) panel.linea(ranura.getNombre() + ": Sin equipo");
+            else mostrarEquipo(panel, equipo);
         }
         panel.separador();
         panel.titulo("EQUIPAMIENTO GUARDADO");
@@ -565,6 +571,7 @@ public class app {
             PanelConsola acciones = new PanelConsola(salida, "ACCIONES DE INVENTARIO");
             acciones.opcion(1, "Comparar equipamiento");
             acciones.opcion(2, "Cambiar equipamiento");
+            acciones.opcion(3, "Desequipar una pieza");
             acciones.opcion(0, "Volver a exploración");
             acciones.cerrar();
             String opcion = leerOpcion(entrada, salida);
@@ -574,8 +581,10 @@ public class app {
                 if (!compararEquipamiento(jugador, entrada, salida, coloresAnsi)) return false;
             } else if (opcion.equals("2")) {
                 if (!cambiarEquipamiento(jugador, entrada, salida, coloresAnsi)) return false;
+            } else if (opcion.equals("3")) {
+                if (!desequiparEquipamiento(jugador, entrada, salida)) return false;
             } else {
-                salida.println("Entrada inválida. Escribe 1, 2 o 0 para volver.");
+                salida.println("Entrada inválida. Escribe 1, 2, 3 o 0 para volver.");
             }
         }
     }
@@ -583,9 +592,43 @@ public class app {
     private static void mostrarEquipo(PanelConsola panel, Equipo equipo) {
         panel.linea(equipo.getTipoEquipo().getNombre() + ": " + equipo.getNombre());
         equipo.getBonificaciones().forEach((atributo, cantidad) ->
-                panel.linea(String.format("%s %+d", atributo, cantidad)));
+                panel.linea(String.format("%s %+d", atributo == Atributo.VIDA ? "Vida máxima" : atributo, cantidad)));
         equipo.getHabilidadesOtorgadas().forEach((habilidad, nivel) ->
                 panel.linea(habilidad.getNombre() + ": nivel otorgado " + nivel));
+    }
+
+    private static boolean desequiparEquipamiento(Jugador jugador, Scanner entrada, PrintStream salida) {
+        while (true) {
+            List<TipoEquipo> ranuras = java.util.Arrays.stream(TipoEquipo.values())
+                    .filter(tipo -> jugador.getEquipoEquipado().containsKey(tipo)).toList();
+            PanelConsola panel = new PanelConsola(salida, "DESEQUIPAR");
+            if (ranuras.isEmpty()) panel.linea("No tienes equipo equipado.");
+            for (int i = 0; i < ranuras.size(); i++) {
+                TipoEquipo tipo = ranuras.get(i);
+                panel.opcion(i + 1, tipo.getNombre() + ": " + jugador.getEquipoEquipado().get(tipo).getNombre());
+            }
+            panel.opcion(0, "Volver al inventario");
+            panel.cerrar();
+            int indice = leerIndiceEquipo(entrada, salida, ranuras.size());
+            if (indice == -1) return false;
+            if (indice == 0) return true;
+            TipoEquipo tipo = ranuras.get(indice - 1);
+            Equipo pieza = jugador.getEquipoEquipado().get(tipo);
+            PanelConsola confirmar = new PanelConsola(salida, "CONFIRMAR DESEQUIPADO");
+            mostrarEquipo(confirmar, pieza);
+            confirmar.linea("La pieza vuelve al inventario; se retiran sus efectos.");
+            confirmar.opcion(1, "Desequipar");
+            confirmar.opcion(0, "Cancelar");
+            confirmar.cerrar();
+            int opcion = leerIndiceEquipo(entrada, salida, 1);
+            if (opcion == -1) return false;
+            if (opcion == 0) continue;
+            if (jugador.desequiparAlInventario(tipo)) {
+                salida.println(pieza.getNombre() + " guardada en el inventario.");
+                return true;
+            }
+            salida.println("No se ha podido desequipar. Se conserva el estado anterior.");
+        }
     }
 
     private static boolean compararEquipamiento(Jugador jugador, Scanner entrada, PrintStream salida,

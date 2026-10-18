@@ -9,7 +9,9 @@ import java.util.*;
 import java.io.PrintStream;
 import org.viajedragos.consola.PanelConsola;
 
-public abstract class Equipo extends Objeto implements Equipable {
+public class Equipo extends Objeto implements Equipable {
+
+    private final String idDefinicion;
 
     private final TipoEquipo tipoEquipo;
     private final Map<Atributo, Integer> bonificaciones;
@@ -18,16 +20,21 @@ public abstract class Equipo extends Objeto implements Equipable {
     public Equipo(String nombre, TipoEquipo tipoEquipo,
                   Map<Atributo, Integer> bonificaciones,
                   Map<Habilidad, Integer> habilidadesOtorgadas) {
+        this(null, nombre, tipoEquipo, bonificaciones, habilidadesOtorgadas);
+    }
+
+    public Equipo(String idDefinicion, String nombre, TipoEquipo tipoEquipo,
+                  Map<Atributo, Integer> bonificaciones, Map<Habilidad, Integer> habilidadesOtorgadas) {
 
         super(nombre);
+        if (idDefinicion != null && idDefinicion.isBlank()) throw new IllegalArgumentException("ID vacío");
+        this.idDefinicion = idDefinicion;
         this.tipoEquipo = Objects.requireNonNull(tipoEquipo, "El tipo de equipo no puede ser null");
         Map<Atributo, Integer> copiaBonificaciones = new EnumMap<>(Atributo.class);
         bonificaciones.forEach((atributo, cantidad) -> {
             Objects.requireNonNull(atributo, "El atributo no puede ser null");
             Objects.requireNonNull(cantidad, "La bonificación no puede ser null");
-            if (atributo == Atributo.VIDA) {
-                throw new IllegalArgumentException("Las bonificaciones de vida necesitan una regla específica");
-            }
+            if (cantidad == Integer.MIN_VALUE) throw new IllegalArgumentException("Bonificación no reversible");
             copiaBonificaciones.put(atributo, cantidad);
         });
         Map<Habilidad, Integer> copiaHabilidades = new LinkedHashMap<>();
@@ -49,7 +56,7 @@ public abstract class Equipo extends Objeto implements Equipable {
     public void aplicarEfectos(Combatiente combatiente) {
 
         Objects.requireNonNull(combatiente, "El combatiente no puede ser null");
-        bonificaciones.forEach(combatiente::modificarAtributo);
+        bonificaciones.forEach((atributo, cantidad) -> aplicarBonificacion(combatiente, atributo, cantidad));
         habilidadesOtorgadas.forEach(combatiente::agregarHabilidadEquipo);
     }
 
@@ -66,12 +73,19 @@ public abstract class Equipo extends Objeto implements Equipable {
                 throw new IllegalStateException("Una habilidad que permanece activa debe conservar nivel positivo");
             }
         });
-        bonificaciones.forEach((atributo, cantidad) -> combatiente.modificarAtributo(atributo, -cantidad));
+        bonificaciones.forEach((atributo, cantidad) -> aplicarBonificacion(combatiente, atributo, -cantidad));
         habilidadesOtorgadas.forEach(combatiente::quitarHabilidadEquipo);
     }
 
     public TipoEquipo getTipoEquipo() {
         return tipoEquipo;
+    }
+
+    public String getIdDefinicion() { return idDefinicion; }
+
+    private void aplicarBonificacion(Combatiente combatiente, Atributo atributo, int cantidad) {
+        if (atributo == Atributo.VIDA) combatiente.modificarVidaMaximaEquipo(cantidad);
+        else combatiente.modificarAtributo(atributo, cantidad);
     }
 
     public Map<Atributo, Integer> getBonificaciones() {
@@ -123,7 +137,7 @@ public abstract class Equipo extends Objeto implements Equipable {
                         + textoDiferencia + "\u001B[0m";
             }
 
-            panel.columnas(anchos, a.name(), textoViejo, textoNuevo, columnaDiferencia);
+            panel.columnas(anchos, a == Atributo.VIDA ? "VIDA MÁX." : a.name(), textoViejo, textoNuevo, columnaDiferencia);
         }
         panel.cerrar();
     }

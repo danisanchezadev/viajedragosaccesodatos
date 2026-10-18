@@ -76,6 +76,12 @@ class RepositorioObjetosTest {
     @ParameterizedTest
     @ValueSource(ints = {0,1,2,3,4,5,6,7,8})
     void armaRechazaDatosInvalidos(int caso) {
+        if (caso == 5 || caso == 6) {
+            int bono = caso == 5 ? 1 : -1;
+            var definicion = new DefinicionArma("arma", "Arma", Map.of(Atributo.VIDA, bono));
+            assertEquals(bono, definicion.crearArma().getBonificaciones().get(Atributo.VIDA));
+            return;
+        }
         Class<? extends RuntimeException> error = switch (caso) {
             case 1, 3, 5, 6 -> IllegalArgumentException.class;
             default -> NullPointerException.class;

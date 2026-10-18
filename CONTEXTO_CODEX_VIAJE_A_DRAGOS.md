@@ -38,7 +38,7 @@ La primera versión utilizará **únicamente datos preparados dentro del propio 
 
 - En el alcance actual, cada combate enfrenta a **un jugador y un enemigo**. No diseñar por defecto combates de grupos.
 - Los atributos conocidos son `FUERZA`, `RESISTENCIA`, `AGILIDAD`, `INICIATIVA`, `VELOCIDAD` y `VIDA`.
-- `VIDA` es una entrada del enum `Atributo`, pero la vida actual y la vida máxima se gestionan mediante campos separados (`vida`, `vidaMaxima`), no como entradas ordinarias de los mapas de atributos.
+- `VIDA` es una entrada del enum `Atributo`, pero la vida actual y la base de vida máxima se gestionan por separado. Desde 3.24, VIDA en equipo suma exclusivamente al máximo; no se acepta en los métodos genéricos de atributos ni modifica la vida actual al equipar.
 - Los atributos base y los modificadores de equipo son conceptos diferentes. El atributo efectivo es `max(0, base + modificador)`.
 - Una modificación permanente debe afectar al valor base. Una bonificación o penalización de equipo debe afectar a los modificadores y poder revertirse sin destruir el valor base.
 - Decisión expresa del autor durante la tarea de equipo: conservar el sistema de habilidades que suma cambios a la base y los resta en otro momento, sin añadir un mapa temporal. Esos eventos usan el valor base sin incluir equipo, conservan las diferencias con signo y las revierten. Rabia también debe revertirse en `alFinalCombate`. Los cambios permanentes y los de equipo siguen separados; durante una habilidad activa la base incluye provisionalmente su efecto.
@@ -292,6 +292,19 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - Nuevas pruebas: EncuentrosPorNivelTest 16, NivelesEnemigosTest 12 y EquilibrioVariantesTest 3. Las 867 anteriores se conservan adaptando catálogo ampliado, filtro inicial y jugador al nivel de cada enemigo en la prueba automática. Simulación histórica inicial intacta en sus resultados. Variantes: 18.000 combates con semillas fijas, nivel mínimo, vida completa, repartos fuerza/resistencia/velocidad y arma +0/+2, sin pociones: 100 % victorias en la muestra, medias 2,128–3,222 turnos. No representa empezar herido.
 - Verificación: mvn clean test, BUILD SUCCESS; 898 pruebas, 0 fallos/errores/omitidas; 49 fuentes principales y 60 archivos de pruebas. Sin commit ni push.
 
+### 3.24 Equipamiento general, primera fase
+
+- Equipo pasa a ser la clase común concreta y conserva Arma como subclase compatible con sus habilidades. TipoEquipo añade AMULETO al final sin cambiar el orden anterior. Siete ranuras, una pieza por cada una, incluido un solo anillo; inventario ilimitado, sin restricciones de nivel/clase/atributos.
+- DefinicionEquipo(id, nombre, tipo, bonificaciones) inmutable crea ejemplares independientes. Cada pieza de catálogo conserva getIdDefinicion; identidad del ejemplar por referencia y selección por índice, sin equals basado en nombre/estadísticas. DefinicionArma conserva constructor/crearArma y añade comoEquipo; las armas creadas guardan ahora ID. Los constructores manuales antiguos sin ID se conservan.
+- RepositorioObjetos añade obtenerEquipamiento default vacío para definiciones adicionales sin repetir armas. Las implementaciones anteriores siguen siendo válidas. La aventura lee las tres listas una vez. ConfiguracionRepositorios.tienda añade sobrecarga con las adicionales; ProductoTienda añade equipo() general y conserva sus constructores anteriores y arma() para DefinicionArma. Validación cruza IDs y contenido entre armas, piezas y pociones.
+- VIDA se admite en cualquier pieza como bonificación al máximo. Combatiente conserva vidaMaxima permanente y getVidaMaximaBase; getVidaMaxima suma el modificador VIDA del equipo, con mínimo cero. Equipar no cura ni dispara alCurarse; retirar ajusta vida actual al máximo final si es necesario. Curarse consulta el máximo efectivo. La progresión mantiene +6 a la base y +6 a actual, sin absorber bonos de equipo; no cambian umbrales ni puntos. Un intercambio conserva la vida hasta el máximo final, evitando recortes por el máximo transitorio.
+- Aplicación/retirada de los otros atributos y habilidades mantiene el sistema anterior. Los intercambios, desequipado y ventas reutilizan snapshots que restauran ranuras, inventario, atributos/base, modificadores VIDA, vida y estados ante fallos.
+- Nuevas definiciones en memoria: armadura_cuero/Armadura de cuero (ARMADURA, RESISTENCIA +1, 8 monedas); casco_cuero/Casco de cuero (CASCO, RESISTENCIA +1, 8); guantes_cuero/Guantes de cuero (GUANTES, FUERZA +1, 10); botas_ligeras/Botas ligeras (BOTAS, AGILIDAD +1, 8); anillo_sencillo/Anillo sencillo (ANILLO, INICIATIVA +1, 10); amuleto_sencillo/Amuleto sencillo (AMULETO, VIDA máxima +2, 10). Diez productos con los cuatro anteriores intactos. Venta precio / 2 entero, desde guardado o equipado. Sin nuevos botines/recompensas.
+- Comercio identifica por ID más contenido; compatibilidad estructural única solo para piezas antiguas sin ID. Dos modelos con mismo nombre/bonos y diferentes IDs ya no son ambiguos. Las referencias duplicadas manualmente conservan la protección de venta anterior; los ejemplares independientes se seleccionan y venden individualmente.
+- Inventario muestra ranuras vacías/ocupadas y bonificaciones de Vida máxima. Opciones 1 comparar, 2 cambiar, 3 desequipar, 0 volver. Desequipar pide confirmar, conserva la referencia y la devuelve al final del inventario. Cancelación/EOF no confirman. Sin pausas dentro de menús.
+- Pruebas añadidas: EquipoGeneralTest 25, CatalogoEquipoGeneralTest 17 y EquipoGeneralConsolaTest 21. Base local comprobada: 899 casos (la documentación anterior registraba 898); se conservan, adaptando solo las reglas estructurales de VIDA, tienda de diez productos, ranuras vacías, el inválido 3 a 4 y una pieza antigua sin ID en la regresión de venta ambigua.
+- Verificación: mvn clean test, BUILD SUCCESS; 962 pruebas, 0 fallos/errores/omitidas; 50 fuentes principales y 63 archivos de pruebas. README y GUIA_ACCESO_DATOS actualizados. Sin cambios en fórmulas, enemigos, recompensas ni sistema de habilidades/pausas; sin persistencia. Pendientes pergaminos, mejoras individuales/aleatorias, rarezas y habilidades desde datos. Sin commit ni push.
+
 ## 4. Habilidades
 
 - `Habilidad` es una clase abstracta que implementa una interfaz de eventos (`EventosHabilidad`).
@@ -365,7 +378,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 > **Estado:** 18 de octubre de 2026. Base local 88934c5 (oro/comercio). Interfaz unificada y ritmo narrativo en cambios locales según 3.18–3.19. Codex no ha realizado commit ni push.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia actual:** `mvn clean test`: BUILD SUCCESS; 49 fuentes principales y 60 archivos de pruebas; 898 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 867 casos anteriores y se añaden 31 según 3.23, sin cambios en fórmulas, equipo o recompensas previas ni acceso a datos externo.
+> **Evidencia actual:** `mvn clean test`: BUILD SUCCESS; 50 fuentes principales y 63 archivos de pruebas; 962 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 899 casos del estado local previo y se añaden 63 según 3.24, sin cambios en fórmulas de combate, enemigos o recompensas ni acceso a datos externo.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -379,7 +392,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 898 pruebas ejecutadas sin fallos ni errores; 867 casos anteriores y 31 de enemigos por nivel, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
+- [x] Suite JUnit: 962 pruebas ejecutadas sin fallos ni errores; 899 casos anteriores y 63 de equipo general, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
@@ -458,6 +471,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Centralizar selección de repositorios, separar ofertas predeterminadas, validar correspondencias y documentar integración externa sin implementarla según 3.21.
 - [x] Experiencia por victoria desde datos del enemigo, subidas múltiples, mejoras permanentes, vida independiente y reparto obligatorio con presentación/pruebas según 3.22.
 - [x] Nivel en datos de enemigos, tres variantes, encuentros elegibles por nivel y validación/visualización/compatibilidad de repositorios según 3.23.
+- [x] Generalizar equipo, ID de catálogo y ejemplares, siete ranuras, vida máxima, desequipado, tienda y repositorios compatibles según 3.24.
 - [x] Unificar pantallas con PanelConsola y establecer normas futuras en AGENTS.md; alineación, ANSI, barras y flujos probados según 3.18.
 - [x] Pausas narrativas mediante RitmoConsola, cuatro velocidades, selección persistente durante la sesión y pruebas sin esperas reales según 3.19.
 - [x] Continuidad de fase 4 publicada en 6fc2a8d: misma instancia del jugador, vida restante sin recuperación, Lobos nuevos y sin límite de encuentros; muerte/terminación voluntaria devuelve al inicio y nueva aventura crea otro jugador. La fase 5 añade su primera recompensa fija.

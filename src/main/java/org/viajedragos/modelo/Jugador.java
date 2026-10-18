@@ -42,6 +42,7 @@ public class Jugador extends Combatiente{
         int puntos = Math.addExact(puntosPendientes, Math.multiplyExact(subidas, 2));
         int vidaExtra = Math.multiplyExact(subidas, 6);
         int maxima = Math.addExact(getVidaMaxima(), vidaExtra);
+        int maximaBase = Math.addExact(getVidaMaximaBase(), vidaExtra);
         int actual = (int) Math.min(maxima, (long) getVida() + vidaExtra);
         // Validar todos los incrementos antes de modificar el estado.
         for (Atributo atributo : Atributo.values()) {
@@ -51,7 +52,7 @@ public class Jugador extends Combatiente{
             for (Atributo atributo : Atributo.values()) {
                 if (atributo != Atributo.VIDA) aumentarAtributo(atributo, subidas);
             }
-            setVidaMaxima(maxima);
+            setVidaMaxima(maximaBase);
             setVida(actual);
         }
         nivel = nuevoNivel;
@@ -110,7 +111,7 @@ public class Jugador extends Combatiente{
                     throw new IllegalStateException("No se incorporó la poción correctamente");
                 }
             } else {
-                Equipo arma = producto.arma().crearArma();
+                Equipo arma = producto.equipo().crearEquipo();
                 var esperado = new ArrayList<>(equipoAntes);
                 esperado.add(arma);
                 agregarEquipo(arma);
@@ -213,6 +214,15 @@ public class Jugador extends Combatiente{
         if (!cambiarEquipoSeguro(nuevo)) return false;
         inventarioEquipo.remove(indice);
         if (anterior != null) inventarioEquipo.add(anterior);
+        return true;
+    }
+
+    public boolean desequiparAlInventario(TipoEquipo tipo) {
+        Objects.requireNonNull(tipo);
+        Equipo pieza = getEquipoEquipado().get(tipo);
+        if (pieza == null || inventarioEquipo.stream().anyMatch(e -> e == pieza)) return false;
+        if (!desequiparSeguro(tipo)) return false;
+        inventarioEquipo.add(pieza);
         return true;
     }
 

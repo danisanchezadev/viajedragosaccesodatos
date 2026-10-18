@@ -12,4 +12,9 @@ public class Arma extends Equipo {
 
         super(nombre, tipoEquipo, bonificaciones, habilidadesOtorgadas);
     }
+
+    public Arma(String idDefinicion, String nombre, TipoEquipo tipoEquipo,
+                Map<Atributo, Integer> bonificaciones, Map<Habilidad, Integer> habilidadesOtorgadas) {
+        super(idDefinicion, nombre, tipoEquipo, bonificaciones, habilidadesOtorgadas);
+    }
 }

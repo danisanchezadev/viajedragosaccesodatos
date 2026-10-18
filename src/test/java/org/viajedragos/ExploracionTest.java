@@ -77,7 +77,7 @@ class ExploracionTest {
         assertTrue(texto().contains("FUERZA +1"));
         assertTrue(texto().contains("AGILIDAD -1"));
         assertTrue(texto().contains("Instinto de supervivencia: nivel otorgado 2"));
-        assertFalse(texto().contains("Armadura:"));
+        assertTrue(texto().contains("Armadura: Sin equipo"));
         assertEquals(inventario, j.getInventarioPociones());
         assertEquals(modificadores, j.getModificadoresEquipo());
         assertEquals(estados, j.getHabilidades());
@@ -154,7 +154,7 @@ class ExploracionTest {
     void inventarioRechazaAccionesSinModificarEstado() {
         Jugador j = jugador(13);
         j.agregarPocion(TipoPocion.GRANDE);
-        assertTrue(app.consultarInventario(j, new Scanner("3\nx\n0\n"), consola()));
+        assertTrue(app.consultarInventario(j, new Scanner("4\nx\n0\n"), consola()));
         assertEquals(2, texto().split("Entrada inválida", -1).length - 1);
         assertEquals(13, j.getVida());
         assertEquals(1, j.getCantidadPociones(TipoPocion.GRANDE));

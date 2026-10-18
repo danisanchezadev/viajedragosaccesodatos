@@ -23,15 +23,15 @@ public record DefinicionArma(String id, String nombre, Map<Atributo, Integer> bo
         Objects.requireNonNull(bonificaciones).forEach((atributo, cantidad) -> {
             Objects.requireNonNull(atributo);
             Objects.requireNonNull(cantidad);
-            if (atributo == Atributo.VIDA) {
-                throw new IllegalArgumentException("Las bonificaciones de vida necesitan una regla específica");
-            }
+            if (cantidad == Integer.MIN_VALUE) throw new IllegalArgumentException("Bonificación no reversible");
             copia.put(atributo, cantidad);
         });
         bonificaciones = Collections.unmodifiableMap(copia);
     }
 
     public Arma crearArma() {
-        return new Arma(nombre, TipoEquipo.ARMA, bonificaciones, Map.of());
+        return new Arma(id, nombre, TipoEquipo.ARMA, bonificaciones, Map.of());
     }
+
+    public DefinicionEquipo comoEquipo() { return new DefinicionEquipo(id, nombre, TipoEquipo.ARMA, bonificaciones); }
 }

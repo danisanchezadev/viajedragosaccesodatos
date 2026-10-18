@@ -312,7 +312,10 @@ class EquipamientoTest {
         assertThrows(IllegalArgumentException.class, () -> jugador.modificarAtributo(Atributo.VIDA, 5));
         assertThrows(IllegalArgumentException.class, () -> jugador.aumentarAtributo(Atributo.VIDA, 5));
         assertThrows(IllegalArgumentException.class, () -> jugador.disminuirAtributo(Atributo.VIDA, 5));
-        assertThrows(IllegalArgumentException.class, () -> pieza(TipoEquipo.ARMA, Map.of(Atributo.VIDA, 5), Map.of()));
+        assertTrue(jugador.equipar(pieza(TipoEquipo.ARMA, Map.of(Atributo.VIDA, 5), Map.of())));
+        assertEquals(35, jugador.getVidaMaxima());
+        assertEquals(15, jugador.getVida());
+        assertTrue(jugador.desequipar(TipoEquipo.ARMA));
         assertEquals(15, jugador.getVida());
         assertEquals(30, jugador.getVidaMaxima());
     }

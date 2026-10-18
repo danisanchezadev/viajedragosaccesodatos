@@ -137,6 +137,12 @@ ni pausas narrativas en estos menús.
 | Poción grande | 10 | 5 |
 | Espada desgastada | 12 | 6 |
 | Espada de hierro | 20 | 10 |
+| Armadura de cuero | 8 | 4 |
+| Casco de cuero | 8 | 4 |
+| Guantes de cuero | 10 | 5 |
+| Botas ligeras | 8 | 4 |
+| Anillo sencillo | 10 | 5 |
+| Amuleto sencillo | 10 | 5 |
 
 `ProductoTienda` enlaza una definición existente con su precio; su identificador
 y nombre proceden de esa definición. `RepositorioTienda` permite listar y buscar
@@ -150,7 +156,7 @@ saldo e inventarios. Una poción debe coincidir con la definición configurada e
 el jugador, ya que su inventario cuenta unidades por tipo.
 
 `ProductoTienda.precioVenta()` centraliza la división entera `precio / 2`.
-La venta muestra cada poción con su cantidad y cada arma guardada o equipada;
+La venta muestra cada poción con su cantidad y cada pieza guardada o equipada;
 vende una unidad tras confirmar. Las equipadas se identifican y requieren
 confirmar explícitamente su desequipado y venta. `[0]` en compra/venta vuelve
 a tienda; cancelar la confirmación también vuelve a tienda sin cambios.
@@ -161,17 +167,19 @@ seguro reutiliza la restauración del intercambio: un fallo recupera ranuras,
 atributos, vida, habilidades y sus estados. No se consumen pociones ni se disparan
 eventos de curación por venderlas; las compras conservan su funcionamiento.
 
-Las armas actuales no guardan el ID del catálogo. Se exige una correspondencia
-única por nombre, ranura ARMA, bonificaciones y ausencia de habilidades adicionales;
+Las piezas creadas desde catálogo conservan su ID original. Se exige coincidencia
+por ese ID y por nombre, ranura, bonificaciones y ausencia de habilidades adicionales;
 las pociones deben coincidir con su definición completa configurada en Jugador.
 Una correspondencia desconocida, ambigua o incoherente entre listado y búsqueda
 no permite vender. Se usan los precios del repositorio proporcionado, también si
 es alternativo. Las referencias al mismo objeto duplicadas manualmente entre
 inventario/ranuras no se venden; las armas independientes de un mismo tipo sí.
-No se añaden restricciones al inventario ni se cambian precios de compra.
+Los constructores antiguos sin ID conservan la búsqueda estructural única como
+compatibilidad. Las piezas nuevas no dependen solo del nombre o bonificaciones.
+No se añaden restricciones al inventario ni se cambian precios de compra anteriores.
 
 Para otro origen, seleccionar las implementaciones en `ConfiguracionRepositorios`:
-`enemigos()`, `objetos()` y `tienda(armas, pociones)`. También se puede proporcionar
+`enemigos()`, `objetos()` y `tienda(armas, pociones, equipos)`. También se puede proporcionar
 la instancia a la sobrecarga de `app.ejecutar` que acepta los repositorios.
 Las firmas anteriores siguen disponibles. Actualmente solo existe memoria:
 no hay implementaciones de ficheros, JDBC ni JPA. No cambian las ofertas de espadas,
@@ -238,14 +246,18 @@ No hay lectura de archivos, JDBC, JPA, frameworks ni persistencia en esta versi�
 ## Catálogo de objetos y equipamiento
 
 La aventura carga una sola vez las definiciones de `RepositorioObjetos`:
-`obtenerArmas()` y `obtenerPociones()`. `RepositorioObjetosMemoria` devuelve listas
+`obtenerArmas()`, `obtenerPociones()` y el método opcional `obtenerEquipamiento()`.
+Este último devuelve definiciones adicionales, sin repetir las armas. Las
+implementaciones anteriores siguen funcionando con su valor predeterminado vacío.
+`RepositorioObjetosMemoria` devuelve listas
 inmutables con Espada desgastada (`espada_desgastada`, FUERZA +1, sin habilidades),
 Espada de hierro (`espada_hierro`, FUERZA +2, sin habilidades),
 Poción pequeña (`pocion_pequena`, 8 PS) y Poción grande (`pocion_grande`, 16 PS).
 
 `DefinicionArma` es un record con id, nombre y copia inmutable de bonificaciones.
 `crearArma()` crea una instancia independiente en la ranura ARMA. Las bonificaciones
-pueden ser negativas; VIDA continúa rechazada porque necesita una regla propia.
+pueden ser negativas; VIDA se admite como bonificación de vida máxima, separada de
+vida actual. `crearArma()` conserva también el ID de su definición.
 `DefinicionPocion` contiene id, TipoPocion, nombre y recuperación positiva; nunca
 cantidades poseídas. El inventario sigue perteneciendo exclusivamente a Jugador.
 
@@ -279,10 +291,47 @@ la acción de combate y la oferta voluntaria única de espada tras la primera
 victoria real. La espada se identifica por id, independientemente de su nombre
 visible. El catálogo no genera botín ni ejecuta efectos.
 
-Limitaciones: solo las dos espadas y dos pociones actuales; sin catálogo de habilidades,
-armaduras, inventario genérico, persistencia ni tecnologías externas. El sistema
+Limitaciones: dos tipos de poción y sin catálogo de habilidades desde datos,
+persistencia ni tecnologías externas. El catálogo puede añadir piezas de las siete ranuras. El sistema
 existente de equipo con habilidades permanece intacto. Archivos/JDBC/JPA podrán
 implementar este contrato posteriormente; no están implementados aquí.
+
+## Equipamiento general: primera fase
+
+`Equipo` es la representación común concreta y `Arma` se conserva como clase
+compatible, incluidas sus habilidades. Las ranuras son ARMA, ARMADURA, CASCO,
+GUANTES, BOTAS, ANILLO y AMULETO. Solo una pieza por ranura y un único anillo;
+inventario ilimitado, sin requisitos de nivel, atributos o clase.
+
+`DefinicionEquipo(id, nombre, tipo, bonificaciones)` es inmutable y crea ejemplares
+independientes con `crearEquipo()`. Cada ejemplar conserva `getIdDefinicion()`;
+dos piezas del mismo modelo comparten ID de catálogo, pero son objetos distintos,
+seleccionables por su posición numerada. No se redefine equals por nombre ni
+bonificaciones. `DefinicionArma` mantiene crearArma y añade comoEquipo; no se
+necesita una subclase distinta para cada categoría.
+
+Bonificaciones de todas las ranuras se suman; las permanentes del nivel se mantienen
+en la base. En VIDA, la bonificación afecta exclusivamente al máximo efectivo:
+20/30 con +5 pasa a 20/35, con otro +3 a 20/38, y retirando +5 a 20/33. Equipar no
+cura ni dispara alCurarse; retirar recorta la vida actual solo si supera el máximo
+resultante. Un intercambio conserva la vida hasta el máximo final, sin perder PS
+por el máximo intermedio. La curación posterior respeta el máximo efectivo.
+Los +6 PS por nivel se añaden una sola vez a la base y a la vida actual.
+
+Inventario: `[1] Comparar`, `[2] Cambiar equipamiento`, `[3] Desequipar una pieza`,
+`[0] Volver`. Cambiar exige elegir una pieza compatible y confirmar. Desequipar
+muestra las ocupadas y solicita confirmación; devuelve el mismo ejemplar al final
+del inventario. Cancelar/EOF no confirman ni retiran efectos. Los paneles muestran
+todas las ranuras, incluidas vacías, y VIDA se presenta como Vida máxima.
+No se añaden pausas en estos menús.
+
+La tienda predeterminada tiene diez productos; conserva los cuatro anteriores y
+añade las seis piezas de la tabla. Pueden comprarse, equiparse, desequiparse y
+venderse, incluidas equipadas. La venta usa ID y contenido para no valorar una
+pieza desconocida o modificada como otra definición. No hay botín aleatorio nuevo.
+Los intercambios y ventas reutilizan la recuperación segura de ranuras, atributos,
+vida y estados de habilidades. Siguen pendientes pergaminos, puntos de mejora,
+bonificaciones aleatorias, rarezas y habilidades en las definiciones generales.
 
 ## Equilibrio inicial
 
@@ -738,3 +787,13 @@ las comprobaciones iniciales a los cuatro de nivel 1 y el jugador de la prueba
 automática al nivel mínimo de cada enemigo. Sin aserciones eliminadas.
 Resultado de `mvn clean test`: BUILD SUCCESS; 898 pruebas, 0 fallos, 0 errores y
 0 omitidas; 49 fuentes principales y 60 archivos de pruebas.
+
+Equipamiento general añade 63 casos: EquipoGeneralTest (25),
+CatalogoEquipoGeneralTest (17) y EquipoGeneralConsolaTest (21). Se conservan los
+899 casos que tenía el estado local al iniciar esta fase, adaptando solo la
+aceptación de VIDA, diez productos, ranuras vacías, el nuevo válido 3 del menú y
+la compatibilidad de venta para armas antiguas sin ID. Se comprueban todas las
+ranuras, acumulación/ciclos, vida máxima/curación/niveles, ejemplares, habilidades,
+recuperación ante fallos, compra/venta y repositorio alternativo con menús inmediatos.
+Resultado de `mvn clean test`: BUILD SUCCESS; 962 pruebas, 0 fallos, 0 errores y
+0 omitidas; 50 fuentes principales y 63 archivos de pruebas.

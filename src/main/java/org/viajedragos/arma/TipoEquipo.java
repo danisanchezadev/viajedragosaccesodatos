@@ -7,7 +7,8 @@ public enum TipoEquipo {
     CASCO("Casco"),
     BOTAS("Botas"),
     GUANTES("Guantes"),
-    ANILLO("Anillo");
+    ANILLO("Anillo"),
+    AMULETO("Amuleto");
 
     private String nombre;
 
