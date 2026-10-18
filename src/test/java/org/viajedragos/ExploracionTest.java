@@ -41,7 +41,7 @@ class ExploracionTest {
     }
 
     private String texto() {
-        return salida.toString(StandardCharsets.UTF_8);
+        return org.viajedragos.TextoConsola.contenido(salida.toString(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -266,7 +266,7 @@ class ExploracionTest {
         assertEquals(1, texto().split("Tu acción ha terminado", -1).length - 1);
         assertTrue(texto().contains("Vida final: Aventurero 10/24"));
         assertTrue(texto().contains("Vida recuperada: +14 PS"));
-        String inventario = texto().substring(texto().indexOf("  INVENTARIO"));
+        String inventario = texto().substring(texto().indexOf("INVENTARIO"));
         assertTrue(inventario.matches("(?s).*Poción pequeña +x1.*Poción grande +x2.*"));
     }
 

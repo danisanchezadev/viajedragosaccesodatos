@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ComercioAventuraTest {
     private final ByteArrayOutputStream salida = new ByteArrayOutputStream();
     private PrintStream consola() { return new PrintStream(salida, true, StandardCharsets.UTF_8); }
-    private String texto() { return salida.toString(StandardCharsets.UTF_8); }
+    private String texto() { return org.viajedragos.TextoConsola.contenido(salida.toString(StandardCharsets.UTF_8)); }
     private Jugador jugador() { return new Jugador("Aventurero", "", 6, 2, 3, 2, 2, 1, 100); }
     private RepositorioEnemigos enemigos() {
         return () -> List.of(new DefinicionEnemigo("prueba", "Enemigo", "", 1, 0, 1, 0, 0, 1));
@@ -60,7 +60,7 @@ class ComercioAventuraTest {
         Jugador jugador = jugador();
         assertFalse(aventura(jugador, "1\n2\n5\n0\n0\n", 6));
         assertEquals(20, jugador.getOro());
-        assertTrue(texto().contains("Recompensa: +5 monedas. Oro: 20 monedas."));
+        assertTrue(texto().contains("Oro obtenido: +5 monedas Oro total: 20 monedas"));
         assertTrue(texto().contains("5. Tienda"));
         assertTrue(texto().contains("Oro disponible: 20 monedas"));
         assertTrue(texto().contains("1. Poción pequeña - 5 monedas"));
@@ -112,7 +112,7 @@ class ComercioAventuraTest {
                 prohibido, enemigos(), new Random(0)));
         assertEquals(15, jugador.getOro());
         assertTrue(texto().contains("Oro disponible: 15 monedas"));
-        assertFalse(texto().contains("Recompensa: +5"));
+        assertFalse(texto().contains("Oro obtenido: +5"));
         assertFalse(texto().contains("Has encontrado una Espada"));
         assertTrue(jugador.getInventarioPociones().isEmpty());
         assertTrue(jugador.getInventarioEquipo().isEmpty());
@@ -130,7 +130,7 @@ class ComercioAventuraTest {
         }, 1);
         assertTrue(aventura(jugador, "", 0));
         assertEquals(15, jugador.getOro());
-        assertFalse(texto().contains("Recompensa: +5"));
+        assertFalse(texto().contains("Oro obtenido: +5"));
         assertTrue(jugador.getInventarioPociones().isEmpty());
         assertTrue(jugador.getInventarioEquipo().isEmpty());
     }
@@ -139,7 +139,7 @@ class ComercioAventuraTest {
     void volverAlMenuInicialYNuevaAventuraReiniciaSaldoYPertenencias() {
         app.ejecutar(new Scanner("1\n1\n2\n5\n1\n0\n4\n1\n1\n2\n5\n0\n0\n"), consola(),
                 dados(12), sinBotin(), enemigos(), new Random(0));
-        assertEquals(2, texto().split("Recompensa: \\+5 monedas. Oro: 20 monedas.", -1).length - 1);
+        assertEquals(2, texto().split("Oro obtenido: \\+5 monedas Oro total: 20 monedas", -1).length - 1);
         assertEquals(1, texto().split("Has comprado", -1).length - 1);
         assertEquals(2, texto().split("Has encontrado una Espada desgastada", -1).length - 1);
         assertTrue(texto().endsWith("Hasta pronto." + System.lineSeparator()));

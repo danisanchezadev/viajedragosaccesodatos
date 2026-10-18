@@ -303,7 +303,7 @@ class HabilidadesRealesIntegracionTest {
         assertEquals(automatico.getFuerza(), interactivo.getFuerza());
         assertEquals(automatico.getAgilidad(), interactivo.getAgilidad());
         assertEquals(enemigoAutomatico.getVida(), enemigoInteractivo.getVida());
-        String texto = salida.toString(StandardCharsets.UTF_8);
+        String texto = org.viajedragos.TextoConsola.contenido(salida.toString(StandardCharsets.UTF_8));
         assertFalse(texto.contains("Rabia"));
         assertFalse(texto.contains("Sed de batalla"));
         assertTrue(texto.contains("1. Atacar"));

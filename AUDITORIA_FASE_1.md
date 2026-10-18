@@ -2,7 +2,7 @@
 
 Fecha: 14 de octubre de 2026.
 
-> **Estado actual (18 de octubre de 2026):** base publicada d796ffc. Cambios locales de inventario/comparación, obtención/intercambio, corrección de efectos temporales persistentes y aislamiento del estado temporal entre combatientes. `mvn clean test`: 624 pruebas pasan, 0 fallos/errores/omitidas; 601 casos anteriores y 23 nuevos. Sin commit ni push. Los apartados siguientes conservan el historial de cada etapa; la más reciente se documenta al final.
+> **Estado actual (18 de octubre de 2026):** base local 88934c5 (oro/comercio). Cambios locales de interfaz unificada y ritmo narrativo. `mvn clean test`: 751 pruebas pasan, 0 fallos/errores/omitidas; 723 casos anteriores y 28 nuevos de ritmo. Codex no ha hecho commit ni push. Los apartados siguientes conservan el historial de cada etapa; la más reciente se documenta al final.
 
 ## Alcance y resultado
 
@@ -1243,3 +1243,90 @@ dos dados para un crítico que requiere tres. Se corrige la preparación usando
 defensa fallida, sin cambiar el motor. Ejecución final de mvn clean test:
 BUILD SUCCESS; 624 pruebas, 0 fallos, 0 errores, 0 omitidas; 41 fuentes principales
 y 43 archivos de pruebas recompilados. Sin commit ni push.
+
+## Oro, comercio y unificación visual de consola (18 de octubre de 2026)
+
+El encargo de oro/comercio se verificó con 691 pruebas: las 624 anteriores,
+33 en OroCompraTest, 16 en RepositorioTiendaTest y 18 en ComercioAventuraTest.
+La base local pasó a 88934c5 mediante un commit externo a Codex durante la sesión.
+La documentación de continuidad incorpora ahora esas reglas: saldo inicial 15,
+victoria +5, tienda de cuatro productos y compras encapsuladas sin persistencia.
+
+Antes de unificar la interfaz se revisaron las salidas de todas las clases
+principales. Ya había paneles manuales de inicio, encuentro, victoria/recompensas,
+turno y ataque, con interiores inconsistentes de 44/48/49 columnas. Seguían con
+formato plano o ASCII exploración, tienda, inventario, comparación, intercambio
+y pociones. Se localizaron también el aviso breve de setEquipo y dos println
+de depuración en DebilidadEnemiga; solo estos dos últimos se eliminan.
+
+PanelConsola centraliza bordes Unicode, títulos centrados, margen, opciones [n],
+columnas, ajuste de texto, anchura sin SGR ANSI y barras de diez segmentos.
+Interior 48, contenido 44, anchura total 50. Los nombres largos se dividen, no se
+descartan. Los colores se cierran antes del borde. Los mensajes breves de error,
+confirmación, botín o resultado textual pueden seguir fuera de paneles.
+AGENTS.md documenta las reglas futuras y mantiene la preferencia de asesoramiento
+sin elogios automáticos. No hay dependencias ni un framework de interfaz.
+
+Se mantiene el motor publicado. El borrador visual local de Combate había dejado
+el final de turno/alternancia/incremento dentro de un bloque comentado; al retirar
+el bloque duplicado se recupera el flujo original. La comparación con la base y
+las pruebas confirman que no se cambian fórmulas, dados, habilidades o recompensas.
+No se modifican repositorios, sus interfaces ni modelos de negocio en esta fase.
+
+Las regresiones funcionales extraen contenido con TextoConsola para no depender de
+bordes, padding o saltos de ajuste. Se actualizan los literales de títulos, columnas
+y salud; las comprobaciones iniciales de dos aventuras cuentan ahora cuatro
+presentaciones de la vida (encuentro y acción) en lugar de dos. No se eliminan casos
+ni aserciones funcionales de estado, tiradas, daño, eventos o resultados.
+Las pruebas visuales usan siempre la salida original, sin normalizar.
+
+Se añaden 32 casos: PanelConsolaTest (23) e InterfazConsolaTest (9), con bordes,
+centrado, nombres largos, marcas combinadas, ANSI, columnas, barras, menú principal
+mediante las regresiones existentes, tienda, inventario, compra/consumo/equipamiento,
+ataques, críticos, fallos, contraataques y huida con dados controlados.
+
+Resultado real final de mvn clean test: BUILD SUCCESS; 723 pruebas, 0 fallos,
+0 errores y 0 omitidas; 46 fuentes principales y 49 archivos de pruebas.
+Se corrigieron durante la implementación una llave de cierre al recuperar el bucle,
+literales de presentación antiguos y la preparación de dados de una prueba nueva
+que no contemplaba el cambio del poseedor del turno. No se alteró el motor para
+adaptarlo a esas expectativas. La apariencia en la fuente concreta de IntelliJ
+no se verificó abriendo el IDE; las anchuras y flujos sí se comprobaron por pruebas.
+La ejecución real en terminal detectó una salida heredada que reemplazaba bordes
+por interrogaciones. main configura explícitamente UTF-8 al iniciar; se añadió una
+prueba con PrintStream original ASCII y se repitió la ejecución del menú real,
+esta vez con bordes y acentos correctos, terminando con código 0.
+Sin commit ni push por parte de Codex.
+
+## Pausas narrativas configurables (18 de octubre de 2026)
+
+Se revisaron las llamadas de app, Combate y las ofertas de objetos antes de editar.
+Se conserva la interfaz visual ya unificada y todas las firmas previas. Las nuevas
+sobrecargas reciben un RitmoConsola compartido durante la sesión. El constructor
+anterior de Combate y las entradas anteriores con flujos/dados proporcionados son
+instantáneos; main inicia Normal. El combate automático no espera.
+
+RitmoConsola concentra los cuatro modos (0/250/700/1200 ms) y la única espera real,
+secuencial. Su Espera sustituible permite registrar las pausas sin dormir. No se
+añaden hilos, temporizadores, concurrencia ni eventos. Ante InterruptedException
+se restaura la bandera, se avisa y se omiten esperas mientras siga interrumpido.
+
+Se pausa después del encuentro y anuncio del turno; antes del resultado enemigo;
+después de cada ataque, incluido fallo/contraataque; después del anuncio final de
+victoria/derrota/muerte simultánea; y tras presentar oro, pociones realmente
+obtenidas y las ofertas de ambas espadas. No hay pausas dentro de paneles, menús,
+validaciones o consultas. La selección se cambia con 2 en el menú principal y se
+conserva incluso al crear otra aventura. AGENTS.md establece estas reglas futuras.
+
+Los 723 casos anteriores se conservan. AventuraTest cambia únicamente su opción
+principal inválida de 2 a 9, manteniendo todas las aserciones. Se añaden 28 casos:
+RitmoConsolaTest (9) y RitmoAventuraTest (19). Comprueban tiempos registrados,
+configuración/cancelación/EOF, sesión, paneles completos, ausencia de esperas en
+navegación, ataque enemigo y sus resultados, fallo/contraataque, derrota, botín,
+las dos armas, instantáneo, automático, equivalencia de texto/resultados y gestión
+de interrupciones. Todas las pruebas se ejecutan sin esperas reales.
+
+Resultado real de mvn clean test: BUILD SUCCESS; 751 pruebas, 0 fallos, 0 errores,
+0 omitidas; 47 fuentes principales y 51 archivos de pruebas. Tiempo Maven: 7,849 s.
+Las reglas, fórmulas, dados, probabilidades, recompensas y repositorios no cambian.
+Se mantienen los cambios locales anteriores. Sin commit ni push.

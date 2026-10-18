@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class CatalogoObjetosIntegracionTest {
     private final ByteArrayOutputStream salida = new ByteArrayOutputStream();
     private PrintStream consola() { return new PrintStream(salida, true, StandardCharsets.UTF_8); }
-    private String texto() { return salida.toString(StandardCharsets.UTF_8); }
+    private String texto() { return org.viajedragos.TextoConsola.contenido(salida.toString(StandardCharsets.UTF_8)); }
     private final RepositorioEnemigos enemigos = () -> List.of(
             new DefinicionEnemigo("lobo", "Lobo", "", 5, 2, 2, 1, 2, 18));
 
@@ -111,7 +111,7 @@ class CatalogoObjetosIntegracionTest {
             fail("No debe empezar el combate"); return 1;
         }, sinAzar(), enemigos, sinAzar(), objetos));
         assertTrue(texto().contains("catálogo de objetos no es válido"));
-        assertFalse(texto().contains("Encuentro 1."));
+        assertFalse(texto().contains("ENCUENTRO 1"));
         assertEquals(10, j.getVida());
         assertEquals(1, j.getCantidadPociones(TipoPocion.PEQUENA));
         assertSame(anterior, j.getDefinicionPocion(TipoPocion.PEQUENA));
@@ -163,8 +163,8 @@ class CatalogoObjetosIntegracionTest {
         assertArrayEquals(new int[]{1,1}, consultas);
         assertEquals(2, encuentros[0]);
         assertEquals(1, texto().split("Has encontrado una Espada del catálogo", -1).length - 1);
-        assertTrue(texto().contains("Fuerza +3"));
-        assertTrue(texto().contains("Velocidad -1"));
+        assertTrue(texto().contains("FUERZA +3"));
+        assertTrue(texto().contains("VELOCIDAD -1"));
         assertTrue(texto().contains("Botín: Pequeña del catálogo (+1)."));
         assertEquals(2, j.getCantidadPociones(TipoPocion.PEQUENA));
         assertEquals(2, j.getCantidadPociones(TipoPocion.GRANDE));
@@ -270,9 +270,9 @@ class CatalogoObjetosIntegracionTest {
         app.ejecutar(new Scanner("1\n1\n1\n4\n1\n1\n2\n1\n0\n0\n"), consola(),
                 dados(1,1,1,1,6,1,6, 1,1,1,1,6,1,6), botin, enemigos, new Random(0), repo);
         assertArrayEquals(new int[]{2,2}, consultas);
-        assertEquals(2, texto().split("Aventurero: 48/48", -1).length - 1);
+        assertEquals(4, texto().split("PS 48/48", -1).length - 1);
         assertTrue(texto().contains("No tienes equipo equipado"));
-        assertTrue(texto().contains("Pequeña del catálogo     x1"));
+        assertTrue(texto().contains("Pequeña del catálogo x1"));
         assertFalse(texto().contains("x2"));
     }
 

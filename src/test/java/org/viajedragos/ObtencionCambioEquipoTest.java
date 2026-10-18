@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ObtencionCambioEquipoTest {
     private final ByteArrayOutputStream salida = new ByteArrayOutputStream();
     private PrintStream consola() { return new PrintStream(salida,true,StandardCharsets.UTF_8); }
-    private String texto() { return salida.toString(StandardCharsets.UTF_8); }
+    private String texto() { return org.viajedragos.TextoConsola.contenido(salida.toString(StandardCharsets.UTF_8)); }
     private Jugador jugador() { return new Jugador("Prueba", "",6,2,3,2,2,48,48); }
     private Equipo pieza(String nombre, TipoEquipo tipo, int fuerza) {
         return new Arma(nombre,tipo,Map.of(Atributo.FUERZA,fuerza),Map.of());
@@ -57,8 +57,8 @@ class ObtencionCambioEquipoTest {
         assertEquals(3,texto().split("Victoria\\.",-1).length-1);
         assertEquals(1,texto().split("Has encontrado una Espada de hierro",-1).length-1);
         assertEquals(1,texto().split("Has encontrado una Espada desgastada",-1).length-1);
-        assertTrue(texto().indexOf("Has encontrado una Espada de hierro") > texto().indexOf("Encuentro 2."));
-        assertTrue(texto().indexOf("Has encontrado una Espada de hierro") < texto().indexOf("Encuentro 3."));
+        assertTrue(texto().indexOf("Has encontrado una Espada de hierro") > texto().indexOf("ENCUENTRO 2"));
+        assertTrue(texto().indexOf("Has encontrado una Espada de hierro") < texto().indexOf("ENCUENTRO 3"));
         assertEquals(guardar ? 1 : 0,j.getInventarioEquipo().size());
         if (guardar) {
             assertEquals("Espada de hierro",j.getInventarioEquipo().getFirst().getNombre());
@@ -74,7 +74,7 @@ class ObtencionCambioEquipoTest {
         assertFalse(aventura(j,"3\n3\n1\n2\n3\n1\n1\n0\n",
                 1,1,1,1,6,1, 1,1,1,1,6,1,6, 1,1,1,1,6,1,6));
         assertTrue(texto().contains("Has escapado"));
-        assertTrue(texto().indexOf("Has encontrado una Espada de hierro") > texto().indexOf("Encuentro 3."));
+        assertTrue(texto().indexOf("Has encontrado una Espada de hierro") > texto().indexOf("ENCUENTRO 3"));
         assertEquals(1,j.getInventarioEquipo().size());
         assertTrue(j.getEquipoEquipado().isEmpty());
         assertEquals(6,j.getFuerza());
@@ -204,7 +204,7 @@ class ObtencionCambioEquipoTest {
                 () -> tiradas[inicios[0]++],new Random(0),lobos,new Random(0),repo);
         assertEquals(tiradas.length,inicios[0]);
         assertEquals(2,consultasObjetos[0]);
-        String segunda = texto().substring(texto().lastIndexOf("Encuentro 1."));
+        String segunda = texto().substring(texto().lastIndexOf("ENCUENTRO 1"));
         assertTrue(segunda.contains("No tienes equipamiento guardado"));
         assertTrue(segunda.contains("No tienes equipo equipado"));
         assertTrue(segunda.contains("48/48"));

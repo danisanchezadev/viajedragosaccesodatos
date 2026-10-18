@@ -28,7 +28,7 @@ En el combate se enfrentan un jugador y un enemigo. Los personajes poseen atribu
 
 El equipo también importa. Un arma u otro objeto equipable puede otorgar bonificaciones o penalizaciones a varios atributos y conceder habilidades. Cambiar de equipo exige distinguir los atributos propios del personaje de los modificadores aportados por el equipo, para que una penalización o bonificación desaparezca correctamente al retirarlo. Antes de sustituir una pieza, el jugador puede comparar sus modificadores con los de la nueva pieza.
 
-El juego tendrá acciones de combate como atacar, intentar huir y utilizar objetos. El comercio y la obtención de objetos forman parte del propósito de la aplicación, pero sus reglas operativas concretas todavía no están suficientemente confirmadas en este contexto como para que Codex las invente.
+El juego permite atacar, intentar huir y utilizar pociones. El comercio sencillo está confirmado según 3.17. Las ampliaciones de estas mecánicas requieren reglas expresas; no inventarlas.
 
 La primera versión utilizará **únicamente datos preparados dentro del propio programa**. Por ejemplo, una clase podrá ofrecer una lista de enemigos y otra una lista de armas. Esto permite probar las mecánicas sin consultar ni escribir ninguna fuente externa. En una fase posterior, el colaborador podrá sustituir gradualmente esos catálogos por acceso a bases de datos, JPA/Hibernate, Spring o formatos de archivo como TXT, CSV, binarios y JSON. **Esa fase futura no debe implementarse ahora.**
 
@@ -94,7 +94,7 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - Tras victoria, botín y oferta de espada si corresponde: menú de exploración con `1. Revisar inventario`, `2. Usar objeto`, `3. Continuar al siguiente encuentro`, `4. Terminar aventura y volver al menú inicial`, `0. Salir del juego`. Continuar conserva al jugador; terminar lo descarta; salir termina la sesión. Sustituye la numeración inicial de la fase 4.
 - Menú inicial: `1. Nueva aventura`, `0. Salir`. Una nueva aventura crea un personaje nuevo.
 - Muerte del jugador o de ambos: mostrar resultado, terminar aventura y volver al menú inicial. El motor resuelve previamente sus muertes y contingencias según las reglas existentes.
-- Sin oro, experiencia ni progresión. Las recompensas actuales son la espada de 3.6 y el botín de pociones de 3.7. Consumo de pociones fuera del combate según 3.8.
+- Sin experiencia ni progresión de niveles. Las recompensas incluyen las espadas, el botín de pociones y cinco monedas por victoria según 3.17. Consumo fuera de combate según 3.8.
 - Si se interrumpe la entrada durante el combate, termina la sesión sin resultado ficticio ni reutilización del personaje interrumpido.
 - Implementación limitada a app.java: ejecutar conserva el menú inicial y crea el jugador; jugarAventura, de acceso de paquete, contiene la repetición de encuentros y devuelve si corresponde volver al inicio o salir. No cambia el motor ni sus contratos.
 
@@ -128,7 +128,7 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - Jugador.usarPocion(TipoPocion) devuelve los PS realmente recuperados o cero si no consume. Comprueba existencias y vida, reutiliza curarse y descuenta una unidad solo si hay recuperación positiva; elimina del mapa la última unidad. No expone escritura externa ni modifica firmas anteriores.
 - La consola calcula el resultado mediante la recuperación devuelta y muestra vida y cantidad restante. Con 22/24, una pequeña cura 2 PS. Nunca se supera la vida máxima mediante la recuperación de la poción.
 - Se conservan los eventos alCurarse activos y sus estados/niveles. Instinto de supervivencia mantiene sus efectos según vida, aun fuera de combate; el siguiente combate conserva su restauración final. No se añaden habilidades a la demo.
-- app conserva el bucle entre encuentros y contiene métodos sencillos de presentación, consulta, uso y lectura de opciones. Cabeceras y separadores ASCII, sin nuevas clases productivas ni bibliotecas. El cierre de entrada en los submenús termina la sesión sin otra acción o encuentro.
+- app conserva el bucle entre encuentros y contiene métodos sencillos de presentación, consulta, uso y lectura de opciones. Las cabeceras ASCII de esta fase inicial se sustituyen por PanelConsola en 3.18. El cierre de entrada en los submenús termina la sesión sin otra acción o encuentro.
 - El consumo durante el combate está implementado según 3.9 y la huida según 3.10. Siguen pendientes cofres, mazmorra y otros consumibles.
 
 ### 3.9 Pociones durante la acción del jugador en combate
@@ -220,6 +220,38 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - 23 casos nuevos en AislamientoHabilidadesTest: reproducción exacta, cinco habilidades, activa/inactiva, aprendizaje/equipo, varias piezas, intercambio/restauración, contador por atacante y ciclos. Los 601 casos anteriores permanecen; ImpetuTest y PrimerImpulsoTest adaptan únicamente su preparación para reutilizar el estado entre eventos, con todas sus aserciones conservadas.
 - Verificación real: mvn clean test, BUILD SUCCESS; 624 pruebas, 0 fallos/errores/omitidas; 41 fuentes principales y 43 archivos de pruebas. Sin commit ni push.
 
+### 3.17 Oro y comercio sencillo
+
+- Base de esta fase: 0ab4dff; código incorporado al commit 88934c5 durante la sesión por una operación externa a Codex. Codex no ejecutó commit ni push.
+- Jugador empieza con 15 monedas, conserva saldo entre encuentros y recibe +5 solo por victoria definitiva. No se premia huida, derrota ni muerte simultánea. Nueva aventura: jugador nuevo, sin pertenencias y saldo 15.
+- getOro/agregarOro/gastarOro rechazan cantidades no positivas y evitan saldo negativo o desbordamiento al sumar. No hay clase monedero ni economía genérica.
+- ProductoTienda asocia exactamente una DefinicionArma o DefinicionPocion con precio positivo; id y nombre proceden de la definición. RepositorioTienda permite obtenerTodos/buscarPorId. Su implementación en memoria reutiliza las definiciones ya cargadas de RepositorioObjetos, con cuatro productos: pequeña 5, grande 10, desgastada 12, hierro 20.
+- Jugador.comprar(id, RepositorioTienda) consulta precio, valida definición y saldo, incorpora una unidad y cobra al final. Las pociones se acumulan; cada arma es nueva y se guarda sin equipar. Ante fallo se recuperan saldo e inventarios, incluso si la incorporación fue parcial. No se permite comprar una definición de poción distinta de la configurada para ese tipo en el jugador.
+- Exploración añade 5. Tienda sin renumerar 0–4. Se muestra oro en exploración y tienda; 0 en tienda vuelve, inválidos repiten y EOF interrumpe la sesión. Las firmas previas de app siguen disponibles; una sobrecarga permite proporcionar RepositorioTienda alternativo. No hay venta, descuentos, stock limitado ni persistencia.
+- 691 casos reales superados: 624 anteriores más 67 de oro/catálogo/compra/integración. AventuraTest y BotinPocionesTest sustituyen el inválido 5 por 9 sin cambiar aserciones.
+
+### 3.18 Interfaz de consola unificada
+
+- Auditoría de todas las salidas de src/main/java: app, Combate, Equipo, el aviso breve de Combatiente.setEquipo y dos mensajes de depuración de DebilidadEnemiga. Los catálogos y demás modelos no imprimen pantallas.
+- Ya existían paneles manuales para inicio, encuentro, victoria/recompensas, turno, acciones y ataques. Usaban interiores de 44/48/49 y no ajustaban textos largos; los demás menús aún eran planos o ASCII. Se conserva esa estética y se sustituye su construcción repetida por PanelConsola.
+- PanelConsola: interior 48, márgenes 2 por lado y 44 de texto; bordes Unicode, títulos centrados, opciones [n], separadores, columnas ajustables, barras proporcionales de 10 segmentos. Divide textos largos sin cortar puntos de código; los SGR ANSI no cuentan como anchura y se cierran antes del borde. Referencia: IntelliJ con fuente monoespaciada y los caracteres latinos/bordes/barras del juego; no hay implementación universal de anchura para emojis o escrituras de doble columna.
+- Se unifican exploración, tienda, inventario y atributos existentes, comparación, cambio/confirmación, pociones en ambos contextos y ofertas de armas. Avisos breves, validaciones, confirmaciones, botín de pociones y resultado textual pueden seguir fuera de paneles. Se eliminan solo los dos println de depuración de medias de DebilidadEnemiga, sin cambiar su efecto.
+- Se conserva el bucle original de Combate: el borrador visual local había dejado final de turno, alternancia e incremento dentro de un bloque comentado. Se recupera el flujo publicado y se reemplaza únicamente su presentación. Dados, fórmulas, eventos, muerte/resurrección, acción de poción y huida no cambian.
+- AGENTS.md establece ESTÁNDAR DE INTERFAZ DE CONSOLA — VIAJE A DRAGOS y conserva la preferencia de asesoramiento sin elogios automáticos. Sin nuevas dependencias, cambios en contratos públicos existentes, repositorios ni modelos de negocio.
+- Pruebas previas adaptadas solo en lectura de contenido/literales/filas: TextoConsola retira bordes y reúne líneas ajustadas para las regresiones funcionales; las 32 pruebas nuevas examinan salida original (23 del componente y 9 de flujos). No se eliminan casos ni comprobaciones de atributos, eventos, resultados o dados. Ahora la vida inicial aparece tanto en encuentro como en estado de acción, por lo que se ajustan los recuentos de esas apariciones de 2 a 4 en pruebas de dos aventuras.
+- Verificación real: mvn clean test, BUILD SUCCESS; 723 pruebas, 0 fallos/errores/omitidas; 46 fuentes principales y 49 archivos de pruebas. main configura UTF-8 de forma explícita; prueba con salida original ASCII y ejecución real del menú en terminal correctas. No se ha abierto IntelliJ durante esta verificación. Sin commit ni push de la interfaz.
+
+### 3.19 Pausas narrativas configurables
+
+- RitmoConsola centraliza una espera secuencial y cuatro velocidades: instantánea 0, rápida 250, normal 700 y lenta 1200 ms. No hay animación por caracteres, hilos, temporizadores ni un sistema de eventos nuevo.
+- main inicia Normal. El menú principal añade 2. Velocidad de narración: 1 instantánea, 2 rápida, 3 normal, 4 lenta, 0 vuelve sin cambiar. La elección se conserva en un único RitmoConsola durante toda la sesión, incluidas aventuras nuevas; sin persistencia.
+- Las entradas existentes de app con flujos/dados proporcionados y el constructor anterior de Combate conservan ritmo instantáneo. Las nuevas sobrecargas permiten proporcionar el ritmo. El motor automático y ataque sin salida no esperan, incluso si se proporciona Normal. No se detecta un entorno de pruebas ni se depende de ajustes del desarrollador.
+- Pausas después del panel de encuentro y anuncio de turno/orden; antes del resultado de un ataque enemigo; después de cada ataque (también fallo/contraataque); tras anunciar victoria, derrota o muerte simultánea; tras presentar oro, cada poción realmente encontrada y cada oferta de arma. Las pausas se sitúan fuera del dibujo de paneles y no modifican el orden de los eventos o la resolución del combate.
+- No se esperan menús, entradas, cancelaciones, validaciones, inventario, comparación, tienda o cambios de velocidad. Las repeticiones de opciones inválidas no repiten pausas de los hitos ya mostrados.
+- El componente vacía la salida antes de esperar. InterruptedException restaura la bandera y muestra un aviso; mientras siga interrumpido no vuelve a esperar. La Espera sustituible permite comprobar llamadas sin dormir.
+- AGENTS.md establece el estándar de ritmo futuro. Se conservan los cambios visuales y las 723 pruebas anteriores; el único inválido principal 2 de AventuraTest se sustituye por 9 sin cambiar aserciones. 28 casos nuevos (9 de componente y 19 de integración) comprueban configuración, sesión, puntos de pausa, paneles, instantáneo/automático e interrupción sin esperas reales.
+- Verificación: mvn clean test, BUILD SUCCESS; 751 pruebas, 0 fallos/errores/omitidas; 47 fuentes principales y 51 archivos de pruebas. Sin commit ni push.
+
 ## 4. Habilidades
 
 - `Habilidad` es una clase abstracta que implementa una interfaz de eventos (`EventosHabilidad`).
@@ -254,10 +286,10 @@ Estas áreas forman parte del objetivo del producto, pero **no se han establecid
 
 - **Encuentros y exploración:** el personaje podrá encontrar enemigos y objetos. Quedan pendientes el procedimiento de selección de encuentros, desplazamiento, zonas, eventos y recompensas concretas.
 - **Inventario actual:** cantidades de las dos pociones según 3.7, encapsuladas en Jugador, consultables y consumibles entre combates según 3.8 y utilizables durante su acción según 3.9. Cualquier inventario general sigue pendiente. No se inventan límites de capacidad ni otros objetos.
-- **Comercio:** previsto como mecánica sencilla de compra/venta o interacción con una tienda; precios, moneda, descuentos y restricciones **no están confirmados para esta aplicación**. No importar reglas de ejercicios independientes sobre Strategy y tipos de cliente.
+- **Comercio:** compras sencillas confirmadas e implementadas según 3.17; venta, descuentos y otras ampliaciones quedan fuera de alcance. No importar reglas de ejercicios independientes sobre Strategy y tipos de cliente.
 - **Progresión:** no hay aquí una especificación confirmada de experiencia, niveles, clases de personaje o distribución de atributos para el MVP. No inventarla.
 - **Huida:** implementada para el jugador según 3.10, sin persecución ni huida enemiga. **Objetos en combate:** únicamente las dos pociones, según 3.9; otros objetos siguen pendientes.
-- **Continuidad actual:** mismo jugador y sus pociones, vida restante sin curación automática, enemigos nuevos del catálogo 3.11 y menús según 3.5. Espada según 3.6 y botín según 3.7. Muerte termina aventura; sin persistencia ni otras recompensas.
+- **Continuidad actual:** mismo jugador, oro y pertenencias; vida restante sin curación automática, enemigos nuevos del catálogo 3.11 y menús según 3.5/3.17. Espadas, botín y oro mantienen sus reglas. Muerte termina aventura; sin persistencia.
 
 ## 7. Estructura de código conocida (orientativa; verificar)
 
@@ -291,9 +323,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 18 de octubre de 2026. Base publicada d796ffc. Cambios locales de inventario/comparación, obtención/intercambio y corrección de efectos temporales (3.13–3.15). Sin commit ni push.
+> **Estado:** 18 de octubre de 2026. Base local 88934c5 (oro/comercio). Interfaz unificada y ritmo narrativo en cambios locales según 3.18–3.19. Codex no ha realizado commit ni push.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 41 fuentes principales y 43 archivos de pruebas recompilados; 624 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 601 casos anteriores y se añaden 23 según 3.16. Limpieza y restauración temporal aisladas por EstadoHabilidad, sin cambios de fórmulas, disparo ni mecánicas.
+> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 47 fuentes principales y 51 archivos de pruebas; 751 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 723 casos anteriores y se añaden 28 según 3.19, sin esperas reales ni cambios de fórmulas, disparo o mecánicas.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -307,14 +339,14 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 624 pruebas ejecutadas sin fallos ni errores; 601 casos anteriores y 23 nuevos de aislamiento temporal, sin pruebas eliminadas ni deshabilitadas. Solo se adapta la preparación de dos archivos anteriores según 3.16.
+- [x] Suite JUnit: 751 pruebas ejecutadas sin fallos ni errores; 723 casos anteriores y 28 de ritmo, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
 - [x] Auditar clases, paquetes, firmas, dependencias y referencias del repositorio.
 - [x] Comprobar compilación del código principal: `mvn compile` termina correctamente.
 - [x] Ejecutar las pruebas existentes con `mvn test`.
-- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 624 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
+- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 751 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
 - [x] Revisar `EventosHabilidad`: todas sus firmas actuales y overrides implementados reciben `EstadoHabilidad` y compilan en el código principal.
 - [x] Revisar y corregir las seis llamadas del borrador a `dispararHabilidades`: las lambdas reciben habilidad y estado y pasan ese estado al evento.
 - [x] Activar el auxiliar existente `dispararHabilidades` para usarlo desde ataque, recorriendo habilidad y estado juntos.
@@ -379,9 +411,11 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Verificar límites 0/49/50/99 y 0/19/20/99, los cuatro resultados y enumerar 10.000 parejas: 40/40/10/10. Dos llamadas de botín por victoria y ninguna por derrota/muerte simultánea/interrupción; sin dados extra.
 - [x] Verificar acumulación, inventario nuevo vacío, resurrección antes de la muerte definitiva, generador conservado entre encuentros/aventuras y espada intacta. Obtener pociones no recupera vida.
 - [x] Implementar consumo encapsulado mediante Jugador.usarPocion, con curarse, recuperación real, una unidad solo tras éxito y retirada de la última entrada; sin modificar el mapa desde fuera.
-- [x] Menú de exploración 1/2/3/4/0, consulta de pociones/equipo y uso con opciones fijas 1/2/0, separadores ASCII y gestión de cancelación, inválidos y cierre de entrada.
+- [x] Menú de exploración 1/2/3/4/5/0, consulta de pociones/equipo y uso con opciones fijas 1/2/0; paneles Unicode, cancelación, inválidos y cierre de entrada.
 - [x] Añadir 31 casos de consumo/exploración; conservar vida/pociones/equipo entre encuentros sin curación automática, botín duplicado ni dados adicionales. Verificar alCurarse con actividad/estado/nivel e Instinto de supervivencia y su restauración posterior.
-- [ ] Definir e implementar comercio mínimo si lo requiere el MVP.
+- [x] Oro y comercio mínimo de cuatro productos, repositorio en memoria sustituible, compras encapsuladas y recompensa fija según 3.17.
+- [x] Unificar pantallas con PanelConsola y establecer normas futuras en AGENTS.md; alineación, ANSI, barras y flujos probados según 3.18.
+- [x] Pausas narrativas mediante RitmoConsola, cuatro velocidades, selección persistente durante la sesión y pruebas sin esperas reales según 3.19.
 - [x] Continuidad de fase 4 publicada en 6fc2a8d: misma instancia del jugador, vida restante sin recuperación, Lobos nuevos y sin límite de encuentros; muerte/terminación voluntaria devuelve al inicio y nueva aventura crea otro jugador. La fase 5 añade su primera recompensa fija.
 - [x] Espada desgastada publicada en ec9dc46: ARMA, FUERZA +1, sin habilidades, aceptar/rechazar tras la primera victoria, oferta única y descarte definitivo. Se conserva su comportamiento al incorporar pociones.
 - [x] Añadir 11 casos de RecompensaTest: oferta única/condicionada, no equipo inicial, +1 sin cambiar base ni vida, persistencia sin duplicar, rechazo, invalidación/EOF, aventura nueva sin espada, daño real 7→8, limpieza temporal y ranura ocupada sin sustitución.
@@ -438,7 +472,7 @@ Después de programar, informa de:
 
 - La secuencia del ataque individual y el contraataque están confirmados, integrados y probados. El turno tiene dos acciones ordenadas y resuelve muertes entre ellas, según la aclaración expresa del autor durante la fase 3.
 - No existe un modificador de agilidad del turno: el +2 se aplica exclusivamente al cálculo de iniciativa del poseedor.
-- ¿Qué reglas concretas rigen comercio y futuros encuentros? La huida del jugador está confirmada en 3.10. alHuir/alPerseguir, persecución y huida enemiga permanecen fuera de alcance. Las pociones se confirman en 3.7/3.8/3.9; el consumo exitoso en combate sustituye al ataque y cancelar/inválidos/rechazos no consumen acción.
+- El comercio mínimo está confirmado en 3.17; venta y otras ampliaciones requieren decisiones nuevas. La huida del jugador está confirmada en 3.10. alHuir/alPerseguir, persecución y huida enemiga permanecen fuera de alcance. Las pociones se confirman en 3.7/3.8/3.9; el consumo exitoso en combate sustituye al ataque y cancelar/inválidos/rechazos no consumen acción.
 - Confirmado: alFinalCombate solo del jugador, siempre, como limpieza incluso muerto; el enemigo no participa.
 - Confirmado: tras victoria se permite consultar inventario/usar poción/continuar/terminar aventura/salir, sin recuperación automática. Espada única tras primera victoria y botín de pociones tras cada victoria definitiva. Futuras ampliaciones necesitan reglas propias.
 - Catálogo de enemigos confirmado en 3.11 y objetos en 3.12. Otros catálogos o fuentes externas requieren su propia autorización.

@@ -34,9 +34,6 @@ public class DebilidadEnemiga extends Habilidad {
         double mediaJugador = calcularMedia(portador);
         double mediaOponente = calcularMedia(oponente);
 
-        System.out.println("Media del jugador = " + mediaJugador);
-        System.out.println("Media del oponenete = " + mediaOponente);
-
         if(calcularMedia(portador) >= calcularMedia(oponente) * 2){
 
             oponente.recibirDanio(oponente.getVida());

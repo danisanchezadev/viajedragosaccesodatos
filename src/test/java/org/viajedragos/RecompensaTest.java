@@ -56,7 +56,7 @@ class RecompensaTest {
     }
 
     private String texto() {
-        return salida.toString(StandardCharsets.UTF_8);
+        return org.viajedragos.TextoConsola.contenido(salida.toString(StandardCharsets.UTF_8));
     }
 
     private long veces(String fragmento) {
@@ -93,7 +93,7 @@ class RecompensaTest {
         assertEquals(24, j.getVida());
         assertEquals(24, j.getVidaMaxima());
         assertTrue(texto().indexOf("Victoria.") < texto().indexOf("Has encontrado"));
-        assertTrue(texto().contains("Fuerza +1"));
+        assertTrue(texto().contains("FUERZA +1"));
         assertTrue(texto().indexOf("Espada desgastada equipada")
                 < texto().indexOf("3. Continuar al siguiente encuentro"));
     }
@@ -212,11 +212,11 @@ class RecompensaTest {
         assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
                 app.ejecutar(new Scanner("1\n1\n1\n4\n1\n1\n1\n2\n0\n"), consola(), dados, new Random(0), soloLobo(), new Random(0)));
         dados.comprobarConsumo();
-        assertEquals(2, veces("Encuentro 1."));
+        assertEquals(2, veces("ENCUENTRO 1"));
         assertEquals(2, veces("Has encontrado una Espada desgastada"));
         assertEquals(1, veces("Espada desgastada equipada"));
-        String nueva = texto().substring(texto().lastIndexOf("Encuentro 1."));
-        assertTrue(nueva.contains("Aventurero: 48/48 de vida | Lobo: 18/18 de vida"));
+        String nueva = texto().substring(texto().lastIndexOf("ENCUENTRO 1"));
+        assertTrue(nueva.contains("Aventurero Lobo PS 48/48 PS 18/18"));
         assertTrue(nueva.contains("Aventurero golpea a Lobo y causa 7 puntos de daño"));
         assertFalse(nueva.contains("Espada desgastada equipada"));
     }
@@ -363,10 +363,10 @@ class RecompensaTest {
         assertEquals(equipar ? 7 : 6, j.getFuerza());
         assertEquals(2, j.getCantidadPociones(TipoPocion.PEQUENA));
         assertEquals(2, j.getCantidadPociones(TipoPocion.GRANDE));
-        String primero = texto().substring(0, texto().indexOf("Encuentro 2."));
+        String primero = texto().substring(0, texto().indexOf("ENCUENTRO 2"));
         assertFalse(primero.contains("Has encontrado"));
         assertFalse(primero.contains("Botín:"));
-        assertTrue(texto().indexOf("Encuentro 2.") < texto().indexOf("Has encontrado"));
+        assertTrue(texto().indexOf("ENCUENTRO 2") < texto().indexOf("Has encontrado"));
     }
 
     @Test
@@ -400,10 +400,10 @@ class RecompensaTest {
         assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.ejecutar(
                 new Scanner("1\n1\n1\n3\n3\n4\n1\n3\n1\n0\n0\n"), consola(), dados, new Random(0), soloLobo(), new Random(0)));
         dados.comprobarConsumo();
-        assertEquals(2, veces("Encuentro 1."));
+        assertEquals(2, veces("ENCUENTRO 1"));
         assertEquals(1, veces("Has encontrado una Espada desgastada"));
-        String nueva = texto().substring(texto().lastIndexOf("Encuentro 1."));
-        assertTrue(nueva.contains("Aventurero: 48/48 de vida"));
+        String nueva = texto().substring(texto().lastIndexOf("ENCUENTRO 1"));
+        assertTrue(nueva.contains("PS 48/48"));
         assertTrue(nueva.contains("No tienes consumibles"));
         assertTrue(nueva.contains("No tienes equipo equipado"));
         assertTrue(texto().contains("Vida final: Aventurero 30/48"));

@@ -46,7 +46,7 @@ class BotinPocionesTest {
     }
 
     private String texto() {
-        return salida.toString(StandardCharsets.UTF_8);
+        return org.viajedragos.TextoConsola.contenido(salida.toString(StandardCharsets.UTF_8));
     }
 
     private long veces(String fragmento) {
@@ -217,8 +217,8 @@ class BotinPocionesTest {
                 new Scanner("1\n1\n2\n4\n1\n1\n2\n0\n"), consola(), dados, azar, soloLobo(), new Random(0)));
         dados.comprobarConsumo();
         azar.comprobarConsumo();
-        String primera = texto().substring(0, texto().lastIndexOf("Encuentro 1."));
-        String segunda = texto().substring(texto().lastIndexOf("Encuentro 1."));
+        String primera = texto().substring(0, texto().lastIndexOf("ENCUENTRO 1"));
+        String segunda = texto().substring(texto().lastIndexOf("ENCUENTRO 1"));
         assertTrue(primera.contains("Botín: Poción pequeña"));
         assertFalse(primera.contains("Botín: Poción grande"));
         assertFalse(segunda.contains("Botín: Poción pequeña"));

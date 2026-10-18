@@ -15,19 +15,106 @@ Requiere JDK 23 y Maven. No utiliza persistencia ni servicios externos.
    y `2` la rechaza definitivamente. Aporta **Fuerza +1** y ninguna habilidad.
 7. Después del botín y de la oferta de espada aparece el menú de exploración:
    `1` revisa el inventario, `2` permite usar una poción, `3` continúa al siguiente
-   encuentro, `4` termina la aventura y vuelve al inicio, y `0` sale del juego.
+   encuentro, `4` termina la aventura y vuelve al inicio, `5` abre la tienda y `0` sale del juego.
 8. Tras la segunda victoria real se ofrece la **Espada de hierro**, FUERZA +2:
    `1` la guarda y `2` la deja atrás. Para equiparla, entra en inventario y elige
    `2. Cambiar equipamiento`, selecciona ranura/pieza y confirma con `1`.
 
-El menú inicial ofrece `1. Nueva aventura` y `0. Salir`. Cada aventura crea un
+El menú inicial ofrece `[1] Nueva aventura`, `[2] Velocidad de narración` y `[0] Salir del juego`. Cada aventura crea un
 Aventurero con 48/48 de vida, sin habilidades ni equipamiento. Cada encuentro crea
 un enemigo nuevo del catálogo, sin dificultad automática ni límite de
 encuentros. Al continuar se conserva exactamente la vida restante del Aventurero:
 no hay curación automática entre encuentros ni progresión. La espada fija se ofrece
 después de la primera victoria real y no vuelve a ofrecerse durante esa aventura,
 aunque se rechace. Huir no cuenta como victoria. Además, cada
-enemigo derrotado definitivamente puede dejar pociones.
+enemigo derrotado definitivamente puede dejar pociones. El Aventurero empieza con
+15 monedas y recibe 5 por cada victoria definitiva; huir o perder no concede oro.
+
+## Presentación de consola
+
+Todas las pantallas principales utilizan `PanelConsola`: bordes Unicode, títulos
+centrados, interior de 48 columnas (44 de texto y dos de margen a cada lado),
+opciones `[n]` y barras de vida de diez segmentos. Las líneas y las columnas se
+ajustan automáticamente, incluidos nombres largos. Los códigos ANSI no cuentan
+como anchura y se restablecen antes de los bordes. La comparación sigue coloreando
+solo la diferencia cuando se habilita expresamente el color.
+
+Se conserva la estética de los primeros paneles de inicio, encuentro, recompensa,
+turno y ataque; se unifica con exploración, tienda, inventario, comparación,
+cambio de equipo y uso de pociones. Los avisos breves, validaciones y confirmaciones
+pueden permanecer fuera de paneles para no sobrecargar el registro.
+
+La referencia es la consola de IntelliJ con fuente monoespaciada y soporte de
+Unicode para los caracteres latinos, bordes y barras usados por el juego. Se han
+verificado matemáticamente anchuras, ANSI y ajustes de texto mediante pruebas;
+la apariencia concreta de la fuente en IntelliJ debe comprobarse allí.
+`main` configura explícitamente UTF-8 para no heredar una codificación de Windows
+que sustituya los bordes por interrogaciones. El menú real también se ha ejecutado
+en terminal con bordes y acentos correctos. Las normas para futuras modificaciones
+están en `AGENTS.md`.
+
+## Pausas narrativas
+
+Al ejecutar `main` desde IntelliJ, el ritmo predeterminado es **Normal**. En el menú
+principal, `[2] Velocidad de narración` permite elegir una velocidad y volver:
+
+| Opción | Modo | Pausa |
+|---|---|---:|
+| 1 | Instantánea | 0 ms |
+| 2 | Rápida | 250 ms |
+| 3 | Normal | 700 ms |
+| 4 | Lenta | 1200 ms |
+| 0 | Volver sin cambiar | — |
+
+La elección permanece durante la sesión, también al comenzar otra aventura.
+Se pausa tras presentar el encuentro y el orden del turno, antes del resultado
+de un ataque enemigo, después de cada ataque, tras anunciar victoria/derrota y
+al presentar recompensas u objetos encontrados. Cada panel se dibuja completo
+antes de esperar; no hay animación por caracteres ni cambios de estilo.
+La navegación, inventario, compras, validaciones y configuración no esperan.
+
+`RitmoConsola` concentra los tiempos y la única espera real. Si se interrumpe,
+conserva la señal, informa y omite nuevas esperas mientras siga interrumpido.
+Las firmas anteriores de app con entrada/salida/dados proporcionados y el constructor
+anterior de Combate siguen siendo instantáneos. Para otra velocidad se proporcionan
+las nuevas sobrecargas con RitmoConsola. El modo automático nunca espera.
+Las pruebas usan una espera sustituible que registra las llamadas sin dormir;
+no requieren propiedades de Maven ni configuración del usuario.
+
+## Oro y tienda
+
+El saldo pertenece al mismo Jugador durante toda la aventura. `getOro`,
+`agregarOro` y `gastarOro` permiten consultarlo y modificarlo sin saldo negativo:
+las cantidades deben ser positivas, el gasto insuficiente falla y el desbordamiento
+al sumar se rechaza. Una aventura nueva comienza con 15 monedas, sin pertenencias.
+
+La opción `[5] Tienda` conserva las opciones anteriores de exploración. Muestra
+saldo y productos; elegir uno compra una unidad y permite seguir comprando. `[0]`
+vuelve sin comprar. No hay venta ni stock limitado.
+
+| Producto | Precio |
+|---|---:|
+| Poción pequeña | 5 |
+| Poción grande | 10 |
+| Espada desgastada | 12 |
+| Espada de hierro | 20 |
+
+`ProductoTienda` enlaza una definición existente con su precio; su identificador
+y nombre proceden de esa definición. `RepositorioTienda` permite listar y buscar
+por identificador. `RepositorioTiendaMemoria` reutiliza las definiciones del catálogo
+de objetos cargado por la aventura y no duplica atributos, curación ni habilidades.
+
+`Jugador.comprar(id, repositorio)` resuelve la compra sin teclado. Las pociones
+incrementan su cantidad y las armas se crean independientes y se guardan, sin
+equiparlas automáticamente. Solo se cobra tras incorporarlas; un fallo recupera
+saldo e inventarios. Una poción debe coincidir con la definición configurada en
+el jugador, ya que su inventario cuenta unidades por tipo.
+
+Para otro origen comercial, implementar `RepositorioTienda` y proporcionar la
+instancia a la sobrecarga de `app.ejecutar` que acepta también dicho repositorio.
+Las firmas anteriores siguen disponibles. Actualmente solo existe memoria:
+no hay implementaciones de ficheros, JDBC ni JPA. No cambian las ofertas de espadas,
+el botín, la selección de enemigos ni los dados por comprar o recibir oro.
 
 ## Catálogo de enemigos
 
@@ -218,7 +305,7 @@ y reglas no cambian.
 
 ## Exploración e inventario
 
-El menú de exploración muestra nombre y vida actual/máxima con separadores ASCII.
+El menú de exploración muestra nombre, vida actual/máxima, barra y oro en un panel Unicode.
 Continuar inicia directamente otro combate; no hay tiradas de mazmorra.
 
 Revisar inventario muestra únicamente las pociones disponibles, sus cantidades y
@@ -360,7 +447,8 @@ no modifica fuerza directamente ni llama a aplicarEfectos manualmente.
 El primer combate es de aprendizaje: ambos comienzan sin habilidades. Su
 adquisición mediante progresión, recompensas o equipamiento se definirá más adelante.
 Esta demo ofrece Atacar, usar las dos pociones y Huir en combate. Otros
-consumibles, cofres, tiradas de mazmorra, desplazamiento y comercio quedan pendientes.
+consumibles, cofres, tiradas de mazmorra y desplazamiento quedan pendientes.
+El comercio actual permite únicamente las cuatro compras descritas arriba.
 
 ## Comprobar el proyecto
 
@@ -386,7 +474,7 @@ las pruebas de integración, sin asignarlas a la demo ni añadir narración.
 restauración, niveles y equipo. `RolesModificadoresDanioTest` comprueba los roles
 confirmados: Caparazón, Defensa perfecta y Guardia férrea solo en defensa;
 Castigo al torpe y Golpe certero solo en ataque. Incluye condiciones de activación,
-instancias compartidas y reglas especiales. La suite completa pasa con 624 pruebas.
+instancias compartidas y reglas especiales. La suite completa pasa con 751 pruebas.
 El análisis y la corrección están en `ANALISIS_ROLES_MODIFICADORES_DANIO.md`.
 
 `AventuraTest` añade 12 casos de continuidad: identidad del jugador, enemigos
@@ -503,3 +591,22 @@ ImpetuTest y PrimerImpulsoTest para conservar el mismo EstadoHabilidad entre eve
 no se eliminan casos ni se cambian sus aserciones. Resultado de mvn clean test:
 BUILD SUCCESS; 624 pruebas, 0 fallos, 0 errores y 0 omitidas; 41 fuentes principales
 y 43 archivos de pruebas recompilados. Sin cambios de disparo ni secuencia de combate.
+
+La fase de oro y comercio (`88934c5`) conserva los 624 casos y añade 67:
+OroCompraTest (33), RepositorioTiendaTest (16) y ComercioAventuraTest (18).
+La presentación unificada conserva esos 691 casos y añade 32: PanelConsolaTest
+(23) e InterfazConsolaTest (9). Se adaptan las comprobaciones de textos antiguos
+a los paneles, columnas y opciones `[n]`, sin eliminar pruebas funcionales.
+TextoConsola extrae el contenido para esas regresiones; las pruebas visuales usan
+la salida original, comprobando bordes, centrado, ajuste, ANSI, barras y flujos.
+Resultado real de `mvn clean test`: BUILD SUCCESS; 723 pruebas, 0 fallos,
+0 errores y 0 omitidas; 46 fuentes principales y 49 archivos de pruebas.
+
+La fase de ritmo conserva esos 723 casos y añade 28: RitmoConsolaTest (9) y
+RitmoAventuraTest (19), sin esperas reales. Comprueban velocidades, configuración,
+interrupción, persistencia de sesión, paneles completos, menús inmediatos, ataque
+enemigo, fallo/contraataque, victoria/derrota, ambas espadas, botín, modo automático
+y equivalencia de texto y resultados con ritmo instantáneo. Solo se cambia a 9
+una entrada inválida del menú principal en AventuraTest, porque 2 ahora configura
+el ritmo; se conservan sus aserciones. Resultado: mvn clean test, BUILD SUCCESS;
+751 pruebas, 0 fallos/errores/omitidas; 47 fuentes principales y 51 archivos de pruebas.

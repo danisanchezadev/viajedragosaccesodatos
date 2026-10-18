@@ -7,6 +7,7 @@ import org.viajedragos.modelo.Objeto;
 
 import java.util.*;
 import java.io.PrintStream;
+import org.viajedragos.consola.PanelConsola;
 
 public abstract class Equipo extends Objeto implements Equipable {
 
@@ -94,10 +95,10 @@ public abstract class Equipo extends Objeto implements Equipable {
 
         atributos.addAll(otroEquipo.bonificaciones.keySet());
 
-        salida.printf("%-15s %-12s %-12s %-12s%n",
-                "ATRIBUTO", "ACTUAL", "NUEVO", "DIFERENCIA");
-
-        salida.println("----------------------------------------------------");
+        PanelConsola panel = new PanelConsola(salida, "COMPARACIÓN DE EQUIPAMIENTO");
+        int[] anchos = {11, 8, 8, 11};
+        panel.columnas(anchos, "ATRIBUTO", "ACTUAL", "NUEVO", "DIFERENCIA");
+        panel.separador();
 
         for (Atributo a : atributos) {
 
@@ -116,18 +117,14 @@ public abstract class Equipo extends Objeto implements Equipable {
 
             String signo = diferencia > 0 ? "+" : "";
             String textoDiferencia = signo + diferencia;
-            // Se rellena antes de colorear para que ANSI no altere la alineación.
-            String columnaDiferencia = String.format("%-12s", textoDiferencia);
+            String columnaDiferencia = textoDiferencia;
             if (coloresAnsi && diferencia != 0) {
                 columnaDiferencia = (diferencia > 0 ? "\u001B[32m" : "\u001B[31m")
-                        + textoDiferencia + "\u001B[0m" + " ".repeat(Math.max(0, 12 - textoDiferencia.length()));
+                        + textoDiferencia + "\u001B[0m";
             }
 
-            salida.printf("%-15s %-12s %-12s %s%n",
-                    a,
-                    textoViejo,
-                    textoNuevo,
-                    columnaDiferencia);
+            panel.columnas(anchos, a.name(), textoViejo, textoNuevo, columnaDiferencia);
         }
+        panel.cerrar();
     }
 }

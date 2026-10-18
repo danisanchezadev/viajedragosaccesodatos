@@ -29,7 +29,8 @@ class ComparacionEquipoTest {
         pieza(Map.of(Atributo.FUERZA, actual)).compararCon(pieza(Map.of(Atributo.FUERZA, nuevo)),
                 new PrintStream(salida, true, StandardCharsets.UTF_8), false);
         String[] columnas = salida.toString(StandardCharsets.UTF_8).lines()
-                .filter(l -> l.startsWith("FUERZA")).findFirst().orElseThrow().trim().split("\\s+");
+                .filter(l -> l.startsWith("│  FUERZA")).map(l -> l.substring(3, l.length() - 3))
+                .findFirst().orElseThrow().trim().split("\\s+");
         assertArrayEquals(new String[]{"FUERZA", actual == 0 ? "--" : "" + actual,
                 nuevo == 0 ? "--" : "" + nuevo, diferencia}, columnas);
         assertFalse(salida.toString(StandardCharsets.UTF_8).contains("\u001B"));
@@ -43,17 +44,19 @@ class ComparacionEquipoTest {
         var salida = new ByteArrayOutputStream();
         actual.compararCon(nueva, new PrintStream(salida, true, StandardCharsets.UTF_8), ansi);
         String texto = salida.toString(StandardCharsets.UTF_8);
-        List<String> filas = texto.lines().skip(2).toList();
+        List<String> filas = texto.lines().filter(l -> l.startsWith("│  "))
+                .map(l -> l.substring(3, l.length() - 3))
+                .filter(l -> l.matches("^(FUERZA|RESISTENCIA|AGILIDAD|INICIATIVA)\\s+.*")).toList();
         assertEquals(4, filas.size());
         List<Atributo> esperados = List.of(Atributo.FUERZA, Atributo.RESISTENCIA, Atributo.AGILIDAD, Atributo.INICIATIVA);
         for (int i = 0; i < filas.size(); i++) {
             String fila = filas.get(i);
             assertTrue(fila.startsWith(esperados.get(i).name()));
-            assertFalse(fila.substring(0, 42).contains("\u001B"), "Atributo, ACTUAL y NUEVO sin colores");
+            assertFalse(fila.substring(0, 33).contains("\u001B"), "Atributo, ACTUAL y NUEVO sin colores");
         }
         String limpio = texto.replaceAll("\u001B\\[[0-9;]*m", "");
-        assertTrue(limpio.lines().anyMatch(l -> l.trim().matches("RESISTENCIA\\s+4\\s+--\\s+-4")));
-        assertTrue(limpio.lines().anyMatch(l -> l.trim().matches("AGILIDAD\\s+--\\s+-2\\s+-2")));
+        assertTrue(limpio.lines().anyMatch(l -> l.matches("│\\s+RESISTENCIA\\s+4\\s+--\\s+-4\\s+│")));
+        assertTrue(limpio.lines().anyMatch(l -> l.matches("│\\s+AGILIDAD\\s+--\\s+-2\\s+-2\\s+│")));
         if (ansi) {
             assertTrue(texto.contains("\u001B[32m+2\u001B[0m"));
             assertTrue(texto.contains("\u001B[31m-4\u001B[0m"));
@@ -70,7 +73,7 @@ class ComparacionEquipoTest {
     void mapasVaciosNoInventanFilasNiCodigosDeColor() {
         var salida = new ByteArrayOutputStream();
         pieza(Map.of()).compararCon(pieza(Map.of()), new PrintStream(salida), true);
-        assertEquals(2, salida.toString().lines().count());
+        assertEquals(7, salida.toString(StandardCharsets.UTF_8).lines().count());
         assertFalse(salida.toString().contains("\u001B"));
     }
 }

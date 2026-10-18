@@ -21,6 +21,9 @@ import org.viajedragos.modelo.Jugador;
 import org.viajedragos.modelo.TipoPocion;
 
 import java.io.PrintStream;
+import org.viajedragos.consola.PanelConsola;
+import org.viajedragos.consola.RitmoConsola;
+import java.nio.charset.StandardCharsets;
 import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.Scanner;
@@ -29,12 +32,20 @@ import java.util.HashSet;
 
 public class app {
     public static void main(String[] args) {
-        ejecutar(new Scanner(System.in), System.out, new Dado());
+        // También en Windows: los bordes deben emitirse como UTF-8, no con la página de códigos heredada.
+        System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
+        ejecutar(new Scanner(System.in, StandardCharsets.UTF_8), System.out, new Dado(),
+                new RitmoConsola(RitmoConsola.Velocidad.NORMAL));
     }
 
     public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados) {
         // Un generador de botín por sesión, distinto del generador interno de Dado.
         ejecutar(entrada, salida, dados, new Random());
+    }
+
+    public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, RitmoConsola ritmo) {
+        ejecutar(entrada, salida, dados, new Random(), new RepositorioEnemigosMemoria(), new Random(),
+                new RepositorioObjetosMemoria(), null, ritmo);
     }
 
     static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin) {
@@ -53,34 +64,81 @@ public class app {
         ejecutar(entrada, salida, dados, azarBotin, repositorio, azarEncuentros, objetos, null);
     }
 
+
     public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin,
                                 RepositorioEnemigos repositorio, Random azarEncuentros,
                                 RepositorioObjetos objetos, RepositorioTienda tienda) {
-        salida.println("=== Viaje a Dragos ===");
-        salida.println("Un combate por turnos. La iniciativa decide quién actúa primero.");
+        ejecutar(entrada, salida, dados, azarBotin, repositorio, azarEncuentros, objetos, tienda,
+                new RitmoConsola(RitmoConsola.Velocidad.INSTANTANEA));
+    }
+
+    public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin,
+                                RepositorioEnemigos repositorio, Random azarEncuentros,
+                                RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo) {
+        java.util.Objects.requireNonNull(ritmo);
+
         while (true) {
-            salida.println("1. Nueva aventura");
-            salida.println("0. Salir");
-            salida.print("> ");
+            PanelConsola panel = new PanelConsola(salida, "VIAJE A DRAGOS");
+            panel.linea("Explora, combate y mejora tu equipo.");
+            panel.linea("La iniciativa decide quién actúa primero.");
+            panel.linea("Velocidad: " + ritmo.getVelocidad().getNombre());
+            panel.separador();
+            panel.opcion(1, "Nueva aventura");
+            panel.opcion(2, "Velocidad de narración");
+            panel.opcion(0, "Salir del juego");
+            panel.cerrar();
+            salida.print("Elige una opción > ");
             salida.flush();
             if (!entrada.hasNextLine()) {
                 salida.println("Entrada finalizada. Hasta pronto.");
                 return;
             }
+
             String opcion = entrada.nextLine().trim();
+
             if (opcion.equals("0")) {
                 salida.println("Hasta pronto.");
                 return;
             }
-            if (!opcion.equals("1")) {
-                salida.println("Entrada inválida. Escribe 1 o 0.");
+
+            if (opcion.equals("2")) {
+                if (!configurarVelocidad(entrada, salida, ritmo)) return;
                 continue;
             }
+
+            if (!opcion.equals("1")) {
+                salida.println("Entrada inválida. Escribe 1, 2 o 0.");
+                continue;
+            }
+
             // Un jugador por aventura; continuar nunca reconstruye este personaje.
             Jugador jugador = new Jugador("Aventurero", "", 6, 2, 3, 2, 2, 48, 48);
-            if (!jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros, objetos, tienda)) return;
+
+            if (!jugarAventura(jugador, entrada, salida, dados, azarBotin,
+                    repositorio, azarEncuentros, objetos, tienda, ritmo)) {
+                return;
+            }
         }
     }
+
+    static boolean configurarVelocidad(Scanner entrada, PrintStream salida, RitmoConsola ritmo) {
+        PanelConsola panel = new PanelConsola(salida, "VELOCIDAD DE NARRACIÓN");
+        panel.linea("Actual: " + ritmo.getVelocidad().getNombre());
+        RitmoConsola.Velocidad[] velocidades = RitmoConsola.Velocidad.values();
+        for (int i = 0; i < velocidades.length; i++) {
+            panel.opcion(i + 1, velocidades[i].getNombre() + " (" + velocidades[i].getMilisegundos() + " ms)");
+        }
+        panel.opcion(0, "Volver sin cambiar");
+        panel.cerrar();
+        int seleccion = leerIndiceEquipo(entrada, salida, velocidades.length);
+        if (seleccion == -1) return false;
+        if (seleccion != 0) {
+            ritmo.setVelocidad(velocidades[seleccion - 1]);
+            salida.println("Velocidad de narración: " + ritmo.getVelocidad().getNombre() + ".");
+        }
+        return true;
+    }
+
 
     // Devuelve true para volver al menú inicial y false para terminar la sesión.
     static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida, TiradorDado dados) {
@@ -112,6 +170,15 @@ public class app {
                                  TiradorDado dados, Random azarBotin,
                                  RepositorioEnemigos repositorio, Random azarEncuentros,
                                  RepositorioObjetos objetos, RepositorioTienda tienda) {
+        return jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros, objetos, tienda,
+                new RitmoConsola(RitmoConsola.Velocidad.INSTANTANEA));
+    }
+
+    static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
+                                 TiradorDado dados, Random azarBotin,
+                                 RepositorioEnemigos repositorio, Random azarEncuentros,
+                                 RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo) {
+        java.util.Objects.requireNonNull(ritmo);
         List<DefinicionEnemigo> catalogo;
         try {
             catalogo = List.copyOf(repositorio.obtenerTodos());
@@ -161,19 +228,28 @@ public class app {
         int victorias = 0;
         while (true) {
             Enemigo enemigo = seleccionarEnemigo(catalogo, azarEncuentros);
-            salida.printf("%nEncuentro %d.%n", encuentro);
-            salida.printf("Comienza el combate: %s contra %s.%n", jugador.getNombre(), enemigo.getNombre());
+            PanelConsola panelEncuentro = new PanelConsola(salida, "ENCUENTRO " + encuentro);
+            panelEncuentro.linea("Comienza el combate: " + jugador.getNombre() + " contra " + enemigo.getNombre() + ".");
+            panelEncuentro.columnas(jugador.getNombre(), enemigo.getNombre());
+            panelEncuentro.columnas("PS " + jugador.getVida() + "/" + jugador.getVidaMaxima(),
+                    "PS " + enemigo.getVida() + "/" + enemigo.getVidaMaxima());
+            panelEncuentro.cerrar();
+            ritmo.pausar(salida);
             ResultadoCombate resultado;
             try {
-                resultado = new Combate(jugador, enemigo, dados).combatir(entrada, salida);
+                resultado = new Combate(jugador, enemigo, dados, ritmo).combatir(entrada, salida);
             } catch (NoSuchElementException finEntrada) {
                 salida.println("Entrada finalizada. Sesión interrumpida; el combate queda sin terminar.");
                 return false;
             }
-            salida.printf("Vida final: %s %d/%d | %s %d/%d%n",
+            PanelConsola panelFinal = new PanelConsola(salida, "FIN DEL ENCUENTRO");
+            panelFinal.linea(String.format("Vida final: %s %d/%d | %s %d/%d",
                     jugador.getNombre(), jugador.getVida(), jugador.getVidaMaxima(),
-                    enemigo.getNombre(), enemigo.getVida(), enemigo.getVidaMaxima());
+                    enemigo.getNombre(), enemigo.getVida(), enemigo.getVidaMaxima()));
+            panelFinal.cerrar();
             mostrarResultado(resultado, salida);
+            if (resultado == ResultadoCombate.ENEMIGO_MUERE || resultado == ResultadoCombate.JUGADOR_MUERE
+                    || resultado == ResultadoCombate.AMBOS_MUEREN) ritmo.pausar(salida);
             if (resultado == ResultadoCombate.JUGADOR_MUERE || resultado == ResultadoCombate.AMBOS_MUEREN) {
                 salida.println("La aventura ha terminado.");
                 return true;
@@ -182,14 +258,18 @@ public class app {
             if (resultado == ResultadoCombate.ENEMIGO_MUERE) {
                 victorias++;
                 jugador.agregarOro(5);
-                salida.printf("Recompensa: +5 monedas. Oro: %d monedas.%n", jugador.getOro());
+                PanelConsola panelRecompensa = new PanelConsola(salida, "RECOMPENSAS");
+                panelRecompensa.linea("Oro obtenido: +5 monedas");
+                panelRecompensa.linea("Oro total: " + jugador.getOro() + " monedas");
+                panelRecompensa.cerrar();
+                ritmo.pausar(salida);
                 // Solo una vez tras la resolución definitiva, fuera de los menús.
-                obtenerBotin(jugador, azarBotin, salida);
+                obtenerBotin(jugador, azarBotin, salida, ritmo);
                 if (!espadaOfrecida) {
                     espadaOfrecida = true;
-                    if (!ofrecerEspada(jugador, entrada, salida, espada)) return false;
+                    if (!ofrecerEspada(jugador, entrada, salida, espada, ritmo)) return false;
                 }
-                if (victorias == 2 && !ofrecerArmaGuardada(jugador, entrada, salida, espadaHierro)) return false;
+                if (victorias == 2 && !ofrecerArmaGuardada(jugador, entrada, salida, espadaHierro, ritmo)) return false;
             } else if (resultado == ResultadoCombate.JUGADOR_HUYE) {
                 salida.println("Regresas a exploración sin recompensas. Conservas tu personaje y sus pertenencias.");
             }
@@ -226,24 +306,21 @@ public class app {
         return catalogo.get(azarEncuentros.nextInt(catalogo.size())).crearEnemigo();
     }
 
-    private static void cabecera(String titulo, PrintStream salida) {
-        salida.printf("%n----------------------------------------%n");
-        salida.println("  " + titulo);
-        salida.println("----------------------------------------");
-    }
-
     private static void mostrarExploracion(Jugador jugador, PrintStream salida) {
-        cabecera("VIAJE A DRAGOS - EXPLORACIÓN", salida);
-        salida.printf("  %s%n  Vida: %d/%d PS%n  Oro: %d monedas%n%n",
-                jugador.getNombre(), jugador.getVida(), jugador.getVidaMaxima(), jugador.getOro());
-        salida.println("1. Revisar inventario");
-        salida.println("2. Usar objeto");
-        salida.println("3. Continuar al siguiente encuentro");
-        salida.println("4. Terminar aventura y volver al menú inicial");
-        salida.println("5. Tienda");
-        salida.println("0. Salir del juego");
+        PanelConsola panel = new PanelConsola(salida, "VIAJE A DRAGOS - EXPLORACIÓN");
+        panel.linea(jugador.getNombre());
+        panel.linea("Vida: " + jugador.getVida() + "/" + jugador.getVidaMaxima() + " PS");
+        panel.linea(PanelConsola.barraVida(jugador.getVida(), jugador.getVidaMaxima()));
+        panel.linea("Oro: " + jugador.getOro() + " monedas");
+        panel.separador();
+        panel.opcion(1, "Revisar inventario");
+        panel.opcion(2, "Usar objeto");
+        panel.opcion(3, "Continuar al siguiente encuentro");
+        panel.opcion(4, "Terminar aventura y volver al menú inicial");
+        panel.opcion(5, "Tienda");
+        panel.opcion(0, "Salir del juego");
+        panel.cerrar();
     }
-
     static boolean consultarTienda(Jugador jugador, Scanner entrada, PrintStream salida, RepositorioTienda tienda) {
         List<org.viajedragos.modelo.ProductoTienda> productos;
         try {
@@ -257,14 +334,15 @@ public class app {
             return true;
         }
         while (true) {
-            cabecera("TIENDA", salida);
-            salida.printf("  Oro disponible: %d monedas%n", jugador.getOro());
-            if (productos.isEmpty()) salida.println("No hay productos disponibles.");
+            PanelConsola panel = new PanelConsola(salida, "TIENDA");
+            panel.linea("Oro disponible: " + jugador.getOro() + " monedas");
+            if (productos.isEmpty()) panel.linea("No hay productos disponibles.");
             for (int i = 0; i < productos.size(); i++) {
                 var producto = productos.get(i);
-                salida.printf("%d. %s - %d monedas%n", i + 1, producto.nombre(), producto.precio());
+                panel.opcion(i + 1, producto.nombre() + " - " + producto.precio() + " monedas");
             }
-            salida.println("0. Volver a exploración");
+            panel.opcion(0, "Volver a exploración");
+            panel.cerrar();
             int indice = leerIndiceEquipo(entrada, salida, productos.size());
             if (indice == -1) return false;
             if (indice == 0) return true;
@@ -296,41 +374,45 @@ public class app {
     }
 
     static boolean consultarInventario(Jugador jugador, Scanner entrada, PrintStream salida, boolean coloresAnsi) {
-        cabecera("INVENTARIO", salida);
-        salida.println("CONSUMIBLES");
+        PanelConsola panel = new PanelConsola(salida, "INVENTARIO");
+        panel.linea("Oro: " + jugador.getOro() + " monedas");
+        panel.columnas("Fuerza: " + jugador.getFuerza(), "Resistencia: " + jugador.getResistencia());
+        panel.columnas("Iniciativa: " + jugador.getIniciativa(), "Agilidad: " + jugador.getAgilidad());
+        panel.linea("Velocidad: " + jugador.getVelocidad());
+        panel.separador();
+        panel.titulo("CONSUMIBLES");
         boolean tienePociones = false;
         for (TipoPocion tipo : TipoPocion.values()) {
             int cantidad = jugador.getCantidadPociones(tipo);
             if (cantidad > 0) {
                 tienePociones = true;
-                salida.printf("  %-24s x%d%n    Recupera %d PS%n",
-                        jugador.getDefinicionPocion(tipo).nombre(), cantidad, jugador.getDefinicionPocion(tipo).recuperacionPS());
+                panel.linea(jugador.getDefinicionPocion(tipo).nombre() + " x" + cantidad);
+                panel.linea("Recupera " + jugador.getDefinicionPocion(tipo).recuperacionPS() + " PS");
             }
         }
-        if (!tienePociones) salida.println("  No tienes consumibles");
+        if (!tienePociones) panel.linea("No tienes consumibles");
 
-        salida.printf("%nEQUIPO%n");
-        if (jugador.getEquipoEquipado().isEmpty()) salida.println("  No tienes equipo equipado");
+        panel.separador();
+        panel.titulo("EQUIPO");
+        if (jugador.getEquipoEquipado().isEmpty()) panel.linea("No tienes equipo equipado");
         for (TipoEquipo ranura : TipoEquipo.values()) {
             var equipo = jugador.getEquipoEquipado().get(ranura);
             if (equipo == null) continue;
-            salida.printf("  %s: %s%n", ranura.getNombre(), equipo.getNombre());
-            equipo.getBonificaciones().forEach((atributo, cantidad) ->
-                    salida.printf("    %s %+d%n", atributo, cantidad));
-            equipo.getHabilidadesOtorgadas().forEach((habilidad, nivel) ->
-                    salida.printf("    %s: nivel otorgado %d%n", habilidad.getNombre(), nivel));
+            mostrarEquipo(panel, equipo);
         }
-        salida.printf("%nEQUIPAMIENTO GUARDADO%n");
-        if (jugador.getInventarioEquipo().isEmpty()) salida.println("  No tienes equipamiento guardado");
+        panel.separador();
+        panel.titulo("EQUIPAMIENTO GUARDADO");
+        if (jugador.getInventarioEquipo().isEmpty()) panel.linea("No tienes equipamiento guardado");
         for (Equipo equipo : jugador.getInventarioEquipo()) {
-            salida.printf("  %s: %s%n", equipo.getTipoEquipo().getNombre(), equipo.getNombre());
-            equipo.getBonificaciones().forEach((atributo, cantidad) ->
-                    salida.printf("    %s %+d%n", atributo, cantidad));
-            equipo.getHabilidadesOtorgadas().forEach((habilidad, nivel) ->
-                    salida.printf("    %s: nivel otorgado %d%n", habilidad.getNombre(), nivel));
+            mostrarEquipo(panel, equipo);
         }
+        panel.cerrar();
         while (true) {
-            salida.printf("%n1. Comparar equipamiento%n2. Cambiar equipamiento%n0. Volver a exploración%n");
+            PanelConsola acciones = new PanelConsola(salida, "ACCIONES DE INVENTARIO");
+            acciones.opcion(1, "Comparar equipamiento");
+            acciones.opcion(2, "Cambiar equipamiento");
+            acciones.opcion(0, "Volver a exploración");
+            acciones.cerrar();
             String opcion = leerOpcion(entrada, salida);
             if (opcion == null) return false;
             if (opcion.equals("0")) return true;
@@ -342,6 +424,14 @@ public class app {
                 salida.println("Entrada inválida. Escribe 1, 2 o 0 para volver.");
             }
         }
+    }
+
+    private static void mostrarEquipo(PanelConsola panel, Equipo equipo) {
+        panel.linea(equipo.getTipoEquipo().getNombre() + ": " + equipo.getNombre());
+        equipo.getBonificaciones().forEach((atributo, cantidad) ->
+                panel.linea(String.format("%s %+d", atributo, cantidad)));
+        equipo.getHabilidadesOtorgadas().forEach((habilidad, nivel) ->
+                panel.linea(habilidad.getNombre() + ": nivel otorgado " + nivel));
     }
 
     private static boolean compararEquipamiento(Jugador jugador, Scanner entrada, PrintStream salida,
@@ -357,12 +447,13 @@ public class app {
         List<Equipo> equipados = java.util.Arrays.stream(TipoEquipo.values())
                 .map(tipo -> jugador.getEquipoEquipado().get(tipo)).filter(java.util.Objects::nonNull).toList();
         while (true) {
-            cabecera("COMPARAR - PIEZA EQUIPADA", salida);
+            PanelConsola panel = new PanelConsola(salida, "COMPARAR - PIEZA EQUIPADA");
             for (int i = 0; i < equipados.size(); i++) {
                 Equipo equipo = equipados.get(i);
-                salida.printf("%d. %s: %s%n", i + 1, equipo.getTipoEquipo().getNombre(), equipo.getNombre());
+                panel.opcion(i + 1, equipo.getTipoEquipo().getNombre() + ": " + equipo.getNombre());
             }
-            salida.println("0. Volver al inventario");
+            panel.opcion(0, "Volver al inventario");
+            panel.cerrar();
             int indice = leerIndiceEquipo(entrada, salida, equipados.size());
             if (indice == -1) return false;
             if (indice == 0) return true;
@@ -375,12 +466,13 @@ public class app {
                 continue;
             }
             while (true) {
-                cabecera("COMPARAR - PIEZA GUARDADA", salida);
-                salida.printf("Pieza actual: %s (%s)%n", actual.getNombre(), actual.getTipoEquipo().getNombre());
+                PanelConsola guardadas = new PanelConsola(salida, "COMPARAR - PIEZA GUARDADA");
+                guardadas.linea("Pieza actual: " + actual.getNombre() + " (" + actual.getTipoEquipo().getNombre() + ")");
                 for (int i = 0; i < compatibles.size(); i++) {
-                    salida.printf("%d. %s%n", i + 1, compatibles.get(i).getNombre());
+                    guardadas.opcion(i + 1, compatibles.get(i).getNombre());
                 }
-                salida.println("0. Volver a la selección de pieza equipada");
+                guardadas.opcion(0, "Volver a la selección de pieza equipada");
+                guardadas.cerrar();
                 int nueva = leerIndiceEquipo(entrada, salida, compatibles.size());
                 if (nueva == -1) return false;
                 if (nueva == 0) break;
@@ -399,13 +491,13 @@ public class app {
         }
         TipoEquipo[] ranuras = TipoEquipo.values();
         while (true) {
-            cabecera("CAMBIAR - RANURA", salida);
+            PanelConsola panel = new PanelConsola(salida, "CAMBIAR - RANURA");
             for (int i = 0; i < ranuras.length; i++) {
                 Equipo actual = jugador.getEquipoEquipado().get(ranuras[i]);
-                salida.printf("%d. %s: %s%n", i + 1, ranuras[i].getNombre(),
-                        actual == null ? "Sin equipo" : actual.getNombre());
+                panel.opcion(i + 1, ranuras[i].getNombre() + ": " + (actual == null ? "Sin equipo" : actual.getNombre()));
             }
-            salida.println("0. Volver al inventario");
+            panel.opcion(0, "Volver al inventario");
+            panel.cerrar();
             int ranura = leerIndiceEquipo(entrada, salida, ranuras.length);
             if (ranura == -1) return false;
             if (ranura == 0) return true;
@@ -418,11 +510,12 @@ public class app {
                 salida.println("No tienes piezas guardadas compatibles con la ranura " + tipo.getNombre() + ".");
                 continue;
             }
-            salida.println("Selecciona una pieza guardada:");
+            PanelConsola guardadas = new PanelConsola(salida, "SELECCIONA UNA PIEZA GUARDADA");
             for (int i = 0; i < compatibles.size(); i++) {
-                salida.printf("%d. %s%n", i + 1, jugador.getInventarioEquipo().get(compatibles.get(i)).getNombre());
+                guardadas.opcion(i + 1, jugador.getInventarioEquipo().get(compatibles.get(i)).getNombre());
             }
-            salida.println("0. Volver a la selección de ranura");
+            guardadas.opcion(0, "Volver a la selección de ranura");
+            guardadas.cerrar();
             int pieza = leerIndiceEquipo(entrada, salida, compatibles.size());
             if (pieza == -1) return false;
             if (pieza == 0) continue;
@@ -433,7 +526,11 @@ public class app {
                 salida.printf("Actual: %s | Nuevo: %s%n", actual.getNombre(), nueva.getNombre());
                 actual.compararCon(nueva, salida, coloresAnsi);
             }
-            salida.printf("¿Equipar %s?%n1. Confirmar%n0. Cancelar%n", nueva.getNombre());
+            PanelConsola confirmacion = new PanelConsola(salida, "CONFIRMAR EQUIPAMIENTO");
+            confirmacion.linea("¿Equipar " + nueva.getNombre() + "?");
+            confirmacion.opcion(1, "Confirmar");
+            confirmacion.opcion(0, "Cancelar");
+            confirmacion.cerrar();
             int confirmar = leerIndiceEquipo(entrada, salida, 1);
             if (confirmar == -1) return false;
             if (confirmar == 0) continue;
@@ -462,13 +559,15 @@ public class app {
     }
 
     static boolean usarObjeto(Jugador jugador, Scanner entrada, PrintStream salida) {
-        cabecera("USAR OBJETO", salida);
-        salida.printf("  Vida actual: %d/%d PS%n%n", jugador.getVida(), jugador.getVidaMaxima());
-        salida.printf("1. %s (x%d) +%d PS%n", jugador.getDefinicionPocion(TipoPocion.PEQUENA).nombre(),
-                jugador.getCantidadPociones(TipoPocion.PEQUENA), jugador.getDefinicionPocion(TipoPocion.PEQUENA).recuperacionPS());
-        salida.printf("2. %s (x%d) +%d PS%n", jugador.getDefinicionPocion(TipoPocion.GRANDE).nombre(),
-                jugador.getCantidadPociones(TipoPocion.GRANDE), jugador.getDefinicionPocion(TipoPocion.GRANDE).recuperacionPS());
-        salida.println("0. Cancelar");
+        PanelConsola panel = new PanelConsola(salida, "USAR OBJETO");
+        panel.linea("Vida actual: " + jugador.getVida() + "/" + jugador.getVidaMaxima() + " PS");
+        int numero = 1;
+        for (TipoPocion tipo : TipoPocion.values()) {
+            panel.opcion(numero++, jugador.getDefinicionPocion(tipo).nombre() + " (x"
+                    + jugador.getCantidadPociones(tipo) + ") +" + jugador.getDefinicionPocion(tipo).recuperacionPS() + " PS");
+        }
+        panel.opcion(0, "Cancelar");
+        panel.cerrar();
         while (true) {
             String opcion = leerOpcion(entrada, salida);
             if (opcion == null) return false;
@@ -500,13 +599,19 @@ public class app {
     }
 
     static void obtenerBotin(Jugador jugador, Random azarBotin, PrintStream salida) {
+        obtenerBotin(jugador, azarBotin, salida, new RitmoConsola(RitmoConsola.Velocidad.INSTANTANEA));
+    }
+
+    static void obtenerBotin(Jugador jugador, Random azarBotin, PrintStream salida, RitmoConsola ritmo) {
         if (azarBotin.nextInt(100) < 50) {
             jugador.agregarPocion(TipoPocion.PEQUENA);
             salida.printf("Botín: %s (+1).%n", jugador.getDefinicionPocion(TipoPocion.PEQUENA).nombre());
+            ritmo.pausar(salida);
         }
         if (azarBotin.nextInt(100) < 20) {
             jugador.agregarPocion(TipoPocion.GRANDE);
             salida.printf("Botín: %s (+1).%n", jugador.getDefinicionPocion(TipoPocion.GRANDE).nombre());
+            ritmo.pausar(salida);
         }
     }
 
@@ -517,12 +622,16 @@ public class app {
     }
 
     private static boolean ofrecerArmaGuardada(Jugador jugador, Scanner entrada, PrintStream salida,
-                                              DefinicionArma definicion) {
+                                              DefinicionArma definicion, RitmoConsola ritmo) {
         Arma arma = definicion.crearArma();
-        salida.printf("Has encontrado una %s.%n", arma.getNombre());
-        arma.getBonificaciones().forEach((atributo, cantidad) -> salida.printf("%s %+d%n", atributo, cantidad));
-        salida.println("1. Guardar en el inventario");
-        salida.println("2. Dejarla atrás");
+        PanelConsola panel = new PanelConsola(salida, "BOTÍN - ARMA ENCONTRADA");
+        panel.linea("Has encontrado una " + arma.getNombre() + ".");
+        mostrarEquipo(panel, arma);
+        panel.separador();
+        panel.opcion(1, "Guardar en el inventario");
+        panel.opcion(2, "Dejarla atrás");
+        panel.cerrar();
+        ritmo.pausar(salida);
         while (true) {
             String opcion = leerOpcion(entrada, salida);
             if (opcion == null) return false;
@@ -539,35 +648,53 @@ public class app {
         }
     }
 
-    static boolean ofrecerEspada(Jugador jugador, Scanner entrada, PrintStream salida, DefinicionArma definicion) {
+
+    static boolean ofrecerEspada(Jugador jugador, Scanner entrada,
+                                 PrintStream salida, DefinicionArma definicion) {
+        return ofrecerEspada(jugador, entrada, salida, definicion,
+                new RitmoConsola(RitmoConsola.Velocidad.INSTANTANEA));
+    }
+
+    static boolean ofrecerEspada(Jugador jugador, Scanner entrada,
+                                 PrintStream salida, DefinicionArma definicion, RitmoConsola ritmo) {
+
         Arma espada = definicion.crearArma();
-        salida.printf("Has encontrado una %s.%n", espada.getNombre());
-        espada.getBonificaciones().forEach((atributo, cantidad) -> {
-            String nombre = atributo.name().toLowerCase(java.util.Locale.ROOT);
-            salida.printf("%s %+d%n", Character.toUpperCase(nombre.charAt(0)) + nombre.substring(1), cantidad);
-        });
+
+        PanelConsola panel = new PanelConsola(salida, "BOTÍN - ARMA ENCONTRADA");
+        panel.linea("Has encontrado una " + espada.getNombre() + ".");
+        mostrarEquipo(panel, espada);
+        panel.separador();
+        panel.opcion(1, "Equipar " + espada.getNombre());
+        panel.opcion(2, "Rechazar " + espada.getNombre());
+        panel.cerrar();
+        ritmo.pausar(salida);
         while (true) {
-            salida.printf("1. Equipar %s%n", espada.getNombre());
-            salida.printf("2. Rechazar %s%n", espada.getNombre());
-            salida.print("> ");
+            salida.print("Elige una opción > ");
             salida.flush();
+
             if (!entrada.hasNextLine()) {
                 salida.println("Entrada finalizada. Hasta pronto.");
                 return false;
             }
+
             String opcion = entrada.nextLine().trim();
+
             if (opcion.equals("1")) {
                 if (jugador.equipar(espada)) {
-                    salida.printf("%s equipada. Fuerza actual: %d.%n", espada.getNombre(), jugador.getFuerza());
+                    salida.printf("%s equipada. Fuerza actual: %d.%n",
+                            espada.getNombre(), jugador.getFuerza());
                 } else {
                     salida.println("No se puede equipar: la ranura de arma está ocupada.");
                 }
                 return true;
             }
+
             if (opcion.equals("2")) {
-                salida.printf("Has rechazado la %s. La dejas atrás.%n", espada.getNombre());
+                salida.printf("Has rechazado la %s. La dejas atrás.%n",
+                        espada.getNombre());
                 return true;
             }
+
             salida.println("Entrada inválida. Escribe 1 o 2.");
         }
     }

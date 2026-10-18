@@ -5,6 +5,8 @@ import org.viajedragos.habilidad.Habilidad;
 import org.viajedragos.modelo.Combatiente;
 import org.viajedragos.modelo.Jugador;
 import org.viajedragos.modelo.TipoPocion;
+import org.viajedragos.consola.PanelConsola;
+import org.viajedragos.consola.RitmoConsola;
 
 import java.io.PrintStream;
 import java.util.Map;
@@ -19,11 +21,17 @@ public class Combate {
 
     private TiradorDado tirador;
     private Combatiente poseedorTurno;
+    private final RitmoConsola ritmo;
 
     public Combate(Combatiente jugador, Combatiente enemigo, TiradorDado tirador) {
+        this(jugador, enemigo, tirador, new RitmoConsola(RitmoConsola.Velocidad.INSTANTANEA));
+    }
+
+    public Combate(Combatiente jugador, Combatiente enemigo, TiradorDado tirador, RitmoConsola ritmo) {
         this.jugador = jugador;
         this.enemigo = enemigo;
         this.tirador = tirador;
+        this.ritmo = Objects.requireNonNull(ritmo);
     }
 
     public Combatiente primerTurno() {
@@ -68,27 +76,24 @@ public class Combate {
     public void ataque(Combatiente atacante, Combatiente defensor) {
         ataque(atacante, defensor, null);
     }
-
     private void ataque(Combatiente atacante, Combatiente defensor, PrintStream salida) {
 
-        //creo el contexto para este ataque en específico
+        // Creo el contexto para este ataque específico.
         ContextoAtaque ca = new ContextoAtaque(atacante, defensor);
 
         dispararHabilidades(atacante, (h, estado) -> h.antesDeAtacar(ca, estado));
 
-        //Las tiradas de ataque y defensa deben ser accesibles para el resto de métodos, así que salen aquí.
+        // Las tiradas quedan accesibles para los eventos y el cálculo del daño.
         int tiradaAtacante = tirador.tirarDado();
         int tiradaDefensor = tirador.tirarDado();
 
-        //Pasamos las tiradas al contexto
         ca.setDadoAtaque(tiradaAtacante);
         ca.setDadoDefensa(tiradaDefensor);
 
         dispararHabilidades(atacante, (h, estado) -> h.antesDeCalcularDanio(ca, estado));
         dispararHabilidades(defensor, (h, estado) -> h.antesDeCalcularDanio(ca, estado));
 
-        //Determinamos el daño bruto que consigue realizar el ataque.
-        //Este daño nunca puede ser menor que 0.
+        // Determino el daño bruto conservando las reglas de fallo y contraataque.
         int vidaAtacanteAntes = atacante.getVida();
         danioBruto(ca);
         int danioContraataque = Math.max(0, vidaAtacanteAntes - atacante.getVida());
@@ -97,33 +102,49 @@ public class Combate {
         dispararHabilidades(atacante, (h, estado) -> h.antesDeAplicarDanio(ca, estado));
         dispararHabilidades(defensor, (h, estado) -> h.antesDeAplicarDanio(ca, estado));
 
+        if (salida != null && atacante == enemigo) ritmo.pausar(salida);
+
         if (ca.isAtaqueFallido()) {
             ca.setDanioFinal(0);
+
             if (salida != null) {
-                salida.printf("%s falla su ataque contra %s.%n", atacante.getNombre(), defensor.getNombre());
+                PanelConsola panel = new PanelConsola(salida, "ATAQUE FALLIDO");
+                panel.linea(atacante.getNombre() + " falla su ataque contra " + defensor.getNombre() + ".");
+                panel.linea("Daño causado: 0 PS");
                 if (ca.isContraataque()) {
-                    salida.printf("%s contraataca a %s y causa %d puntos de daño.%n",
-                            defensor.getNombre(), atacante.getNombre(), danioContraataque);
+                    panel.separador();
+                    panel.titulo("CONTRAATAQUE");
+                    panel.linea(defensor.getNombre() + " contraataca a " + atacante.getNombre()
+                            + " y causa " + danioContraataque + " puntos de daño.");
                 }
+                panel.cerrar();
+                ritmo.pausar(salida);
             }
             return;
         }
 
         int vidaAntes = defensor.getVida();
         defensor.recibirDanio(ca.getDanioFinal());
+
         if (salida != null) {
-            if (ca.getDadoAtaque() == 6 && ca.getDadoDefensa() == 1) {
-                salida.println("¡Golpe crítico!");
-            }
-            salida.printf("%s golpea a %s y causa %d puntos de daño.%n",
-                    atacante.getNombre(), defensor.getNombre(), Math.max(0, vidaAntes - defensor.getVida()));
+            int danioCausado = Math.max(0, vidaAntes - defensor.getVida());
+            boolean critico = ca.getDadoAtaque() == 6 && ca.getDadoDefensa() == 1;
+
+            PanelConsola panel = new PanelConsola(salida, critico ? "GOLPE CRÍTICO" : "RESULTADO DEL ATAQUE");
+            if (critico) panel.linea("¡Golpe crítico!");
+            panel.linea(atacante.getNombre() + " golpea a " + defensor.getNombre()
+                    + " y causa " + danioCausado + " puntos de daño.");
+            panel.linea("Vida restante: " + defensor.getVida() + "/" + defensor.getVidaMaxima() + " PS");
+            panel.cerrar();
         }
+
         boolean huboDanioEfectivo = defensor.getVida() < vidaAntes;
+
         if (huboDanioEfectivo) {
             dispararHabilidades(atacante, (h, estado) -> h.alHacerDanio(ca, estado));
             dispararHabilidades(defensor, (h, estado) -> h.alRecibirDanio(ca, estado));
         }
-
+        if (salida != null) ritmo.pausar(salida);
     }
 
     private void danioBruto(ContextoAtaque ca) {
@@ -238,21 +259,25 @@ public class Combate {
         while (true) {
             ResultadoCombate resultado = eventosTurno(true);
             if (resultado != ResultadoCombate.CONTINUA) return finalDelCombate(resultado);
-
             Combatiente primeroEnActuar = atacante(poseedorTurno, determinarOponente(poseedorTurno));
             if (salida != null) {
-                salida.printf("%nTurno %d. Orden: %s, después %s.%n", turno,
-                        primeroEnActuar.getNombre(), determinarOponente(primeroEnActuar).getNombre());
+                PanelConsola panel = new PanelConsola(salida, "TURNO " + turno);
+                panel.linea("Turno " + turno + ". Orden: " + primeroEnActuar.getNombre()
+                        + ", después " + determinarOponente(primeroEnActuar).getNombre() + ".");
+                panel.cerrar();
+                ritmo.pausar(salida);
             }
             for (Combatiente actual : new Combatiente[]{primeroEnActuar, determinarOponente(primeroEnActuar)}) {
                 if (salida != null) {
-                    mostrarEstado(salida);
                     salida.printf("Actúa %s.%n", actual.getNombre());
                     if (actual == jugador) {
                         resultado = ejecutarAccionJugador(entrada, salida);
                         if (resultado != ResultadoCombate.CONTINUA) return finalDelCombate(resultado);
                     } else {
-                        salida.println("El enemigo elige atacar.");
+                        mostrarEstado(salida);
+                        PanelConsola panel = new PanelConsola(salida, "ACCIÓN DEL ENEMIGO");
+                        panel.linea("El enemigo elige atacar.");
+                        panel.cerrar();
                         ataque(actual, determinarOponente(actual), salida);
                     }
                 } else {
@@ -272,32 +297,48 @@ public class Combate {
     }
 
     private void mostrarEstado(PrintStream salida) {
-        salida.printf("%s: %d/%d de vida | %s: %d/%d de vida%n",
-                jugador.getNombre(), jugador.getVida(), jugador.getVidaMaxima(),
-                enemigo.getNombre(), enemigo.getVida(), enemigo.getVidaMaxima());
+        PanelConsola panel = new PanelConsola(salida, "ESTADO DEL COMBATE");
+        datosCombatientes(panel);
+        panel.cerrar();
+    }
+
+    private void datosCombatientes(PanelConsola panel) {
+        panel.columnas(jugador.getNombre(), enemigo.getNombre());
+        panel.columnas("PS " + jugador.getVida() + "/" + jugador.getVidaMaxima(),
+                "PS " + enemigo.getVida() + "/" + enemigo.getVidaMaxima());
+        panel.columnas(PanelConsola.barraVida(jugador.getVida(), jugador.getVidaMaxima()),
+                PanelConsola.barraVida(enemigo.getVida(), enemigo.getVidaMaxima()));
     }
 
     // Ejecuta una acción válida; cancelar o introducir inválidos mantiene la elección.
     private ResultadoCombate ejecutarAccionJugador(Scanner entrada, PrintStream salida) {
         while (true) {
-            salida.printf("%n----------------------------------------%n  TU TURNO%n----------------------------------------%n");
-            salida.printf("  %s%n  Vida: %d/%d PS%n%n", jugador.getNombre(), jugador.getVida(), jugador.getVidaMaxima());
-            salida.println("1. Atacar");
+            PanelConsola panel = new PanelConsola(salida, "TU TURNO");
+            datosCombatientes(panel);
+            panel.separador();
+            panel.titulo("ACCIONES");
+            panel.opcion(1, "Atacar");
             if (jugador instanceof Jugador) {
-                salida.println("2. Usar objeto");
-                salida.println("3. Huir");
+                panel.opcion(2, "Usar objeto");
+                panel.opcion(3, "Huir");
             }
+            panel.cerrar();
             salida.print("Elige una opción > ");
             salida.flush();
             // El cierre de la entrada interrumpe la sesión; no representa una huida.
             String opcion = entrada.nextLine().trim();
+
             if (opcion.equals("1")) {
                 ataque(jugador, enemigo, salida);
                 return ResultadoCombate.CONTINUA;
             }
+
             if (opcion.equals("3") && jugador instanceof Jugador) {
-                return intentarHuir(salida) ? ResultadoCombate.JUGADOR_HUYE : ResultadoCombate.CONTINUA;
+                return intentarHuir(salida)
+                        ? ResultadoCombate.JUGADOR_HUYE
+                        : ResultadoCombate.CONTINUA;
             }
+
             if (opcion.equals("2") && jugador instanceof Jugador portador) {
                 if (usarPocionEnCombate(portador, entrada, salida)) {
                     salida.println("Tu acción ha terminado.");
@@ -310,7 +351,6 @@ public class Combate {
             }
         }
     }
-
     private boolean intentarHuir(PrintStream salida) {
         int dadoJugador = tirador.tirarDado();
         int dadoEnemigo = tirador.tirarDado();
@@ -321,13 +361,15 @@ public class Combate {
 
     // true solo tras consumir; cancelar devuelve false y no termina la acción.
     private boolean usarPocionEnCombate(Jugador portador, Scanner entrada, PrintStream salida) {
-        salida.printf("%n----------------------------------------%n  USAR OBJETO%n----------------------------------------%n");
-        salida.printf("  Vida actual: %d/%d PS%n%n", portador.getVida(), portador.getVidaMaxima());
-        salida.printf("1. %s (x%d) +%d PS%n", portador.getDefinicionPocion(TipoPocion.PEQUENA).nombre(),
-                portador.getCantidadPociones(TipoPocion.PEQUENA), portador.getDefinicionPocion(TipoPocion.PEQUENA).recuperacionPS());
-        salida.printf("2. %s (x%d) +%d PS%n", portador.getDefinicionPocion(TipoPocion.GRANDE).nombre(),
-                portador.getCantidadPociones(TipoPocion.GRANDE), portador.getDefinicionPocion(TipoPocion.GRANDE).recuperacionPS());
-        salida.println("0. Cancelar");
+        PanelConsola panel = new PanelConsola(salida, "USAR OBJETO");
+        panel.linea("Vida actual: " + portador.getVida() + "/" + portador.getVidaMaxima() + " PS");
+        int numero = 1;
+        for (TipoPocion tipo : TipoPocion.values()) {
+            panel.opcion(numero++, portador.getDefinicionPocion(tipo).nombre() + " (x"
+                    + portador.getCantidadPociones(tipo) + ") +" + portador.getDefinicionPocion(tipo).recuperacionPS() + " PS");
+        }
+        panel.opcion(0, "Cancelar");
+        panel.cerrar();
         while (true) {
             salida.print("Elige una opción > ");
             salida.flush();

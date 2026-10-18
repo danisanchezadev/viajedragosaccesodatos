@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ComparacionInventarioTest {
     private final ByteArrayOutputStream salida = new ByteArrayOutputStream();
     private PrintStream consola() { return new PrintStream(salida, true, StandardCharsets.UTF_8); }
-    private String texto() { return salida.toString(StandardCharsets.UTF_8); }
+    private String texto() { return org.viajedragos.TextoConsola.contenido(salida.toString(StandardCharsets.UTF_8)); }
     private Jugador jugador() { return new Jugador("Prueba", "",6,2,3,2,2,13,24); }
     private Equipo pieza(String nombre, TipoEquipo tipo, int fuerza) {
         return new Arma(nombre, tipo, Map.of(Atributo.FUERZA, fuerza), Map.of());

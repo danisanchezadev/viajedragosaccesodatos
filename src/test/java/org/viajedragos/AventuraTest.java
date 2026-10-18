@@ -47,7 +47,7 @@ class AventuraTest {
     }
 
     private String texto() {
-        return salida.toString(StandardCharsets.UTF_8);
+        return org.viajedragos.TextoConsola.contenido(salida.toString(StandardCharsets.UTF_8));
     }
 
     private long veces(String fragmento) {
@@ -76,9 +76,9 @@ class AventuraTest {
         ejecutar("1\n1\n2\n3\n1\n2\n0\n", new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
         assertEquals(2, veces("Victoria."));
         assertEquals(2, veces("Vida final: Aventurero 30/48 | Lobo 0/18"));
-        String segundo = texto().substring(texto().indexOf("Encuentro 2."));
-        assertTrue(segundo.contains("Aventurero: 30/48 de vida | Lobo: 18/18 de vida"));
-        assertFalse(segundo.contains("Aventurero: 48/48"));
+        String segundo = texto().substring(texto().indexOf("ENCUENTRO 2"));
+        assertTrue(segundo.contains("Aventurero Lobo PS 30/48 PS 18/18"));
+        assertFalse(segundo.contains("PS 48/48"));
         assertEquals(1, veces("1. Nueva aventura"));
     }
 
@@ -120,15 +120,15 @@ class AventuraTest {
         assertEquals(1, veces("Comienza el combate"));
         assertEquals(2, veces("1. Nueva aventura"));
         assertTrue(texto().contains("La aventura ha terminado."));
-        assertFalse(texto().contains("Encuentro 2."));
+        assertFalse(texto().contains("ENCUENTRO 2"));
     }
 
     @Test
     void nuevaAventuraDespuesDeAbandonarEmpiezaConVidaCompletaYEncuentroUno() {
         ejecutar("1\n1\n2\n4\n1\n1\n2\n0\n", new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
-        assertEquals(2, veces("Encuentro 1."));
-        assertFalse(texto().contains("Encuentro 2."));
-        assertEquals(2, veces("Aventurero: 48/48 de vida | Lobo: 18/18 de vida"));
+        assertEquals(2, veces("ENCUENTRO 1"));
+        assertFalse(texto().contains("ENCUENTRO 2"));
+        assertEquals(4, veces("Aventurero Lobo PS 48/48 PS 18/18"));
         assertTrue(texto().contains("Vida final: Aventurero 30/48"));
         assertTrue(texto().contains("Vida final: Aventurero 48/48"));
     }
@@ -139,7 +139,7 @@ class AventuraTest {
         assertTrue(texto().contains("Derrota."));
         assertEquals(2, veces("1. Nueva aventura"));
         assertFalse(texto().contains("3. Continuar al siguiente encuentro"));
-        assertFalse(texto().contains("Encuentro 2."));
+        assertFalse(texto().contains("ENCUENTRO 2"));
     }
 
     @Test
@@ -147,8 +147,8 @@ class AventuraTest {
         ejecutar("1\n1\n1\n1\n1\n2\n0\n", new Dados(DERROTA, VICTORIA_SIN_DANIO));
         assertEquals(1, veces("Derrota."));
         assertEquals(1, veces("Victoria."));
-        assertEquals(2, veces("Encuentro 1."));
-        assertEquals(2, veces("Aventurero: 48/48 de vida | Lobo: 18/18 de vida"));
+        assertEquals(2, veces("ENCUENTRO 1"));
+        assertEquals(4, veces("Aventurero Lobo PS 48/48 PS 18/18"));
         assertTrue(texto().contains("Vida final: Aventurero 48/48 | Lobo 0/18"));
     }
 
@@ -181,7 +181,7 @@ class AventuraTest {
 
     @Test
     void invalidosEnAmbosMenusNoCreanEncuentrosNiModificanVida() {
-        ejecutar("2\nx\n1\n1\n2\nx\n9\n\n3\n1\n2\n0\n",
+        ejecutar("9\nx\n1\n1\n2\nx\n9\n\n3\n1\n2\n0\n",
                 new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
         assertEquals(5, veces("Entrada inválida"));
         assertEquals(2, veces("Comienza el combate"));

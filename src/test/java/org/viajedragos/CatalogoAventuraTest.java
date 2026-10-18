@@ -39,7 +39,7 @@ class CatalogoAventuraTest {
     };
 
     private PrintStream consola() { return new PrintStream(salida, true, StandardCharsets.UTF_8); }
-    private String texto() { return salida.toString(StandardCharsets.UTF_8); }
+    private String texto() { return org.viajedragos.TextoConsola.contenido(salida.toString(StandardCharsets.UTF_8)); }
     private Jugador jugador() { return new Jugador("Aventurero", "",6,2,3,2,2,48,48); }
     private Random seleccion(int limite, int... indices) {
         return new Random(0) {
@@ -73,7 +73,7 @@ class CatalogoAventuraTest {
         assertEquals(2, tiradasBotin);
         assertEquals(48, j.getVida());
         assertTrue(texto().contains("contra " + definicion.nombre()));
-        assertTrue(texto().contains(definicion.nombre() + ": " + definicion.vidaMaxima() + "/" + definicion.vidaMaxima()));
+        assertTrue(texto().contains("PS 48/48 PS " + definicion.vidaMaxima() + "/" + definicion.vidaMaxima()));
         assertTrue(texto().contains("Victoria."));
         assertEquals(1, j.getCantidadPociones(TipoPocion.PEQUENA));
         assertTrue(j.getEquipoEquipado().isEmpty(), "La espada no se equipa automáticamente");
@@ -167,7 +167,7 @@ class CatalogoAventuraTest {
         assertEquals(4, tiradasBotin);
         assertTrue(texto().contains("contra Goblin"));
         assertTrue(texto().contains("contra Esqueleto"));
-        assertEquals(2, texto().split("Aventurero: 48/48 de vida", -1).length - 1);
+        assertEquals(4, texto().split("PS 48/48", -1).length - 1);
     }
 
     @Test

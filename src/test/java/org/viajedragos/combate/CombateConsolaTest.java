@@ -50,14 +50,14 @@ class CombateConsolaTest {
     }
 
     private String texto() {
-        return salida.toString(StandardCharsets.UTF_8);
+        return org.viajedragos.TextoConsola.contenido(salida.toString(StandardCharsets.UTF_8));
     }
 
     @Test
     void jugadorActuaPrimeroCuandoGanaIniciativa() {
         assertEquals(ResultadoCombate.ENEMIGO_MUERE, ejecutar("1\n", 1, 1, 1, 1, 4, 2));
         assertTrue(texto().contains("Orden: Jugador, después Enemigo"));
-        assertTrue(texto().contains("Jugador: 30/30 de vida | Enemigo: 10/30 de vida"));
+        assertTrue(texto().contains("Jugador Enemigo PS 30/30 PS 10/30"));
         assertTrue(texto().contains("Jugador golpea a Enemigo y causa 10 puntos de daño"));
         assertFalse(texto().contains("Actúa Enemigo"));
     }
@@ -67,7 +67,7 @@ class CombateConsolaTest {
         assertEquals(ResultadoCombate.ENEMIGO_MUERE, ejecutar("1\n", 1, 1, 1, 6, 4, 2, 4, 2));
         assertTrue(texto().contains("Orden: Enemigo, después Jugador"));
         assertTrue(texto().indexOf("Enemigo golpea a Jugador") < texto().indexOf("1. Atacar"));
-        assertTrue(texto().contains("Jugador: 22/30 de vida"));
+        assertTrue(texto().contains("PS 22/30"));
         assertEquals(22, jugador.getVida());
     }
 
@@ -154,7 +154,7 @@ class CombateConsolaTest {
         }, 1);
         assertEquals(ResultadoCombate.ENEMIGO_MUERE, ejecutar("1\n", 1, 1, 1, 6, 4, 2, 4, 2));
         assertEquals(1, muertes[0]);
-        assertTrue(texto().contains("Jugador: 20/30 de vida"));
+        assertTrue(texto().contains("PS 20/30"));
         assertEquals(20, jugador.getVida());
     }
 

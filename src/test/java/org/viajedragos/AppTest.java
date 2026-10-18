@@ -32,15 +32,15 @@ class AppTest {
         assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
                 app.ejecutar(new Scanner(entrada), new PrintStream(salida, true, StandardCharsets.UTF_8), dados, new Random(0), soloLobo(), new Random(0)));
         assertEquals(valores.length, usadas[0]);
-        return salida.toString(StandardCharsets.UTF_8);
+        return org.viajedragos.TextoConsola.contenido(salida.toString(StandardCharsets.UTF_8));
     }
 
     @Test
     void iniciarAtacarGanarYSalir() {
         String texto = ejecutar("1\n1\n2\n0\n", 1, 1, 1, 1, 6, 1, 6);
-        assertTrue(texto.contains("=== Viaje a Dragos ==="));
+        assertTrue(texto.contains("VIAJE A DRAGOS"));
         assertTrue(texto.contains("1. Atacar"));
-        assertTrue(texto.contains("Aventurero: 48/48 de vida | Lobo: 18/18 de vida"));
+        assertTrue(texto.contains("Aventurero Lobo PS 48/48 PS 18/18"));
         assertTrue(texto.contains("¡Golpe crítico!"));
         assertTrue(texto.contains("Aventurero golpea a Lobo y causa 18 puntos de daño"));
         assertTrue(texto.contains("Vida final: Aventurero 48/48 | Lobo 0/18"));
@@ -62,7 +62,7 @@ class AppTest {
                 1, 1, 1, 6, 6, 1, 6, 6, 1, 6,
                 1, 1, 1, 6, 6, 1, 6, 6, 1, 6);
         assertEquals(2, texto.split("Comienza el combate", -1).length - 1);
-        assertEquals(2, texto.split("Aventurero: 48/48 de vida", -1).length - 1);
+        assertEquals(4, texto.split("PS 48/48", -1).length - 1);
         assertEquals(2, texto.split("Vida final: Aventurero 30/48", -1).length - 1);
         assertEquals(2, texto.split("Victoria\\.", -1).length - 1);
         assertTrue(texto.contains("1. Nueva aventura"));
@@ -129,7 +129,7 @@ class AppTest {
             System.setIn(anteriorEntrada);
             System.setOut(anteriorSalida);
         }
-        assertTrue(salida.toString(StandardCharsets.UTF_8).contains("Viaje a Dragos"));
+        assertTrue(salida.toString(StandardCharsets.UTF_8).contains("VIAJE A DRAGOS"));
         assertTrue(salida.toString(StandardCharsets.UTF_8).contains("Hasta pronto."));
     }
 }

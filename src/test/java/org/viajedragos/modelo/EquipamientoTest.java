@@ -329,7 +329,7 @@ class EquipamientoTest {
         } finally {
             System.setOut(consolaOriginal);
         }
-        String texto = salida.toString(StandardCharsets.UTF_8);
+        String texto = salida.toString(StandardCharsets.UTF_8).replaceAll("(?m)^│  |  │$", "");
         assertTrue(texto.lines().anyMatch(l -> l.trim().matches("FUERZA\\s+5\\s+8\\s+\\+3")));
         assertTrue(texto.lines().anyMatch(l -> l.trim().matches("RESISTENCIA\\s+-4\\s+--\\s+\\+4")));
         assertTrue(texto.lines().anyMatch(l -> l.trim().matches("AGILIDAD\\s+--\\s+-2\\s+-2")));
