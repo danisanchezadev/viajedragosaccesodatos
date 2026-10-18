@@ -2,7 +2,7 @@
 
 Fecha: 14 de octubre de 2026.
 
-> **Estado actual (18 de octubre de 2026):** base publicada f97e7fc, pociones durante el combate. Cambios locales: huida del jugador y oferta de espada tras primera victoria real, conservando los demás Combatiente y el modo automático. `mvn clean test`: 422 pruebas pasan, sin fallos, errores ni omisiones. Sin commit ni push de esta fase. Los apartados siguientes conservan el historial de cada etapa; la más reciente se documenta al final.
+> **Estado actual (18 de octubre de 2026):** base publicada 40463bd, huida y espada tras primera victoria real. Cambios locales: catálogo sustituible en memoria, selección uniforme desde el primer encuentro y vida inicial 48/48. `mvn clean test`: 452 pruebas pasan, sin fallos, errores ni omisiones. Simulación: 94,02 % de cuatro victorias en 10.000 sesiones sin consumibles, con espada desde el segundo. Sin commit ni push de esta fase. Los apartados siguientes conservan el historial de cada etapa; la más reciente se documenta al final.
 
 ## Alcance y resultado
 
@@ -783,6 +783,9 @@ reglas, persistencia ni arquitectura genérica de acciones.
 
 ## Huida del combate — 18 de octubre de 2026
 
+Nota de continuidad: esta fase se publicó posteriormente en 40463bd. Las notas
+siguientes conservan su estado original de entrega.
+
 Base main f97e7fc, árbol comprobado limpio antes de editar. Implementación tras
 autorización expresa de fórmula, empate, acción directa, continuidad, espada y
 ausencia de eventos alHuir/alPerseguir. Sin commit ni push.
@@ -851,3 +854,118 @@ no se atribuye a esta fase una partida manual desde IntelliJ.
 Fuera de alcance: huida enemiga, persecución, penalizaciones, nuevas habilidades,
 objetos de escape, cofres, mazmorra y arquitecturas genéricas. Sin cambios en
 ResultadoCombate: se reutiliza JUGADOR_HUYE existente.
+
+## Catálogo de enemigos y equilibrio inicial — 18 de octubre de 2026
+
+Base main 40463bd; árbol limpio comprobado antes de editar. El autor autoriza
+expresamente tres piezas productivas nuevas, variedad desde el primer encuentro,
+generador independiente y ajuste del Aventurero para cuatro combates breves.
+No hay commit ni push de esta fase.
+
+### Contrato, instancias e integración
+
+- DefinicionEnemigo es un record inmutable con id, nombre, descripción, cinco
+  atributos y vida máxima. Valida textos obligatorios, id/nombre no vacíos,
+  atributos no negativos y vida positiva. crearEnemigo crea siempre un Enemigo
+  con vida completa y mapas propios; sin habilidades ni equipo en la definición.
+- RepositorioEnemigos declara List<DefinicionEnemigo> obtenerTodos(). No contiene
+  selección ni aleatoriedad. RepositorioEnemigosMemoria devuelve una lista
+  inmutable estable con Lobo (5/2/2/1/2/18), Goblin (3/1/2/2/3/12), Bandido
+  (4/1/2/1/2/14), Esqueleto (3/2/1/1/1/14). Orden: fuerza, resistencia,
+  iniciativa, agilidad, velocidad, vida máxima. El Lobo conserva sus valores.
+- app carga una copia inmutable una vez por aventura y valida ids únicos/lista.
+  Catálogo vacío/nulo, entrada nula, ids repetidos o definición inválida producen
+  un mensaje sin iniciar combate ni consumir dados/azar. No inventa respaldos.
+- seleccionarEnemigo usa nextInt(tamaño) fuera del repositorio, desde el primer
+  encuentro, con probabilidad uniforme 25 % y repeticiones permitidas. La definición
+  seleccionada construye una instancia nueva incluso tras repetir especie o huir.
+- Un Random de encuentros se conserva por sesión, separado de TiradorDado y del
+  Random de botín. Se conservan las firmas previas y se añaden dos sobrecargas:
+  ejecutar pública y jugarAventura de paquete con repositorio y azar de encuentros.
+  Conectar otra implementación solo requiere suministrarla en el arranque;
+  Combate y Enemigo no conocen repositorios o tecnologías externas.
+- No cambian combate, huida, habilidades, equipo, inventario o recompensas.
+  Sigue el mismo Jugador, sin curación automática, botín solo por victoria y
+  espada ofrecida una vez tras primera victoria real. No se equipa automáticamente.
+
+### Análisis de equilibrio y cambio autorizado
+
+Se revisaron las fórmulas reales antes de modificar el jugador: iniciativa inicial
+por producto, orden de dos acciones con +2 al poseedor, ataque fuerza+agilidad+dado,
+defensa resistencia+agilidad+dado, fallo 1, defensa fallida 1, crítico 6/1 con otro
+dado y contraataque 1/6 directo igual a fuerza. La vida restante se acumula entre
+encuentros y la espada aporta solo +1 a fuerza desde su aceptación.
+
+Sin equipo, los valores ataque/defensa antes del dado son Aventurero 8/4,
+Lobo 6/3, Goblin 5/3, Bandido 5/2 y Esqueleto 4/3. Con dados ataque 4/defensa 2,
+el jugador causa respectivamente 7/7/8/7 y recibe 4/3/3/2. Un crítico del Lobo
+puede causar 13–18 PS ignorando la defensa; subir resistencia por sí sola no
+elimina ese riesgo. Los críticos propios causan 15–20 antes de equipar y 16–21
+después. Los fallos/contraataques y el orden de iniciativa impiden deducir la
+supervivencia solo del daño ordinario.
+
+Se exploraron candidatos con el motor real y después se incorporó una simulación
+reproducible a la suite. Solo la vida inicial de consola cambia 24/24 a 48/48;
+fuerza 6, resistencia 2, iniciativa 3, agilidad 2 y velocidad 2 no cambian.
+Jugador como clase, sus constructores y el motor permanecen intactos.
+
+EquilibrioAventuraTest ejecuta 10.000 sesiones por candidato, cuatro encuentros
+uniformes desde el primero, siempre atacar, sin curación/consumibles/huida y con
+espada real equipada después de la primera victoria. Un observador exclusivo de
+prueba cuenta inicios de turno sin alterar atributos, acciones o dados. Generadores
+de semillas independientes 20261018 (dados) y 20261019 (encuentros); nextLong por
+sesión y reinicio de esos generadores entre candidatos para comparar las mismas
+condiciones. Son 60.000 sesiones simuladas en total.
+
+| Vida | Cuatro victorias / 10.000 | Tasa | Turnos/combate |
+|---|---:|---:|---:|
+| 24 | 5.334 | 53,34 % | 2,823 |
+| 28 | 6.387 | 63,87 % | 2,871 |
+| 32 | 7.263 | 72,63 % | 2,909 |
+| 36 | 8.046 | 80,46 % | 2,941 |
+| 40 | 8.618 | 86,18 % | 2,963 |
+| 48 | 9.402 | 94,02 % | 2,991 |
+
+A 48 PS participaron 10.113 Lobos, 9.889 Goblins, 9.792 Bandidos y 9.976
+Esqueletos; las sesiones que mueren no inician los encuentros restantes. Duración
+media por tipo 3,609 / 2,651 / 2,691 / 2,997 turnos. Vida restante media entre
+supervivientes: 25,66. Se supera el objetivo >=90 % sin prolongar los combates ni
+introducir ventajas ocultas. No garantiza supervivencia ante cualquier secuencia
+ni ante aventuras ilimitadas; la referencia presupone aceptar la espada.
+
+### Pruebas, compatibilidad e incidencias
+
+- Los 422 casos previos se conservan. AppTest, AventuraTest, RecompensaTest,
+  BotinPocionesTest y ExploracionTest inyectan un repositorio solo-Lobo y un azar
+  separado para mantener sus escenarios de combate y botín reproducibles.
+- Los casos que construyen el jugador mediante ejecutar adaptan 24/24 a 48/48;
+  el mismo crítico inicial deja 30/48 en lugar de 6/24. La derrota controlada
+  requiere dos críticos, dos contraataques y un golpe final. Mantienen verificaciones
+  de muerte, ausencia de menú al muerto, continuidad y reinicio sin reducirlas.
+  Los jugadores construidos directamente por otras pruebas mantienen 24 PS u
+  otros valores propios y sus expectativas anteriores.
+- 15 casos nuevos en RepositorioEnemigosTest: catálogo exacto/orden/ids, colección
+  inmutable, validaciones y aislamiento de vida, atributos, equipo y habilidades.
+- 14 casos nuevos en CatalogoAventuraTest: selección de los cuatro desde el primer
+  encuentro, repetición independiente después de dañar/huir, catálogo consultado
+  una vez y copia frente a cambios externos, repositorio alternativo, inválidos,
+  persistencia del generador entre aventuras, premios/espada y modo automático.
+- 1 caso de EquilibrioAventuraTest con los seis candidatos y semillas fijas;
+  exige >=90 % a 48 PS y duración media menor de cuatro turnos. No usa azar no
+  controlado ni una prueba estadística que cambie entre ejecuciones.
+
+La primera ejecución tras el cambio de vida detectó diez expectativas antiguas
+de vida/derrota que todavía suponían 24 PS; se actualizaron como cambio legítimo
+de equilibrio, conservando los escenarios. Una ejecución parcial de simulación
+fue bloqueada por permisos al resolver un plugin Maven; se repitió con autorización
+y terminó correctamente. La verificación final completa no tiene incidencias.
+
+Resultado real final: **mvn clean test, BUILD SUCCESS; 452 pruebas, 0 fallos,
+0 errores y 0 omitidas**, 37 fuentes principales y 33 archivos de pruebas
+recompilados. El auxiliar exploratorio alojado en target fue eliminado por clean;
+la simulación reproducible queda únicamente en las pruebas. README, contexto y
+checklist actualizados; huida reconocida como publicada en 40463bd.
+
+No se introduce persistencia, archivos de datos, frameworks, servicios, nuevas
+habilidades/objetos, escalado ni cambios de fórmulas. Las fuentes externas, sus
+errores operativos y cualquier catálogo de armas/objetos quedan para otra fase.

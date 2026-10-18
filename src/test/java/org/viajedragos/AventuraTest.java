@@ -1,6 +1,8 @@
 package org.viajedragos;
 
 import org.junit.jupiter.api.Test;
+import org.viajedragos.catalogo.RepositorioEnemigos;
+import org.viajedragos.modelo.DefinicionEnemigo;
 import org.viajedragos.arma.Arma;
 import org.viajedragos.arma.Atributo;
 import org.viajedragos.arma.TipoEquipo;
@@ -30,9 +32,14 @@ import java.util.function.IntConsumer;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AventuraTest {
+    private RepositorioEnemigos soloLobo() {
+        return () -> java.util.List.of(new DefinicionEnemigo("lobo", "Lobo", "", 5, 2, 2, 1, 2, 18));
+    }
+
     private static final int[] VICTORIA_SIN_DANIO = {1, 1, 1, 1, 6, 1, 6};
     private static final int[] VICTORIA_CON_VIDA_6 = {1, 1, 1, 6, 6, 1, 6, 6, 1, 6};
-    private static final int[] DERROTA = {1, 1, 1, 6, 6, 1, 6, 1, 6, 6, 1, 4, 2};
+    // Misma regla de derrota; el Aventurero de consola dispone ahora de 48 PS.
+    private static final int[] DERROTA = {1, 1, 1, 6, 6, 1, 6, 1, 6, 6, 1, 6, 1, 6, 1, 6, 1, 6, 4, 2};
     private final ByteArrayOutputStream salida = new ByteArrayOutputStream();
 
     private PrintStream consola() {
@@ -49,13 +56,13 @@ class AventuraTest {
 
     private void ejecutar(String entrada, Dados dados) {
         assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.ejecutar(new Scanner(entrada), consola(), dados, new Random(0)));
+                app.ejecutar(new Scanner(entrada), consola(), dados, new Random(0), soloLobo(), new Random(0)));
         dados.comprobarConsumo();
     }
 
     private boolean jugar(Jugador jugador, String entrada, Dados dados) {
         boolean volverAlInicio = assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(jugador, new Scanner(entrada), consola(), dados, new Random(0)));
+                app.jugarAventura(jugador, new Scanner(entrada), consola(), dados, new Random(0), soloLobo(), new Random(0)));
         dados.comprobarConsumo();
         return volverAlInicio;
     }
@@ -68,10 +75,10 @@ class AventuraTest {
     void continuarConservaExactamenteVidaActualYMaxima() {
         ejecutar("1\n1\n2\n3\n1\n0\n", new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
         assertEquals(2, veces("Victoria."));
-        assertEquals(2, veces("Vida final: Aventurero 6/24 | Lobo 0/18"));
+        assertEquals(2, veces("Vida final: Aventurero 30/48 | Lobo 0/18"));
         String segundo = texto().substring(texto().indexOf("Encuentro 2."));
-        assertTrue(segundo.contains("Aventurero: 6/24 de vida | Lobo: 18/18 de vida"));
-        assertFalse(segundo.contains("Aventurero: 24/24"));
+        assertTrue(segundo.contains("Aventurero: 30/48 de vida | Lobo: 18/18 de vida"));
+        assertFalse(segundo.contains("Aventurero: 48/48"));
         assertEquals(1, veces("1. Nueva aventura"));
     }
 
@@ -121,14 +128,14 @@ class AventuraTest {
         ejecutar("1\n1\n2\n4\n1\n1\n2\n0\n", new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
         assertEquals(2, veces("Encuentro 1."));
         assertFalse(texto().contains("Encuentro 2."));
-        assertEquals(2, veces("Aventurero: 24/24 de vida | Lobo: 18/18 de vida"));
-        assertTrue(texto().contains("Vida final: Aventurero 6/24"));
-        assertTrue(texto().contains("Vida final: Aventurero 24/24"));
+        assertEquals(2, veces("Aventurero: 48/48 de vida | Lobo: 18/18 de vida"));
+        assertTrue(texto().contains("Vida final: Aventurero 30/48"));
+        assertTrue(texto().contains("Vida final: Aventurero 48/48"));
     }
 
     @Test
     void muerteTerminaAventuraSinMenuDeContinuacion() {
-        ejecutar("1\n1\n0\n", new Dados(DERROTA));
+        ejecutar("1\n1\n1\n0\n", new Dados(DERROTA));
         assertTrue(texto().contains("Derrota."));
         assertEquals(2, veces("1. Nueva aventura"));
         assertFalse(texto().contains("3. Continuar al siguiente encuentro"));
@@ -137,12 +144,12 @@ class AventuraTest {
 
     @Test
     void nuevaAventuraTrasMorirNoReutilizaElPersonajeMuerto() {
-        ejecutar("1\n1\n1\n1\n2\n0\n", new Dados(DERROTA, VICTORIA_SIN_DANIO));
+        ejecutar("1\n1\n1\n1\n1\n2\n0\n", new Dados(DERROTA, VICTORIA_SIN_DANIO));
         assertEquals(1, veces("Derrota."));
         assertEquals(1, veces("Victoria."));
         assertEquals(2, veces("Encuentro 1."));
-        assertEquals(2, veces("Aventurero: 24/24 de vida | Lobo: 18/18 de vida"));
-        assertTrue(texto().contains("Vida final: Aventurero 24/24 | Lobo 0/18"));
+        assertEquals(2, veces("Aventurero: 48/48 de vida | Lobo: 18/18 de vida"));
+        assertTrue(texto().contains("Vida final: Aventurero 48/48 | Lobo 0/18"));
     }
 
     @Test
@@ -178,7 +185,7 @@ class AventuraTest {
                 new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
         assertEquals(5, veces("Entrada inválida"));
         assertEquals(2, veces("Comienza el combate"));
-        assertEquals(2, veces("Vida final: Aventurero 6/24 | Lobo 0/18"));
+        assertEquals(2, veces("Vida final: Aventurero 30/48 | Lobo 0/18"));
     }
 
     @Test

@@ -18,13 +18,71 @@ Requiere JDK 23 y Maven. No utiliza persistencia ni servicios externos.
    encuentro, `4` termina la aventura y vuelve al inicio, y `0` sale del juego.
 
 El menú inicial ofrece `1. Nueva aventura` y `0. Salir`. Cada aventura crea un
-Aventurero con 24/24 de vida, sin habilidades ni equipamiento. Cada encuentro crea
-un Lobo nuevo con los valores actuales, sin dificultad automática ni límite de
+Aventurero con 48/48 de vida, sin habilidades ni equipamiento. Cada encuentro crea
+un enemigo nuevo del catálogo, sin dificultad automática ni límite de
 encuentros. Al continuar se conserva exactamente la vida restante del Aventurero:
 no hay curación automática entre encuentros ni progresión. La espada fija se ofrece
 después de la primera victoria real y no vuelve a ofrecerse durante esa aventura,
 aunque se rechace. Huir no cuenta como victoria. Además, cada
 enemigo derrotado definitivamente puede dejar pociones.
+
+## Catálogo de enemigos
+
+Cada encuentro, incluido el primero, selecciona uniformemente una de estas
+definiciones (25 % cada una). Se permiten repeticiones consecutivas:
+
+| Enemigo | Fuerza | Resistencia | Iniciativa | Agilidad | Velocidad | Vida |
+|---|---:|---:|---:|---:|---:|---:|
+| Lobo | 5 | 2 | 2 | 1 | 2 | 18 |
+| Goblin | 3 | 1 | 2 | 2 | 3 | 12 |
+| Bandido | 4 | 1 | 2 | 1 | 2 | 14 |
+| Esqueleto | 3 | 2 | 1 | 1 | 1 | 14 |
+
+`RepositorioEnemigos.obtenerTodos()` devuelve `List<DefinicionEnemigo>` y no
+selecciona enemigos. `RepositorioEnemigosMemoria` contiene una lista inmutable
+de orden estable. El record DefinicionEnemigo guarda identificador, nombre,
+descripción, cinco atributos y vida máxima; crearEnemigo construye una instancia
+nueva con vida completa, mapas independientes y sin habilidades ni equipo.
+
+La aventura carga una instantánea del catálogo una vez. La selección reside en
+app y utiliza un Random de encuentros independiente, conservado durante toda la
+sesión. No utiliza el Random de botín ni TiradorDado. Catálogos vacíos, entradas
+nulas, identificadores duplicados o definiciones inválidas impiden iniciar la
+aventura con un mensaje; no se inventa un enemigo de respaldo.
+
+Para sustituir el origen, otro desarrollador implementa RepositorioEnemigos y
+conecta su instancia mediante la sobrecarga pública de app.ejecutar que recibe
+entrada, salida, dados, azar de botín, repositorio y azar de encuentros. No necesita
+cambiar Combate ni la selección. Las firmas anteriores delegan en memoria.
+No hay lectura de archivos, JDBC, JPA, frameworks ni persistencia en esta versión.
+
+## Equilibrio inicial
+
+Solo cambia la vida del Aventurero de consola: antes 24/24, ahora 48/48.
+Fuerza 6, resistencia 2, iniciativa 3, agilidad 2 y velocidad 2 permanecen iguales.
+La fuerza efectiva pasa a 7 únicamente si el jugador acepta la espada. Jugador
+como clase y las fórmulas del motor no se modifican; tampoco hay curación automática.
+
+EquilibrioAventuraTest utiliza el motor real, siempre Atacar, cuatro encuentros
+uniformes y espada FUERZA +1 desde el segundo. Sin pociones ni huida. Compara
+10.000 sesiones por candidato, con semillas reproducibles independientes: generadores
+de semillas 20261018 (dados) y 20261019 (encuentros), usando nextLong por sesión.
+
+| Vida inicial | Cuatro victorias / 10.000 | Supervivencia |
+|---|---:|---:|
+| 24 | 5.334 | 53,34 % |
+| 28 | 6.387 | 63,87 % |
+| 32 | 7.263 | 72,63 % |
+| 36 | 8.046 | 80,46 % |
+| 40 | 8.618 | 86,18 % |
+| 48 | 9.402 | 94,02 % |
+
+Con 48 PS, la duración media es 2,991 turnos por combate (Lobo 3,609; Goblin 2,651;
+Bandido 2,691; Esqueleto 2,997). Quedan 25,66 PS de media entre quienes completan
+los cuatro encuentros. El ajuste supera el objetivo del 90 % sin alargar combates
+ni modificar daño, críticos, contraataques o iniciativa. Es una muestra fija, no
+una garantía frente a cualquier secuencia de dados ni frente a encuentros ilimitados.
+La espada sigue siendo una elección voluntaria en la consola normal.
 
 La espada permanece equipada y su bonificación no se acumula. La fuerza base
 sigue siendo 6 y la efectiva pasa a 7. Equiparla no recupera vida. Las entradas
@@ -134,7 +192,7 @@ rechazarla marca la oferta como realizada. Una aventura nueva tiene su propia of
 Si muere el Aventurero, incluso si mueren ambos, se muestra el resultado y se
 regresa al menú inicial. Terminar voluntariamente la aventura también descarta
 el personaje junto con su equipo e inventario. Una nueva aventura comienza con
-otro Aventurero a 24/24, sin espada ni pociones, y puede conseguir sus propias recompensas.
+otro Aventurero a 48/48, sin espada ni pociones, y puede conseguir sus propias recompensas.
 
 Cada turno ordena las dos acciones mediante la iniciativa y los dados existentes.
 El enemigo ataca automáticamente cuando le corresponde. Si actúa primero, su
@@ -148,8 +206,8 @@ los contraataques y la pérdida real de vida, limitada a la vida disponible.
 Las entradas inválidas repiten la pregunta sin consumir acciones ni dados.
 Cerrar la entrada interrumpe la sesión; no se interpreta como huida o victoria.
 
-Los valores de Aventurero se definen en `app.ejecutar` y los del Lobo en
-`app.jugarAventura`. Esta última conserva el jugador recibido, crea un nuevo
+Los valores de Aventurero se definen en `app.ejecutar` y los enemigos en
+`RepositorioEnemigosMemoria`. `app.jugarAventura` conserva el jugador recibido, crea un nuevo
 enemigo/Combate por encuentro y deja la limpieza de efectos a alFinalCombate.
 `app.ofrecerEspada` crea una pieza por oferta y utiliza únicamente jugador.equipar;
 no modifica fuerza directamente ni llama a aplicarEfectos manualmente.
@@ -182,7 +240,7 @@ las pruebas de integración, sin asignarlas a la demo ni añadir narración.
 restauración, niveles y equipo. `RolesModificadoresDanioTest` comprueba los roles
 confirmados: Caparazón, Defensa perfecta y Guardia férrea solo en defensa;
 Castigo al torpe y Golpe certero solo en ataque. Incluye condiciones de activación,
-instancias compartidas y reglas especiales. La suite completa pasa con 422 pruebas.
+instancias compartidas y reglas especiales. La suite completa pasa con 452 pruebas.
 El análisis y la corrección están en `ANALISIS_ROLES_MODIFICADORES_DANIO.md`.
 
 `AventuraTest` añade 12 casos de continuidad: identidad del jugador, enemigos
@@ -201,8 +259,9 @@ La continuidad entre encuentros está publicada en `main`, commit `6fc2a8d`.
 La Espada desgastada está publicada en `ec9dc46` y el botín de pociones en
 `c1d20d`. El menú de exploración, consulta y consumo fuera de combate están
 publicados en `e363c95`. El uso de pociones durante el combate está publicado en
-`f97e7fc`. La huida y la oferta de espada tras la primera victoria real son los
-cambios locales de esta fase; no se ha hecho commit ni push.
+`f97e7fc`. La huida y la oferta de espada tras la primera victoria real están
+publicadas en `40463bd`. Catálogo y equilibrio inicial son cambios locales de
+esta fase; no se ha hecho commit ni push.
 
 `InventarioPocionesTest` añade 8 casos de cantidades, datos de recuperación,
 independencia entre jugadores, encapsulación y ausencia de curación automática.
@@ -238,3 +297,11 @@ empates, velocidad efectiva, iniciativa, ausencia de ataques/eventos adicionales
 enemigo antes/después, limpieza, muerte/resurrección, interrupción y continuidad
 sin premios por escapar. Aceptar/rechazar la espada tras huir y ganar no repite
 oferta ni botín. La verificación de consola usa entradas y dados controlados.
+
+Esta fase conserva los 422 casos anteriores y añade 30: 15 en
+RepositorioEnemigosTest, 14 en CatalogoAventuraTest y 1 simulación de equilibrio
+con seis candidatos. Los cinco archivos previos de pruebas de aplicación inyectan
+un repositorio solo-Lobo y un Random de encuentros separado. AppTest, AventuraTest
+y dos escenarios de RecompensaTest que arrancan aventuras adaptan vida 24 a 48
+y secuencias letales al ajuste autorizado; no cambian los datos de los jugadores
+construidos expresamente por otros escenarios. Ninguna prueba se elimina o deshabilita.

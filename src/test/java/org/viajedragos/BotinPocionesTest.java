@@ -1,6 +1,8 @@
 package org.viajedragos;
 
 import org.junit.jupiter.api.Test;
+import org.viajedragos.catalogo.RepositorioEnemigos;
+import org.viajedragos.modelo.DefinicionEnemigo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -26,6 +28,10 @@ import java.util.function.IntConsumer;
 import static org.junit.jupiter.api.Assertions.*;
 
 class BotinPocionesTest {
+    private RepositorioEnemigos soloLobo() {
+        return () -> java.util.List.of(new DefinicionEnemigo("lobo", "Lobo", "", 5, 2, 2, 1, 2, 18));
+    }
+
     private static final int[] VICTORIA = {1, 1, 1, 1, 6, 1, 6};
     private static final int[] VICTORIA_CON_VIDA_6 = {1, 1, 1, 6, 6, 1, 6, 6, 1, 6};
     private static final int[] ENEMIGO_PRIMERO_LETAL = {1, 1, 1, 6, 6, 1, 6};
@@ -49,7 +55,7 @@ class BotinPocionesTest {
 
     private boolean jugar(Jugador j, String entrada, Dados dados, AzarBotin azar) {
         boolean volver = assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(j, new Scanner(entrada), consola(), dados, azar));
+                app.jugarAventura(j, new Scanner(entrada), consola(), dados, azar, soloLobo(), new Random(0)));
         dados.comprobarConsumo();
         return volver;
     }
@@ -208,7 +214,7 @@ class BotinPocionesTest {
         AzarBotin azar = new AzarBotin(0, 99, 99, 0);
         Dados dados = new Dados(VICTORIA, VICTORIA);
         assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.ejecutar(
-                new Scanner("1\n1\n2\n4\n1\n1\n2\n0\n"), consola(), dados, azar));
+                new Scanner("1\n1\n2\n4\n1\n1\n2\n0\n"), consola(), dados, azar, soloLobo(), new Random(0)));
         dados.comprobarConsumo();
         azar.comprobarConsumo();
         String primera = texto().substring(0, texto().lastIndexOf("Encuentro 1."));

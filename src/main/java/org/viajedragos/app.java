@@ -7,6 +7,9 @@ import org.viajedragos.combate.Combate;
 import org.viajedragos.combate.Dado;
 import org.viajedragos.combate.ResultadoCombate;
 import org.viajedragos.combate.TiradorDado;
+import org.viajedragos.catalogo.RepositorioEnemigos;
+import org.viajedragos.catalogo.RepositorioEnemigosMemoria;
+import org.viajedragos.modelo.DefinicionEnemigo;
 import org.viajedragos.modelo.Enemigo;
 import org.viajedragos.modelo.Jugador;
 import org.viajedragos.modelo.TipoPocion;
@@ -16,6 +19,8 @@ import java.util.NoSuchElementException;
 import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.List;
+import java.util.HashSet;
 
 public class app {
     public static void main(String[] args) {
@@ -28,6 +33,11 @@ public class app {
     }
 
     static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin) {
+        ejecutar(entrada, salida, dados, azarBotin, new RepositorioEnemigosMemoria(), new Random());
+    }
+
+    public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin,
+                                RepositorioEnemigos repositorio, Random azarEncuentros) {
         salida.println("=== Viaje a Dragos ===");
         salida.println("Un combate por turnos. La iniciativa decide quién actúa primero.");
         while (true) {
@@ -49,8 +59,8 @@ public class app {
                 continue;
             }
             // Un jugador por aventura; continuar nunca reconstruye este personaje.
-            Jugador jugador = new Jugador("Aventurero", "", 6, 2, 3, 2, 2, 24, 24);
-            if (!jugarAventura(jugador, entrada, salida, dados, azarBotin)) return;
+            Jugador jugador = new Jugador("Aventurero", "", 6, 2, 3, 2, 2, 48, 48);
+            if (!jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros)) return;
         }
     }
 
@@ -61,10 +71,35 @@ public class app {
 
     static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
                                  TiradorDado dados, Random azarBotin) {
+        return jugarAventura(jugador, entrada, salida, dados, azarBotin,
+                new RepositorioEnemigosMemoria(), new Random());
+    }
+
+    static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
+                                 TiradorDado dados, Random azarBotin,
+                                 RepositorioEnemigos repositorio, Random azarEncuentros) {
+        List<DefinicionEnemigo> catalogo;
+        try {
+            catalogo = List.copyOf(repositorio.obtenerTodos());
+            if (catalogo.isEmpty()) {
+                salida.println("No hay enemigos disponibles. No se inicia la aventura.");
+                return true;
+            }
+            var identificadores = new HashSet<String>();
+            for (DefinicionEnemigo definicion : catalogo) {
+                if (!identificadores.add(definicion.id())) {
+                    salida.println("El catálogo contiene identificadores de enemigo repetidos. No se inicia la aventura.");
+                    return true;
+                }
+            }
+        } catch (IllegalArgumentException | NullPointerException datosInvalidos) {
+            salida.println("El catálogo de enemigos no es válido. No se inicia la aventura.");
+            return true;
+        }
         int encuentro = 1;
         boolean espadaOfrecida = false;
         while (true) {
-            Enemigo enemigo = new Enemigo("Lobo", "", 5, 2, 2, 1, 2, 18, 18);
+            Enemigo enemigo = seleccionarEnemigo(catalogo, azarEncuentros);
             salida.printf("%nEncuentro %d.%n", encuentro);
             salida.printf("Comienza el combate: %s contra %s.%n", jugador.getNombre(), enemigo.getNombre());
             ResultadoCombate resultado;
@@ -117,6 +152,10 @@ public class app {
             }
             encuentro++;
         }
+    }
+
+    private static Enemigo seleccionarEnemigo(List<DefinicionEnemigo> catalogo, Random azarEncuentros) {
+        return catalogo.get(azarEncuentros.nextInt(catalogo.size())).crearEnemigo();
     }
 
     private static void cabecera(String titulo, PrintStream salida) {

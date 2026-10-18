@@ -1,6 +1,8 @@
 package org.viajedragos;
 
 import org.junit.jupiter.api.Test;
+import org.viajedragos.catalogo.RepositorioEnemigos;
+import org.viajedragos.modelo.DefinicionEnemigo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -24,6 +26,10 @@ import java.util.Scanner;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ExploracionTest {
+    private RepositorioEnemigos soloLobo() {
+        return () -> java.util.List.of(new DefinicionEnemigo("lobo", "Lobo", "", 5, 2, 2, 1, 2, 18));
+    }
+
     private final ByteArrayOutputStream salida = new ByteArrayOutputStream();
 
     private Jugador jugador(int vida) {
@@ -193,7 +199,7 @@ class ExploracionTest {
         };
         String entrada = "1\n1\n1\nx\n0\n2\n1\n3\n1\n1\n0\n0\n";
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(j, new Scanner(entrada), consola(), dados, azar)));
+                app.jugarAventura(j, new Scanner(entrada), consola(), dados, azar, soloLobo(), new Random(0))));
         assertEquals(valores.length, usadas[0]);
         assertEquals(4, botin[0]);
         assertEquals(14, j.getVida(), "El segundo encuentro no recupera vida automáticamente");
@@ -219,7 +225,7 @@ class ExploracionTest {
                 app.jugarAventura(jugador(24), new Scanner("1\n2\n" + opcion), consola(), () -> {
                     assertTrue(usadas[0] < valores.length);
                     return valores[usadas[0]++];
-                }, new Random(0))));
+                }, new Random(0), soloLobo(), new Random(0))));
         assertEquals(valores.length, usadas[0]);
         assertEquals(1, texto().split("Comienza el combate", -1).length - 1);
         assertTrue(texto().endsWith("Entrada finalizada. Hasta pronto." + System.lineSeparator()));
@@ -249,7 +255,7 @@ class ExploracionTest {
                         assertEquals(7, j.getFuerza());
                     }
                     return tiradas[usadas[0]++];
-                }, azar)));
+                }, azar, soloLobo(), new Random(0))));
         assertEquals(tiradas.length, usadas[0]);
         assertEquals(4, botin[0]);
         assertEquals(24, j.getVida());
@@ -282,7 +288,7 @@ class ExploracionTest {
                 new Scanner(entrada), consola(), () -> {
                     assertTrue(usadas[0] < tiradas.length);
                     return tiradas[usadas[0]++];
-                }, azar)));
+                }, azar, soloLobo(), new Random(0))));
         assertEquals(4, usadas[0]);
         assertEquals(20, j.getVida());
         assertEquals(1, j.getCantidadPociones(TipoPocion.PEQUENA));

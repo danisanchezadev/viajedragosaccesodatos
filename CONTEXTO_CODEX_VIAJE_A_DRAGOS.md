@@ -88,8 +88,8 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 
 ### 3.5 Continuidad entre encuentros: fase 4 confirmada
 
-- Cada aventura crea un único Aventurero con los atributos actuales, 24/24 de vida y sin habilidades ni equipo inicial. Se conserva la misma instancia durante toda la aventura.
-- Cada encuentro crea un Lobo y un Combate nuevos. El Lobo mantiene sus atributos actuales, sin cambios automáticos de dificultad. No se fija un máximo de encuentros.
+- Cada aventura crea un único Aventurero con fuerza 6, resistencia 2, iniciativa 3, agilidad 2, velocidad 2 y 48/48 de vida, sin habilidades ni equipo inicial. La vida anterior era 24/24; ajuste autorizado según 3.11. Se conserva la misma instancia durante toda la aventura.
+- Cada encuentro crea un enemigo y un Combate nuevos. Selección uniforme del catálogo desde el primero según 3.11, sin Lobo obligatorio, escalado ni límite de encuentros.
 - El jugador conserva la vida restante y su vida máxima, sin curación automática entre encuentros. Puede utilizar voluntariamente pociones según 3.8. No se reinician atributos ni se eliminan equipo o habilidades; la limpieza temporal sigue en alFinalCombate.
 - Tras victoria, botín y oferta de espada si corresponde: menú de exploración con `1. Revisar inventario`, `2. Usar objeto`, `3. Continuar al siguiente encuentro`, `4. Terminar aventura y volver al menú inicial`, `0. Salir del juego`. Continuar conserva al jugador; terminar lo descarta; salir termina la sesión. Sustituye la numeración inicial de la fase 4.
 - Menú inicial: `1. Nueva aventura`, `0. Salir`. Una nueva aventura crea un personaje nuevo.
@@ -145,13 +145,26 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 
 ### 3.10 Huida del jugador — implementación autorizada
 
-- Cambio local sobre main f97e7fc. Seleccionar 3 Huir realiza inmediatamente dos tiradas de TiradorDado, una del jugador y otra del enemigo, sin confirmación. Éxito si velocidad efectiva del jugador + dado > velocidad efectiva del enemigo + dado. Incluye equipo y efectos activos; empate falla sin repetición ni límites adicionales de probabilidad.
+- Publicado en main 40463bd sobre f97e7fc. Seleccionar 3 Huir realiza inmediatamente dos tiradas de TiradorDado, una del jugador y otra del enemigo, sin confirmación. Éxito si velocidad efectiva del jugador + dado > velocidad efectiva del enemigo + dado. Incluye equipo y efectos activos; empate falla sin repetición ni límites adicionales de probabilidad.
 - ejecutarAccionJugador ejecuta ataque, consumo o intento de huida. Devuelve CONTINUA tras ataque/poción/huida fallida y JUGADOR_HUYE tras éxito. No añade clases, estados ni contratos públicos. Solo Jugador dispone de opciones 2 y 3; otros Combatiente conservan Atacar. El modo automático siempre ataca.
 - En combatirInterno, JUGADOR_HUYE termina inmediatamente mediante finalDelCombate: sin ataque del jugador, acción enemiga pendiente ni alFinalTurno. Sí ejecuta alFinalCombate del jugador para restaurar temporales y conserva vida, equipo, inventario y habilidades. alHuir y alPerseguir siguen sin conectar por decisión expresa.
 - Fallar consume una acción sin ataque, eventos de ataque, daño ni penalización adicionales. El enemigo pendiente actúa; si ya actuó, no repite. Se conserva resolución de muertes/resurrecciones después de acciones y los eventos finales/alternancia si el combate continúa. Navegar o cancelar pociones no repite iniciativa ni inicio de turno.
-- app trata explícitamente JUGADOR_HUYE: mensaje de escape y regreso a exploración, sin victoria/derrota, botín ni espada. Continuar usa el mismo Jugador con vida restante y crea un Lobo/Combate nuevos; el abandonado no se conserva. Terminar o morir mantiene el descarte habitual del personaje.
+- app trata explícitamente JUGADOR_HUYE: mensaje de escape y regreso a exploración, sin victoria/derrota, botín ni espada. Continuar usa el mismo Jugador con vida restante y crea un enemigo/Combate nuevos; el abandonado no se conserva. Terminar o morir mantiene el descarte habitual del personaje.
 - La espada se ofrece una vez tras la primera victoria real, usando espadaOfrecida local según 3.6. Huir no marca ese booleano; aceptar o rechazar la primera oferta impide repetirla.
 - El cierre de entrada conserva NoSuchElementException e interrupción sin resultado ficticio ni recompensas. No hay huida enemiga, persecución, nuevas habilidades/consumibles ni cambios de reglas de ataque o iniciativa.
+
+### 3.11 Catálogo sustituible y equilibrio inicial autorizados
+
+- Cambios locales sobre 40463bd. El autor autoriza expresamente DefinicionEnemigo (record), RepositorioEnemigos (interfaz) y RepositorioEnemigosMemoria. Esta interfaz específica prepara la sustitución didáctica del origen de datos sin implementar persistencia, frameworks, servicios, fábricas ni otras interfaces.
+- Contrato List<DefinicionEnemigo> obtenerTodos(), sin aleatoriedad. El record almacena id técnico, nombre, descripción, fuerza, resistencia, iniciativa, agilidad, velocidad y vida máxima. crearEnemigo construye un Enemigo nuevo con vida completa y sus mapas propios, sin habilidades/equipo. No se almacenan combatientes mutables en el catálogo.
+- Catálogo en memoria, inmutable y ordenado: lobo/Lobo (5,2,2,1,2,18), goblin/Goblin (3,1,2,2,3,12), bandido/Bandido (4,1,2,1,2,14), esqueleto/Esqueleto (3,2,1,1,1,14). Orden numérico: fuerza, resistencia, iniciativa, agilidad, velocidad, vida máxima. Descripciones inicialmente vacías. Id y nombre obligatorios no vacíos, descripción no nula; atributos no negativos y vida máxima positiva.
+- app carga List.copyOf del catálogo una vez al comenzar cada aventura. Catálogo vacío/nulo, entradas nulas, ids duplicados o definición inválida impiden iniciar la aventura con mensaje y regreso al menú inicial. No hay respaldo inventado, reintentos ni infraestructura de errores externos.
+- Selección privada en app: nextInt(catalogo.size()), uniforme (25 % cada tipo), desde el primer encuentro y con repeticiones permitidas. Crear siempre una instancia nueva, incluso si repite definición. La aventura conserva el jugador, vida, inventario, equipo, huida y recompensas actuales.
+- Random de encuentros independiente de TiradorDado y del Random de botín. Se crea una vez por sesión y se pasa entre aventuras/encuentros. Las firmas anteriores se conservan; nueva sobrecarga pública ejecutar(Scanner, PrintStream, TiradorDado, Random azarBotin, RepositorioEnemigos, Random azarEncuentros), y sobrecarga de paquete de jugarAventura para pruebas.
+- Para cambiar el origen, proporcionar otra implementación del contrato en el arranque mediante esa sobrecarga. No modificar selección, exploración, Enemigo ni Combate. Archivos, JDBC, JPA y otras tecnologías siguen pendientes y no están implementados.
+- Equilibrio: solo la vida inicial de consola cambia 24/24 a 48/48, manteniendo 6/2/3/2/2 en los demás atributos. Sin cambios en Jugador o fórmulas. El jugador elige equipar espada; no se equipa automáticamente. Se justifica con simulación del motor real de cuatro encuentros, sin consumibles/huida y con fuerza +1 desde el segundo.
+- EquilibrioAventuraTest: 10.000 sesiones por candidato con generadores de semillas 20261018 (dados) y 20261019 (encuentros), nextLong independiente por sesión. Resultados de cuatro victorias: vida 24: 53,34 %; 28: 63,87 %; 32: 72,63 %; 36: 80,46 %; 40: 86,18 %; 48: 94,02 % (9.402/10.000). A 48 PS: 2,991 turnos/combate y 25,66 PS restantes medios entre supervivientes. La prueba exige >=90 % con semillas fijas; es objetivo de diseño, no una regla o garantía del motor.
+- Se mantienen los 422 escenarios anteriores, inyectando solo-Lobo en las pruebas de aplicación. Los escenarios que construyen el Aventurero desde ejecutar adaptan expectativas de vida y secuencias letales; los combatientes de prueba propios mantienen sus datos originales. Nuevos casos: 15 catálogo/validación/aislamiento, 14 selección/integración/repositorio sustituible y 1 simulación reproducible.
 
 ## 4. Habilidades
 
@@ -190,7 +203,7 @@ Estas áreas forman parte del objetivo del producto, pero **no se han establecid
 - **Comercio:** previsto como mecánica sencilla de compra/venta o interacción con una tienda; precios, moneda, descuentos y restricciones **no están confirmados para esta aplicación**. No importar reglas de ejercicios independientes sobre Strategy y tipos de cliente.
 - **Progresión:** no hay aquí una especificación confirmada de experiencia, niveles, clases de personaje o distribución de atributos para el MVP. No inventarla.
 - **Huida:** implementada para el jugador según 3.10, sin persecución ni huida enemiga. **Objetos en combate:** únicamente las dos pociones, según 3.9; otros objetos siguen pendientes.
-- **Continuidad actual:** mismo jugador y sus pociones, vida restante sin curación automática, Lobos nuevos y menús según 3.5. Espada según 3.6 y botín según 3.7. Muerte termina aventura; sin persistencia ni otras recompensas.
+- **Continuidad actual:** mismo jugador y sus pociones, vida restante sin curación automática, enemigos nuevos del catálogo 3.11 y menús según 3.5. Espada según 3.6 y botín según 3.7. Muerte termina aventura; sin persistencia ni otras recompensas.
 
 ## 7. Estructura de código conocida (orientativa; verificar)
 
@@ -224,9 +237,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 18 de octubre de 2026. Base publicada f97e7fc, pociones en combate; exploración publicada en e363c95. En local se implementan huida del jugador y oferta de espada tras la primera victoria efectiva. Sin commit ni push de esta fase.
+> **Estado:** 18 de octubre de 2026. Base publicada 40463bd, huida y espada tras primera victoria real. En local se implementan catálogo sustituible en memoria, selección uniforme desde el primer encuentro y equilibrio de vida inicial 48/48. Sin commit ni push de esta fase.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 34 fuentes principales y 30 archivos de pruebas recompilados; 422 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 398 escenarios anteriores (solo se cambia 3 a 4 como entrada inválida del menú principal). Se añaden 18 casos en CombateConsolaTest y 6 en RecompensaTest. Se enumeran las 36 parejas de dados; solo Combate.java y app.java cambian en producción, sin nuevas clases o firmas públicas.
+> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 37 fuentes principales y 33 archivos de pruebas recompilados; 452 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 422 casos anteriores con las adaptaciones de repositorio/equilibrio explicadas en 3.11 y se añaden 30. Simulación final: 94,02 % de cuatro victorias, sin pociones ni huida y con espada desde el segundo encuentro. Solo app y las tres piezas autorizadas cambian en producción; Combate/modelo existente/habilidades/equipo/dados permanecen intactos.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -240,14 +253,14 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 422 pruebas ejecutadas sin fallos ni errores; 398 escenarios anteriores y 24 nuevos de huida, sin pruebas eliminadas ni deshabilitadas.
+- [x] Suite JUnit: 452 pruebas ejecutadas sin fallos ni errores; 422 escenarios anteriores y 30 nuevos de catálogo/integración/equilibrio, sin pruebas eliminadas ni deshabilitadas.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
 - [x] Auditar clases, paquetes, firmas, dependencias y referencias del repositorio.
 - [x] Comprobar compilación del código principal: `mvn compile` termina correctamente.
 - [x] Ejecutar las pruebas existentes con `mvn test`.
-- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 422 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
+- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 452 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
 - [x] Revisar `EventosHabilidad`: todas sus firmas actuales y overrides implementados reciben `EstadoHabilidad` y compilan en el código principal.
 - [x] Revisar y corregir las seis llamadas del borrador a `dispararHabilidades`: las lambdas reciben habilidad y estado y pasan ese estado al evento.
 - [x] Activar el auxiliar existente `dispararHabilidades` para usarlo desde ataque, recorriendo habilidad y estado juntos.
@@ -290,8 +303,10 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Tras reproducir el defecto en 10 casos, convertir RolesModificadoresDanioTest en 41 regresiones de roles confirmados, condiciones originales, mismo tipo/instancia en ambos participantes, daño cero, crítico, fallo y contraataque; documentado en ANALISIS_ROLES_MODIFICADORES_DANIO.md.
 - [ ] Narración de habilidades aplazada expresamente por el autor; no añadir mensajes ni cambiar la interfaz en esta tarea.
 - [x] Confirmar y corregir los cinco roles: Caparazón/Defensa perfecta/Guardia férrea solo defensor; Castigo al torpe/Golpe certero solo atacante. Guarda por identidad del estado asociado al propietario; sin cambiar eventos, fórmulas, niveles, equipo ni otras habilidades.
-- [ ] Crear catálogos Java de enemigos, armas, objetos y habilidades en memoria.
-- [ ] Integrar encuentros desde esos catálogos, sin Factory ni persistencia.
+- [x] Catálogo Java de cuatro enemigos en memoria mediante contrato sustituible, definiciones inmutables, validación e instancias independientes.
+- [x] Integrar selección uniforme desde el primer encuentro y generador independiente, sin Factory ni persistencia. Mantener huida, botín, espada única e inventario.
+- [x] Ajustar únicamente la vida inicial de consola 24 a 48 PS tras simulación del motor real: 94,02 % de cuatro victorias en 10.000 sesiones, sin consumibles y con espada desde el segundo.
+- [ ] Crear otros catálogos de armas, objetos y habilidades cuando se soliciten; no se añaden en esta fase.
 - [x] Implementar Atacar desde el menú en su momento real de acción.
 - [x] Implementar huida directa con dos dados y velocidad efectiva, empate fallido, sin ataque por intento. Éxito limpia y vuelve a exploración; fallo consume acción y conserva la acción enemiga pendiente.
 - [x] Conservar personaje/posesiones tras escapar, sin botín ni espada por huida. Ofrecer espada una vez tras primera victoria real, aunque antes se haya huido.
@@ -365,7 +380,7 @@ Después de programar, informa de:
 - ¿Qué reglas concretas rigen comercio y futuros encuentros? La huida del jugador está confirmada en 3.10. alHuir/alPerseguir, persecución y huida enemiga permanecen fuera de alcance. Las pociones se confirman en 3.7/3.8/3.9; el consumo exitoso en combate sustituye al ataque y cancelar/inválidos/rechazos no consumen acción.
 - Confirmado: alFinalCombate solo del jugador, siempre, como limpieza incluso muerto; el enemigo no participa.
 - Confirmado: tras victoria se permite consultar inventario/usar poción/continuar/terminar aventura/salir, sin recuperación automática. Espada única tras primera victoria y botín de pociones tras cada victoria definitiva. Futuras ampliaciones necesitan reglas propias.
-- ¿Qué catálogo mínimo de enemigos y objetos quiere el autor para la primera demo?
+- Catálogo de enemigos confirmado en 3.11: Lobo, Goblin, Bandido y Esqueleto, sin equipo/habilidades. Otros catálogos o fuentes externas requieren su propia autorización.
 
 Si alguna de estas respuestas ya está expresada de forma inequívoca en código o pruebas del repositorio, documentarla con referencia a los archivos correspondientes. Si no, pedir una decisión concreta antes de implementarla.
 

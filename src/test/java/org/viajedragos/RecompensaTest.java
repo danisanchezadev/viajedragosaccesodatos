@@ -1,6 +1,8 @@
 package org.viajedragos;
 
 import org.junit.jupiter.api.Test;
+import org.viajedragos.catalogo.RepositorioEnemigos;
+import org.viajedragos.modelo.DefinicionEnemigo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.viajedragos.arma.Arma;
@@ -37,6 +39,10 @@ import java.util.function.IntConsumer;
 import static org.junit.jupiter.api.Assertions.*;
 
 class RecompensaTest {
+    private RepositorioEnemigos soloLobo() {
+        return () -> java.util.List.of(new DefinicionEnemigo("lobo", "Lobo", "", 5, 2, 2, 1, 2, 18));
+    }
+
     private static final int[] VICTORIA = {1, 1, 1, 1, 6, 1, 6};
     private static final int[] VICTORIA_CON_VIDA_6 = {1, 1, 1, 6, 6, 1, 6, 6, 1, 6};
     private final ByteArrayOutputStream salida = new ByteArrayOutputStream();
@@ -59,7 +65,7 @@ class RecompensaTest {
 
     private boolean jugar(Jugador j, String entrada, Dados dados) {
         boolean volver = assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(j, new Scanner(entrada), consola(), dados, new Random(0)));
+                app.jugarAventura(j, new Scanner(entrada), consola(), dados, new Random(0), soloLobo(), new Random(0)));
         dados.comprobarConsumo();
         return volver;
     }
@@ -204,13 +210,13 @@ class RecompensaTest {
         // Segundo personaje: ataque normal 4/2 causa 7, no los 8 que daría la espada.
         Dados dados = new Dados(VICTORIA, new int[]{1, 1, 1, 1, 4, 2, 1, 2, 1, 6, 4, 1});
         assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.ejecutar(new Scanner("1\n1\n1\n4\n1\n1\n1\n2\n0\n"), consola(), dados, new Random(0)));
+                app.ejecutar(new Scanner("1\n1\n1\n4\n1\n1\n1\n2\n0\n"), consola(), dados, new Random(0), soloLobo(), new Random(0)));
         dados.comprobarConsumo();
         assertEquals(2, veces("Encuentro 1."));
         assertEquals(2, veces("Has encontrado una Espada desgastada"));
         assertEquals(1, veces("Espada desgastada equipada"));
         String nueva = texto().substring(texto().lastIndexOf("Encuentro 1."));
-        assertTrue(nueva.contains("Aventurero: 24/24 de vida | Lobo: 18/18 de vida"));
+        assertTrue(nueva.contains("Aventurero: 48/48 de vida | Lobo: 18/18 de vida"));
         assertTrue(nueva.contains("Aventurero golpea a Lobo y causa 7 puntos de daño"));
         assertFalse(nueva.contains("Espada desgastada equipada"));
     }
@@ -299,7 +305,7 @@ class RecompensaTest {
             }
         };
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(j, new Scanner("3\n0\n"), consola(), dados, sinBotin)));
+                app.jugarAventura(j, new Scanner("3\n0\n"), consola(), dados, sinBotin, soloLobo(), new Random(0))));
         dados.comprobarConsumo();
         assertEquals(13, j.getVida());
         assertEquals(24, j.getVidaMaxima());
@@ -344,7 +350,7 @@ class RecompensaTest {
         };
         String entrada = "3\n3\n1\n" + (equipar ? "1" : "2") + "\n3\n1\n0\n";
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(j, new Scanner(entrada), consola(), dados, azar)));
+                app.jugarAventura(j, new Scanner(entrada), consola(), dados, azar, soloLobo(), new Random(0))));
         dados.comprobarConsumo();
         assertEquals(4, botin[0]);
         assertEquals(3, enemigos.size());
@@ -377,7 +383,7 @@ class RecompensaTest {
             }
         };
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(j, new Scanner("1\n2\n3\n3\n3\n1\n0\n"), consola(), dados, azar)));
+                app.jugarAventura(j, new Scanner("1\n2\n3\n3\n3\n1\n0\n"), consola(), dados, azar, soloLobo(), new Random(0))));
         dados.comprobarConsumo();
         assertEquals(4, botin[0]);
         assertEquals(1, veces("Has encontrado una Espada desgastada"));
@@ -392,15 +398,15 @@ class RecompensaTest {
         Dados dados = new Dados(VICTORIA_CON_VIDA_6, new int[]{1, 1, 1, 1, 6, 1},
                 new int[]{1, 1, 1, 1, 6, 1});
         assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.ejecutar(
-                new Scanner("1\n1\n1\n3\n3\n4\n1\n3\n1\n0\n0\n"), consola(), dados, new Random(0)));
+                new Scanner("1\n1\n1\n3\n3\n4\n1\n3\n1\n0\n0\n"), consola(), dados, new Random(0), soloLobo(), new Random(0)));
         dados.comprobarConsumo();
         assertEquals(2, veces("Encuentro 1."));
         assertEquals(1, veces("Has encontrado una Espada desgastada"));
         String nueva = texto().substring(texto().lastIndexOf("Encuentro 1."));
-        assertTrue(nueva.contains("Aventurero: 24/24 de vida"));
+        assertTrue(nueva.contains("Aventurero: 48/48 de vida"));
         assertTrue(nueva.contains("No tienes consumibles"));
         assertTrue(nueva.contains("No tienes equipo equipado"));
-        assertTrue(texto().contains("Vida final: Aventurero 6/24"));
+        assertTrue(texto().contains("Vida final: Aventurero 30/48"));
     }
 
     @Test
@@ -415,7 +421,7 @@ class RecompensaTest {
             }
         };
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(j, new Scanner("3\n"), consola(), dados, sinBotin)));
+                app.jugarAventura(j, new Scanner("3\n"), consola(), dados, sinBotin, soloLobo(), new Random(0))));
         dados.comprobarConsumo();
         assertEquals(20, j.getVida());
         assertTrue(texto().contains("el combate queda sin terminar"));
