@@ -56,12 +56,60 @@ entrada, salida, dados, azar de botín, repositorio y azar de encuentros. No nec
 cambiar Combate ni la selección. Las firmas anteriores delegan en memoria.
 No hay lectura de archivos, JDBC, JPA, frameworks ni persistencia en esta versión.
 
+## Catálogo de objetos y equipamiento
+
+La aventura carga una sola vez las definiciones de `RepositorioObjetos`:
+`obtenerArmas()` y `obtenerPociones()`. `RepositorioObjetosMemoria` devuelve listas
+inmutables con Espada desgastada (`espada_desgastada`, FUERZA +1, sin habilidades),
+Poción pequeña (`pocion_pequena`, 8 PS) y Poción grande (`pocion_grande`, 16 PS).
+
+`DefinicionArma` es un record con id, nombre y copia inmutable de bonificaciones.
+`crearArma()` crea una instancia independiente en la ranura ARMA. Las bonificaciones
+pueden ser negativas; VIDA continúa rechazada porque necesita una regla propia.
+`DefinicionPocion` contiene id, TipoPocion, nombre y recuperación positiva; nunca
+cantidades poseídas. El inventario sigue perteneciendo exclusivamente a Jugador.
+
+Para sustituir la fuente se implementa RepositorioObjetos y se pasa como último
+argumento de la nueva sobrecarga pública:
+
+```java
+app.ejecutar(entrada, salida, dados, azarBotin, repositorioEnemigos,
+        azarEncuentros, repositorioObjetos);
+```
+
+No se necesita cambiar la lógica del combate ni la de consumo. Las firmas
+anteriores siguen disponibles y delegan en memoria. No hay consultas al repositorio
+en cada encuentro, menú o uso. Cada aventura nueva vuelve a cargar sus definiciones.
+Colecciones nulas, entradas nulas, ids repetidos entre cualquier categoría, espada
+ausente, tipos de poción repetidos o incompletos y datos inválidos impiden iniciar
+la aventura y devuelven al menú inicial, sin objetos de respaldo.
+
+TipoPocion conserva sus métodos, nombres y 8/16 PS por compatibilidad. Son valores
+predeterminados para los constructores antiguos y para el repositorio en memoria.
+Jugador admite además un constructor con List<DefinicionPocion>, o configurarPociones
+al preparar la aventura. La configuración se valida y copia antes de sustituir la
+anterior, sin alterar cantidades. getDefinicionPocion devuelve los datos efectivos:
+si otro repositorio define PEQUENA con otro nombre y 10 PS, inventario, botín y
+ambos menús muestran esos datos, y usarPocion utiliza 10 PS mediante curarse.
+No hay configuración global mutable ni consultas al enum que prevalezcan sobre
+las definiciones configuradas.
+
+Se mantienen el límite de vida, alCurarse, el descuento solo si hay recuperación,
+la acción de combate y la oferta voluntaria única de espada tras la primera
+victoria real. La espada se identifica por id, independientemente de su nombre
+visible. El catálogo no genera botín ni ejecuta efectos.
+
+Limitaciones: solo los tres objetos actuales; sin catálogo de habilidades,
+armaduras, inventario genérico, persistencia ni tecnologías externas. El sistema
+existente de equipo con habilidades permanece intacto. Archivos/JDBC/JPA podrán
+implementar este contrato posteriormente; no están implementados aquí.
+
 ## Equilibrio inicial
 
 Solo cambia la vida del Aventurero de consola: antes 24/24, ahora 48/48.
 Fuerza 6, resistencia 2, iniciativa 3, agilidad 2 y velocidad 2 permanecen iguales.
 La fuerza efectiva pasa a 7 únicamente si el jugador acepta la espada. Jugador
-como clase y las fórmulas del motor no se modifican; tampoco hay curación automática.
+conserva sus reglas de atributos y las fórmulas del motor no cambian; tampoco hay curación automática.
 
 EquilibrioAventuraTest utiliza el motor real, siempre Atacar, cuatro encuentros
 uniformes y espada FUERZA +1 desde el segundo. Sin pociones ni huida. Compara
@@ -240,7 +288,7 @@ las pruebas de integración, sin asignarlas a la demo ni añadir narración.
 restauración, niveles y equipo. `RolesModificadoresDanioTest` comprueba los roles
 confirmados: Caparazón, Defensa perfecta y Guardia férrea solo en defensa;
 Castigo al torpe y Golpe certero solo en ataque. Incluye condiciones de activación,
-instancias compartidas y reglas especiales. La suite completa pasa con 452 pruebas.
+instancias compartidas y reglas especiales. La suite completa pasa con 501 pruebas.
 El análisis y la corrección están en `ANALISIS_ROLES_MODIFICADORES_DANIO.md`.
 
 `AventuraTest` añade 12 casos de continuidad: identidad del jugador, enemigos
@@ -260,8 +308,9 @@ La Espada desgastada está publicada en `ec9dc46` y el botín de pociones en
 `c1d20d`. El menú de exploración, consulta y consumo fuera de combate están
 publicados en `e363c95`. El uso de pociones durante el combate está publicado en
 `f97e7fc`. La huida y la oferta de espada tras la primera victoria real están
-publicadas en `40463bd`. Catálogo y equilibrio inicial son cambios locales de
-esta fase; no se ha hecho commit ni push.
+publicadas en `40463bd`. El catálogo de enemigos y el equilibrio inicial están
+publicados en `a630e26`. El catálogo de objetos es el cambio local actual;
+no se ha hecho commit ni push de esta fase.
 
 `InventarioPocionesTest` añade 8 casos de cantidades, datos de recuperación,
 independencia entre jugadores, encapsulación y ausencia de curación automática.
@@ -298,10 +347,19 @@ enemigo antes/después, limpieza, muerte/resurrección, interrupción y continui
 sin premios por escapar. Aceptar/rechazar la espada tras huir y ganar no repite
 oferta ni botín. La verificación de consola usa entradas y dados controlados.
 
-Esta fase conserva los 422 casos anteriores y añade 30: 15 en
+La fase de enemigos conservó los 422 casos anteriores y añadió 30: 15 en
 RepositorioEnemigosTest, 14 en CatalogoAventuraTest y 1 simulación de equilibrio
 con seis candidatos. Los cinco archivos previos de pruebas de aplicación inyectan
 un repositorio solo-Lobo y un Random de encuentros separado. AppTest, AventuraTest
 y dos escenarios de RecompensaTest que arrancan aventuras adaptan vida 24 a 48
 y secuencias letales al ajuste autorizado; no cambian los datos de los jugadores
 construidos expresamente por otros escenarios. Ninguna prueba se elimina o deshabilita.
+
+La fase actual conserva sin modificar las 452 pruebas anteriores y añade 49:
+18 en RepositorioObjetosTest y 31 en CatalogoObjetosIntegracionTest. Comprueban
+datos/ids/validación, colecciones protegidas, armas independientes, repositorios
+alternativos, carga una vez por aventura, inventario separado, espada voluntaria
+persistente y única, consumo con los valores efectivos en ambos menús, curación
+parcial/completa, eventos/estado/nivel, Instinto con equipo, modo automático y
+aventura nueva. Resultado real de `mvn clean test`: BUILD SUCCESS; 501 pruebas,
+0 fallos, 0 errores y 0 omitidas. Se recompilan 41 fuentes principales y 35 de pruebas.

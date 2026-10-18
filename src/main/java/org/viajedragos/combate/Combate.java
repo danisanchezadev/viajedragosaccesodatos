@@ -323,10 +323,10 @@ public class Combate {
     private boolean usarPocionEnCombate(Jugador portador, Scanner entrada, PrintStream salida) {
         salida.printf("%n----------------------------------------%n  USAR OBJETO%n----------------------------------------%n");
         salida.printf("  Vida actual: %d/%d PS%n%n", portador.getVida(), portador.getVidaMaxima());
-        salida.printf("1. %s (x%d) +%d PS%n", TipoPocion.PEQUENA.getNombre(),
-                portador.getCantidadPociones(TipoPocion.PEQUENA), TipoPocion.PEQUENA.getRecuperacionPS());
-        salida.printf("2. %s (x%d) +%d PS%n", TipoPocion.GRANDE.getNombre(),
-                portador.getCantidadPociones(TipoPocion.GRANDE), TipoPocion.GRANDE.getRecuperacionPS());
+        salida.printf("1. %s (x%d) +%d PS%n", portador.getDefinicionPocion(TipoPocion.PEQUENA).nombre(),
+                portador.getCantidadPociones(TipoPocion.PEQUENA), portador.getDefinicionPocion(TipoPocion.PEQUENA).recuperacionPS());
+        salida.printf("2. %s (x%d) +%d PS%n", portador.getDefinicionPocion(TipoPocion.GRANDE).nombre(),
+                portador.getCantidadPociones(TipoPocion.GRANDE), portador.getDefinicionPocion(TipoPocion.GRANDE).recuperacionPS());
         salida.println("0. Cancelar");
         while (true) {
             salida.print("Elige una opción > ");
@@ -351,8 +351,8 @@ public class Combate {
             int recuperacion = portador.usarPocion(tipo);
             if (recuperacion > 0) {
                 salida.printf("Has utilizado una %s.%nVida recuperada: +%d PS%nVida actual: %d/%d PS%n",
-                        tipo.getNombre(), recuperacion, portador.getVida(), portador.getVidaMaxima());
-                salida.printf("Unidades restantes de %s: %d%n", tipo.getNombre(), portador.getCantidadPociones(tipo));
+                        portador.getDefinicionPocion(tipo).nombre(), recuperacion, portador.getVida(), portador.getVidaMaxima());
+                salida.printf("Unidades restantes de %s: %d%n", portador.getDefinicionPocion(tipo).nombre(), portador.getCantidadPociones(tipo));
                 return true;
             }
             salida.println("No se ha recuperado vida. No se ha consumido la poción.");

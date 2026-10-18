@@ -107,7 +107,7 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - La espada y su FUERZA +1 permanecen con la misma instancia del jugador en los encuentros posteriores. Base de fuerza 6, efectiva 7 en el Aventurero sin otros efectos. No se modifica vida actual/máxima.
 - Morir o terminar aventura descarta personaje y equipo. Una aventura nueva empieza sin equipo y puede recibir su propia espada tras su primera victoria.
 - Si se cierra la entrada durante la oferta, termina la sesión sin equipar ni iniciar otro encuentro. La victoria ya obtenida conserva su resultado real.
-- Implementación en app.ofrecerEspada, llamado desde jugarAventura con ENEMIGO_MUERE y espadaOfrecida == false. El booleano local se marca antes de la oferta, tanto para aceptar como para rechazar; sustituye el antiguo encuentro == 1. Sin catálogo, motor de recompensas, sustitución ni clases productivas nuevas.
+- Implementación en app.ofrecerEspada, llamado desde jugarAventura con ENEMIGO_MUERE y espadaOfrecida == false. El booleano local se marca antes de la oferta, tanto para aceptar como para rechazar; sustituye el antiguo encuentro == 1. La pieza procede ahora del catálogo de objetos de 3.12; no hay motor de recompensas ni sustitución automática de equipo.
 
 ### 3.7 Botín de pociones publicado en c1d20d
 
@@ -155,7 +155,7 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 
 ### 3.11 Catálogo sustituible y equilibrio inicial autorizados
 
-- Cambios locales sobre 40463bd. El autor autoriza expresamente DefinicionEnemigo (record), RepositorioEnemigos (interfaz) y RepositorioEnemigosMemoria. Esta interfaz específica prepara la sustitución didáctica del origen de datos sin implementar persistencia, frameworks, servicios, fábricas ni otras interfaces.
+- Fase publicada en a630e26, desarrollada sobre 40463bd. El autor autorizó expresamente DefinicionEnemigo (record), RepositorioEnemigos (interfaz) y RepositorioEnemigosMemoria. Esta interfaz específica prepara la sustitución didáctica del origen de datos sin implementar persistencia, frameworks, servicios ni fábricas.
 - Contrato List<DefinicionEnemigo> obtenerTodos(), sin aleatoriedad. El record almacena id técnico, nombre, descripción, fuerza, resistencia, iniciativa, agilidad, velocidad y vida máxima. crearEnemigo construye un Enemigo nuevo con vida completa y sus mapas propios, sin habilidades/equipo. No se almacenan combatientes mutables en el catálogo.
 - Catálogo en memoria, inmutable y ordenado: lobo/Lobo (5,2,2,1,2,18), goblin/Goblin (3,1,2,2,3,12), bandido/Bandido (4,1,2,1,2,14), esqueleto/Esqueleto (3,2,1,1,1,14). Orden numérico: fuerza, resistencia, iniciativa, agilidad, velocidad, vida máxima. Descripciones inicialmente vacías. Id y nombre obligatorios no vacíos, descripción no nula; atributos no negativos y vida máxima positiva.
 - app carga List.copyOf del catálogo una vez al comenzar cada aventura. Catálogo vacío/nulo, entradas nulas, ids duplicados o definición inválida impiden iniciar la aventura con mensaje y regreso al menú inicial. No hay respaldo inventado, reintentos ni infraestructura de errores externos.
@@ -165,6 +165,19 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - Equilibrio: solo la vida inicial de consola cambia 24/24 a 48/48, manteniendo 6/2/3/2/2 en los demás atributos. Sin cambios en Jugador o fórmulas. El jugador elige equipar espada; no se equipa automáticamente. Se justifica con simulación del motor real de cuatro encuentros, sin consumibles/huida y con fuerza +1 desde el segundo.
 - EquilibrioAventuraTest: 10.000 sesiones por candidato con generadores de semillas 20261018 (dados) y 20261019 (encuentros), nextLong independiente por sesión. Resultados de cuatro victorias: vida 24: 53,34 %; 28: 63,87 %; 32: 72,63 %; 36: 80,46 %; 40: 86,18 %; 48: 94,02 % (9.402/10.000). A 48 PS: 2,991 turnos/combate y 25,66 PS restantes medios entre supervivientes. La prueba exige >=90 % con semillas fijas; es objetivo de diseño, no una regla o garantía del motor.
 - Se mantienen los 422 escenarios anteriores, inyectando solo-Lobo en las pruebas de aplicación. Los escenarios que construyen el Aventurero desde ejecutar adaptan expectativas de vida y secuencias letales; los combatientes de prueba propios mantienen sus datos originales. Nuevos casos: 15 catálogo/validación/aislamiento, 14 selección/integración/repositorio sustituible y 1 simulación reproducible.
+
+### 3.12 Catálogo de objetos autorizado
+
+- Implementación local sobre main a630e26. Cuatro tipos nuevos: DefinicionArma y DefinicionPocion (records en modelo), RepositorioObjetos y RepositorioObjetosMemoria (catalogo). Sin persistencia ni nuevas mecánicas.
+- Contrato exclusivo List<DefinicionArma> obtenerArmas() / List<DefinicionPocion> obtenerPociones(). Listas de memoria inmutables. Datos: espada_desgastada/Espada desgastada/FUERZA +1, pocion_pequena/PEQUENA/8 PS y pocion_grande/GRANDE/16 PS. Los nombres y curación iniciales de pociones proceden de TipoPocion, sin duplicar sus valores.
+- DefinicionArma guarda id, nombre y copia inmutable del mapa de bonificaciones. CrearArma genera una Arma nueva, ranura ARMA y habilidades vacías. Se admiten penalizaciones, se rechaza VIDA igual que en Equipo. DefinicionPocion guarda id, tipo, nombre y recuperación positiva. No guardan cantidades, personajes ni habilidades mutables.
+- Jugador conserva ambos constructores anteriores y admite uno adicional con List<DefinicionPocion>. configurarPociones valida/copia el conjunto completo antes de reemplazarlo, sin modificar inventario; getDefinicionPocion devuelve su record inmutable. Se necesitan ambos tipos, ids únicos y una definición por tipo. La configuración pertenece al jugador, sin global mutable ni repositorios en el motor.
+- TipoPocion mantiene identidad, nombres, 8/16 PS y métodos originales como predeterminados. Para un jugador configurado, únicamente sus definiciones determinan nombre y recuperación: una pequeña de 10 PS se muestra y usa como 10 PS. Inventario, botín, exploración y menú de combate consultan esa misma fuente efectiva. usarPocion conserva curarse, alCurarse, límite de vida, recuperación real y descuento solo tras éxito.
+- Nueva sobrecarga pública app.ejecutar(Scanner, PrintStream, TiradorDado, Random azarBotin, RepositorioEnemigos, Random azarEncuentros, RepositorioObjetos), sin eliminar las anteriores. Sobrecarga correspondiente de jugarAventura de paquete. Una consulta a cada lista por aventura; instantáneas antes del primer encuentro. No se consulta en cada menú/uso/encuentro.
+- Validación antes de iniciar: colecciones/entradas nulas, ids repetidos incluso entre categorías, espada ausente (id técnico espada_desgastada, no nombre visible), pociones incompletas, tipos repetidos o datos inválidos impiden comenzar y devuelven al inicio con mensaje. Sin respaldos silenciosos. Se conserva el rechazo previo de enemigos inválidos.
+- Oferta única tras primera victoria real, aceptación/rechazo, ranuras, botín 50/20 independiente, continuidad, huida y reglas del combate intactas. Solo cambian consultas de datos en el menú de Combate, sin dependencia de RepositorioObjetos. Equipar pasa por Combatiente.equipar; no se duplican efectos.
+- Repositorios de archivos/JDBC/JPA podrán devolver estos mismos records mediante el contrato; no existen aún. Sin nuevos objetos, inventario genérico ni catálogo de habilidades. El equipo existente que concede habilidades sigue funcionando; externalizarlas requiere otra fase.
+- Pruebas: 18 de catálogo y 31 de integración añadidas, con 452 anteriores intactas; mvn clean test confirma 501, sin fallos/errores/omitidas, 41 fuentes principales y 35 de pruebas. Datos alternativos de espada y pociones, validación, instantáneas, consumo dentro/fuera, estados/eventos y equipo probados.
 
 ## 4. Habilidades
 
@@ -237,9 +250,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 18 de octubre de 2026. Base publicada 40463bd, huida y espada tras primera victoria real. En local se implementan catálogo sustituible en memoria, selección uniforme desde el primer encuentro y equilibrio de vida inicial 48/48. Sin commit ni push de esta fase.
+> **Estado:** 18 de octubre de 2026. Base publicada a630e26, catálogo de enemigos y equilibrio de vida inicial 48/48. Implementación local del catálogo de objetos de 3.12. Sin commit ni push de esta fase.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 37 fuentes principales y 33 archivos de pruebas recompilados; 452 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 422 casos anteriores con las adaptaciones de repositorio/equilibrio explicadas en 3.11 y se añaden 30. Simulación final: 94,02 % de cuatro victorias, sin pociones ni huida y con espada desde el segundo encuentro. Solo app y las tres piezas autorizadas cambian en producción; Combate/modelo existente/habilidades/equipo/dados permanecen intactos.
+> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 41 fuentes principales y 35 archivos de pruebas recompilados; 501 pruebas, 0 fallos, 0 errores, 0 omitidas. Las 452 anteriores se conservan sin cambios y se añaden 49. Equilibrio reproducido: 94,02 % de cuatro victorias. Cambios productivos: cuatro tipos nuevos, Jugador, app y consultas de presentación de pociones en Combate. Sin cambios de reglas, habilidades, equipamiento ni dados.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -253,14 +266,14 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 452 pruebas ejecutadas sin fallos ni errores; 422 escenarios anteriores y 30 nuevos de catálogo/integración/equilibrio, sin pruebas eliminadas ni deshabilitadas.
+- [x] Suite JUnit: 501 pruebas ejecutadas sin fallos ni errores; 452 anteriores intactas y 49 nuevas de catálogo de objetos/integración, sin pruebas eliminadas ni deshabilitadas.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
 - [x] Auditar clases, paquetes, firmas, dependencias y referencias del repositorio.
 - [x] Comprobar compilación del código principal: `mvn compile` termina correctamente.
 - [x] Ejecutar las pruebas existentes con `mvn test`.
-- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 452 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
+- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 501 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
 - [x] Revisar `EventosHabilidad`: todas sus firmas actuales y overrides implementados reciben `EstadoHabilidad` y compilan en el código principal.
 - [x] Revisar y corregir las seis llamadas del borrador a `dispararHabilidades`: las lambdas reciben habilidad y estado y pasan ese estado al evento.
 - [x] Activar el auxiliar existente `dispararHabilidades` para usarlo desde ataque, recorriendo habilidad y estado juntos.
@@ -306,7 +319,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Catálogo Java de cuatro enemigos en memoria mediante contrato sustituible, definiciones inmutables, validación e instancias independientes.
 - [x] Integrar selección uniforme desde el primer encuentro y generador independiente, sin Factory ni persistencia. Mantener huida, botín, espada única e inventario.
 - [x] Ajustar únicamente la vida inicial de consola 24 a 48 PS tras simulación del motor real: 94,02 % de cuatro victorias en 10.000 sesiones, sin consumibles y con espada desde el segundo.
-- [ ] Crear otros catálogos de armas, objetos y habilidades cuando se soliciten; no se añaden en esta fase.
+- [x] Catálogo de objetos autorizado: espada y dos pociones, records inmutables y repositorio sustituible; valores efectivos por jugador y validación antes del primer encuentro según 3.12.
+- [x] Verificar compatibilidad con espada única, equipo, botín, curación, ambos menús, eventos y continuidad sin modificar las 452 pruebas anteriores.
+- [ ] Crear catálogo de habilidades cuando se solicite; no se añade en esta fase.
 - [x] Implementar Atacar desde el menú en su momento real de acción.
 - [x] Implementar huida directa con dos dados y velocidad efectiva, empate fallido, sin ataque por intento. Éxito limpia y vuelve a exploración; fallo consume acción y conserva la acción enemiga pendiente.
 - [x] Conservar personaje/posesiones tras escapar, sin botín ni espada por huida. Ofrecer espada una vez tras primera victoria real, aunque antes se haya huido.
@@ -380,7 +395,7 @@ Después de programar, informa de:
 - ¿Qué reglas concretas rigen comercio y futuros encuentros? La huida del jugador está confirmada en 3.10. alHuir/alPerseguir, persecución y huida enemiga permanecen fuera de alcance. Las pociones se confirman en 3.7/3.8/3.9; el consumo exitoso en combate sustituye al ataque y cancelar/inválidos/rechazos no consumen acción.
 - Confirmado: alFinalCombate solo del jugador, siempre, como limpieza incluso muerto; el enemigo no participa.
 - Confirmado: tras victoria se permite consultar inventario/usar poción/continuar/terminar aventura/salir, sin recuperación automática. Espada única tras primera victoria y botín de pociones tras cada victoria definitiva. Futuras ampliaciones necesitan reglas propias.
-- Catálogo de enemigos confirmado en 3.11: Lobo, Goblin, Bandido y Esqueleto, sin equipo/habilidades. Otros catálogos o fuentes externas requieren su propia autorización.
+- Catálogo de enemigos confirmado en 3.11 y objetos en 3.12. Otros catálogos o fuentes externas requieren su propia autorización.
 
 Si alguna de estas respuestas ya está expresada de forma inequívoca en código o pruebas del repositorio, documentarla con referencia a los archivos correspondientes. Si no, pedir una decisión concreta antes de implementarla.
 

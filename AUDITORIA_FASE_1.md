@@ -2,7 +2,7 @@
 
 Fecha: 14 de octubre de 2026.
 
-> **Estado actual (18 de octubre de 2026):** base publicada 40463bd, huida y espada tras primera victoria real. Cambios locales: catálogo sustituible en memoria, selección uniforme desde el primer encuentro y vida inicial 48/48. `mvn clean test`: 452 pruebas pasan, sin fallos, errores ni omisiones. Simulación: 94,02 % de cuatro victorias en 10.000 sesiones sin consumibles, con espada desde el segundo. Sin commit ni push de esta fase. Los apartados siguientes conservan el historial de cada etapa; la más reciente se documenta al final.
+> **Estado actual (18 de octubre de 2026):** base publicada a630e26, catálogo de enemigos y equilibrio inicial. Cambios locales: catálogo de objetos, configuración efectiva de pociones por jugador e integración de espada. `mvn clean test`: 501 pruebas pasan, sin fallos, errores ni omisiones. Se mantienen intactas las 452 anteriores y se añaden 49. Sin commit ni push de esta fase. Los apartados siguientes conservan el historial de cada etapa; la más reciente se documenta al final.
 
 ## Alcance y resultado
 
@@ -969,3 +969,86 @@ checklist actualizados; huida reconocida como publicada en 40463bd.
 No se introduce persistencia, archivos de datos, frameworks, servicios, nuevas
 habilidades/objetos, escalado ni cambios de fórmulas. Las fuentes externas, sus
 errores operativos y cualquier catálogo de armas/objetos quedan para otra fase.
+
+## Catálogo de objetos y equipamiento (18 de octubre de 2026)
+
+### Alcance y análisis de impacto
+
+Implementación autorizada sobre main a630e26. La fase anterior de enemigos,
+registrada arriba como local, ya está publicada en ese commit. Se conservan
+las reglas y los tres objetos: Espada desgastada FUERZA +1 sin habilidades,
+Poción pequeña 8 PS y Poción grande 16 PS. Sin persistencia ni objetos nuevos.
+
+Antes de editar se revisaron Equipo/Arma/TipoEquipo/Atributo, TipoPocion,
+Jugador/inventario, Combatiente/equipar/desequipar/curarse, app y el menú de
+consumo de Combate, así como las pruebas relacionadas. La creación fija de espada
+se sustituye por crearArma; todas las consultas de nombres/curación de pociones
+pasan a las definiciones del jugador. No se alteran los efectos encapsulados.
+
+### Arquitectura e integración
+
+- DefinicionArma: record id/nombre/bonificaciones; copia defensiva con EnumMap,
+  mapa no modificable, valida nulos/obligatorios y rechaza VIDA según la regla
+  existente. crearArma construye una instancia nueva, ARMA y habilidades vacías.
+- DefinicionPocion: record id/tipo/nombre/recuperacionPS, datos obligatorios y
+  recuperación positiva. Sin cantidades de inventario ni referencias al jugador.
+- RepositorioObjetos: solo obtenerArmas y obtenerPociones, ambas listas tipadas.
+- RepositorioObjetosMemoria: listas inmutables y solo tres definiciones; nombres
+  y curación inicial de pociones reutilizan TipoPocion. No almacena armas mutables.
+- Jugador: mantiene constructores, inventario y firmas anteriores. Nuevo
+  constructor con List<DefinicionPocion>, configurarPociones y getDefinicionPocion.
+  Valida/copia todas las definiciones antes de reemplazar la configuración.
+  No modifica las cantidades y no expone mapas modificables de definiciones.
+  usarPocion solo cambia el origen de recuperación; curarse y alCurarse intactos.
+- app: conserva todas las entradas previas y añade sobrecargas con repositorio
+  de objetos al final, sin ambigüedades. Carga una instantánea de cada lista una
+  vez por aventura, antes de encuentros/tiradas. Valida ids globales únicos,
+  presencia de espada por id técnico espada_desgastada y ambas pociones sin tipos
+  repetidos. Datos inválidos devuelven al inicio con mensaje, sin respaldos.
+- La espada se construye al ofrecerla, no se equipa automáticamente. Se muestran
+  sus bonificaciones reales. La oferta única, aceptación/rechazo y ranuras no
+  cambian. Botín mantiene exactamente sus dos tiradas y umbrales 50/20; solo cambia
+  la consulta del nombre mostrado. Menús, inventario y botín usan el nombre efectivo.
+- Combate: exclusivamente seis sustituciones de consultas en el menú de pociones
+  (nombre/cantidad de recuperación). Sin dependencia del repositorio ni cambios
+  de iniciativa, acciones, dados, eventos, huida, muerte o limpieza.
+
+TipoPocion conserva nombres/métodos/valores como predeterminados compatibles.
+Las definiciones configuradas son la única fuente efectiva del personaje: con
+PEQUENA de 10 PS se muestran y aplican 10 PS, sin recurrir al valor 8 del enum.
+No hay configuración global mutable. Otra implementación de archivos/JDBC/JPA
+podrá devolver estos records y conectarse por la sobrecarga pública; dichas
+tecnologías no están implementadas. No se externalizan habilidades mutables ni
+se crea inventario genérico; el equipamiento con habilidades existente se conserva.
+
+### Pruebas y resultado real
+
+Se añadieron RepositorioObjetosTest (18 casos) y CatalogoObjetosIntegracionTest
+(31 casos), sin modificar ningún archivo de las 452 pruebas anteriores.
+
+Cobertura nueva: datos e ids exactos, tipos/recuperación inválidos, mapas/listas
+protegidos, copias independientes de armas, penalizaciones y retirada exacta,
+17 variantes de catálogo inválido sin combate/azar ni cambio del personaje,
+regreso al inicio, espada alternativa localizada por id aunque cambie de nombre,
+aceptación/rechazo, oferta única y permanencia, listas originales modificadas
+sin afectar instantáneas, una consulta por aventura, reinicio sin equipo/cantidades
+anteriores, nombres efectivos de botín, constructor/configuración compatible,
+consumo de 10/20 PS en ambos menús, recuperación parcial/completa, estados/niveles
+de alCurarse, Instinto real y limpieza conservando arma, modo automático y salida
+sin consultas. Las pruebas anteriores conservan cobertura de probabilidades,
+dados exactos, huida, muerte, resurrección y efectos temporales.
+
+Resultado final de mvn clean test: BUILD SUCCESS; 501 pruebas, 0 fallos,
+0 errores y 0 omitidas. Recompiladas 41 fuentes principales y 35 de pruebas.
+Simulación anterior reproducida: 53,34 % a 24 PS, 86,18 % a 40 y 94,02 % a 48;
+media a 48 PS: 2,991 turnos por combate.
+
+Incidencias operativas: python.exe no pudo iniciarse en este entorno; no produjo
+cambios y se utilizaron las herramientas de edición disponibles. Una aplicación
+de parche de documentación no encontró su contexto y se corrigió antes de
+aplicarlo. No hubo fallos de compilación ni de pruebas durante esta fase.
+
+Archivos: cuatro clases nuevas, dos archivos de pruebas nuevos, cambios en
+Jugador/app/consultas de Combate y README/contexto/este informe. Sin cambios en
+Equipo, Arma, Combatiente, TipoPocion, habilidades, dados ni pruebas anteriores.
+No se ha realizado commit ni push; los cambios quedan para revisión.

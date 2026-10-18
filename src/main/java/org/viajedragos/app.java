@@ -1,7 +1,10 @@
 package org.viajedragos;
 
 import org.viajedragos.arma.Arma;
-import org.viajedragos.arma.Atributo;
+import org.viajedragos.catalogo.RepositorioObjetos;
+import org.viajedragos.catalogo.RepositorioObjetosMemoria;
+import org.viajedragos.modelo.DefinicionArma;
+import org.viajedragos.modelo.DefinicionPocion;
 import org.viajedragos.arma.TipoEquipo;
 import org.viajedragos.combate.Combate;
 import org.viajedragos.combate.Dado;
@@ -16,7 +19,6 @@ import org.viajedragos.modelo.TipoPocion;
 
 import java.io.PrintStream;
 import java.util.NoSuchElementException;
-import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.List;
@@ -38,6 +40,13 @@ public class app {
 
     public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin,
                                 RepositorioEnemigos repositorio, Random azarEncuentros) {
+        ejecutar(entrada, salida, dados, azarBotin, repositorio, azarEncuentros,
+                new RepositorioObjetosMemoria());
+    }
+
+    public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin,
+                                RepositorioEnemigos repositorio, Random azarEncuentros,
+                                RepositorioObjetos objetos) {
         salida.println("=== Viaje a Dragos ===");
         salida.println("Un combate por turnos. La iniciativa decide quién actúa primero.");
         while (true) {
@@ -60,7 +69,7 @@ public class app {
             }
             // Un jugador por aventura; continuar nunca reconstruye este personaje.
             Jugador jugador = new Jugador("Aventurero", "", 6, 2, 3, 2, 2, 48, 48);
-            if (!jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros)) return;
+            if (!jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros, objetos)) return;
         }
     }
 
@@ -78,6 +87,14 @@ public class app {
     static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
                                  TiradorDado dados, Random azarBotin,
                                  RepositorioEnemigos repositorio, Random azarEncuentros) {
+        return jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros,
+                new RepositorioObjetosMemoria());
+    }
+
+    static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
+                                 TiradorDado dados, Random azarBotin,
+                                 RepositorioEnemigos repositorio, Random azarEncuentros,
+                                 RepositorioObjetos objetos) {
         List<DefinicionEnemigo> catalogo;
         try {
             catalogo = List.copyOf(repositorio.obtenerTodos());
@@ -94,6 +111,28 @@ public class app {
             }
         } catch (IllegalArgumentException | NullPointerException datosInvalidos) {
             salida.println("El catálogo de enemigos no es válido. No se inicia la aventura.");
+            return true;
+        }
+        DefinicionArma espada = null;
+        try {
+            List<DefinicionArma> armas = List.copyOf(objetos.obtenerArmas());
+            List<DefinicionPocion> pociones = List.copyOf(objetos.obtenerPociones());
+            var identificadores = new HashSet<String>();
+            for (DefinicionArma arma : armas) {
+                if (!identificadores.add(arma.id())) {
+                    throw new IllegalArgumentException("Identificadores repetidos");
+                }
+                if (arma.id().equals(DefinicionArma.ID_ESPADA_DESGASTADA)) espada = arma;
+            }
+            for (DefinicionPocion pocion : pociones) {
+                if (!identificadores.add(pocion.id())) {
+                    throw new IllegalArgumentException("Identificadores repetidos entre objetos");
+                }
+            }
+            if (espada == null) throw new IllegalArgumentException("Falta la Espada desgastada");
+            jugador.configurarPociones(pociones);
+        } catch (IllegalArgumentException | NullPointerException datosInvalidos) {
+            salida.println("El catálogo de objetos no es válido o está incompleto. No se inicia la aventura.");
             return true;
         }
         int encuentro = 1;
@@ -123,7 +162,7 @@ public class app {
                 obtenerBotin(jugador, azarBotin, salida);
                 if (!espadaOfrecida) {
                     espadaOfrecida = true;
-                    if (!ofrecerEspada(jugador, entrada, salida)) return false;
+                    if (!ofrecerEspada(jugador, entrada, salida, espada)) return false;
                 }
             } else if (resultado == ResultadoCombate.JUGADOR_HUYE) {
                 salida.println("Regresas a exploración sin recompensas. Conservas tu personaje y sus pertenencias.");
@@ -195,7 +234,7 @@ public class app {
             if (cantidad > 0) {
                 tienePociones = true;
                 salida.printf("  %-24s x%d%n    Recupera %d PS%n",
-                        tipo.getNombre(), cantidad, tipo.getRecuperacionPS());
+                        jugador.getDefinicionPocion(tipo).nombre(), cantidad, jugador.getDefinicionPocion(tipo).recuperacionPS());
             }
         }
         if (!tienePociones) salida.println("  No tienes consumibles");
@@ -223,10 +262,10 @@ public class app {
     static boolean usarObjeto(Jugador jugador, Scanner entrada, PrintStream salida) {
         cabecera("USAR OBJETO", salida);
         salida.printf("  Vida actual: %d/%d PS%n%n", jugador.getVida(), jugador.getVidaMaxima());
-        salida.printf("1. %s (x%d) +%d PS%n", TipoPocion.PEQUENA.getNombre(),
-                jugador.getCantidadPociones(TipoPocion.PEQUENA), TipoPocion.PEQUENA.getRecuperacionPS());
-        salida.printf("2. %s (x%d) +%d PS%n", TipoPocion.GRANDE.getNombre(),
-                jugador.getCantidadPociones(TipoPocion.GRANDE), TipoPocion.GRANDE.getRecuperacionPS());
+        salida.printf("1. %s (x%d) +%d PS%n", jugador.getDefinicionPocion(TipoPocion.PEQUENA).nombre(),
+                jugador.getCantidadPociones(TipoPocion.PEQUENA), jugador.getDefinicionPocion(TipoPocion.PEQUENA).recuperacionPS());
+        salida.printf("2. %s (x%d) +%d PS%n", jugador.getDefinicionPocion(TipoPocion.GRANDE).nombre(),
+                jugador.getCantidadPociones(TipoPocion.GRANDE), jugador.getDefinicionPocion(TipoPocion.GRANDE).recuperacionPS());
         salida.println("0. Cancelar");
         while (true) {
             String opcion = leerOpcion(entrada, salida);
@@ -250,8 +289,8 @@ public class app {
             int recuperacion = jugador.usarPocion(tipo);
             if (recuperacion > 0) {
                 salida.printf("Has utilizado una %s.%nVida recuperada: +%d PS%nVida actual: %d/%d PS%n",
-                        tipo.getNombre(), recuperacion, jugador.getVida(), jugador.getVidaMaxima());
-                salida.printf("Unidades restantes de %s: %d%n", tipo.getNombre(), jugador.getCantidadPociones(tipo));
+                        jugador.getDefinicionPocion(tipo).nombre(), recuperacion, jugador.getVida(), jugador.getVidaMaxima());
+                salida.printf("Unidades restantes de %s: %d%n", jugador.getDefinicionPocion(tipo).nombre(), jugador.getCantidadPociones(tipo));
                 return true;
             }
             salida.println("No se ha recuperado vida. No se ha consumido la poción.");
@@ -261,20 +300,27 @@ public class app {
     static void obtenerBotin(Jugador jugador, Random azarBotin, PrintStream salida) {
         if (azarBotin.nextInt(100) < 50) {
             jugador.agregarPocion(TipoPocion.PEQUENA);
-            salida.printf("Botín: %s (+1).%n", TipoPocion.PEQUENA.getNombre());
+            salida.printf("Botín: %s (+1).%n", jugador.getDefinicionPocion(TipoPocion.PEQUENA).nombre());
         }
         if (azarBotin.nextInt(100) < 20) {
             jugador.agregarPocion(TipoPocion.GRANDE);
-            salida.printf("Botín: %s (+1).%n", TipoPocion.GRANDE.getNombre());
+            salida.printf("Botín: %s (+1).%n", jugador.getDefinicionPocion(TipoPocion.GRANDE).nombre());
         }
     }
 
     // La pieza se crea una sola vez por oferta. false indica cierre de entrada.
     static boolean ofrecerEspada(Jugador jugador, Scanner entrada, PrintStream salida) {
-        Arma espada = new Arma("Espada desgastada", TipoEquipo.ARMA,
-                Map.of(Atributo.FUERZA, 1), Map.of());
-        salida.printf("Has encontrado una %s.%nFuerza %+d%n",
-                espada.getNombre(), espada.getBonificaciones().get(Atributo.FUERZA));
+        return ofrecerEspada(jugador, entrada, salida,
+                new RepositorioObjetosMemoria().obtenerArmas().getFirst());
+    }
+
+    static boolean ofrecerEspada(Jugador jugador, Scanner entrada, PrintStream salida, DefinicionArma definicion) {
+        Arma espada = definicion.crearArma();
+        salida.printf("Has encontrado una %s.%n", espada.getNombre());
+        espada.getBonificaciones().forEach((atributo, cantidad) -> {
+            String nombre = atributo.name().toLowerCase(java.util.Locale.ROOT);
+            salida.printf("%s %+d%n", Character.toUpperCase(nombre.charAt(0)) + nombre.substring(1), cantidad);
+        });
         while (true) {
             salida.printf("1. Equipar %s%n", espada.getNombre());
             salida.printf("2. Rechazar %s%n", espada.getNombre());
