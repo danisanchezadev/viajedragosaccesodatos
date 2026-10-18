@@ -233,12 +233,17 @@ public class app {
         int victorias = 0;
         if (!repartirPuntos(jugador, entrada, salida)) return false;
         while (true) {
-            Enemigo enemigo = seleccionarEnemigo(catalogo, azarEncuentros);
+            Enemigo enemigo = seleccionarEnemigo(catalogo, azarEncuentros, jugador.getNivel());
+            if (enemigo == null) {
+                salida.println("No hay enemigos elegibles para tu nivel. La aventura ha terminado.");
+                return true;
+            }
             PanelConsola panelEncuentro = new PanelConsola(salida, "ENCUENTRO " + encuentro);
             panelEncuentro.linea("Comienza el combate: " + jugador.getNombre() + " contra " + enemigo.getNombre() + ".");
             panelEncuentro.columnas(jugador.getNombre(), enemigo.getNombre());
             panelEncuentro.columnas("PS " + jugador.getVida() + "/" + jugador.getVidaMaxima(),
                     "PS " + enemigo.getVida() + "/" + enemigo.getVidaMaxima());
+            panelEncuentro.linea(enemigo.getNombre() + " — Nivel " + enemigo.getNivel());
             panelEncuentro.cerrar();
             ritmo.pausar(salida);
             ResultadoCombate resultado;
@@ -327,8 +332,10 @@ public class app {
         }
     }
 
-    private static Enemigo seleccionarEnemigo(List<DefinicionEnemigo> catalogo, Random azarEncuentros) {
-        return catalogo.get(azarEncuentros.nextInt(catalogo.size())).crearEnemigo();
+    private static Enemigo seleccionarEnemigo(List<DefinicionEnemigo> catalogo, Random azarEncuentros, int nivelJugador) {
+        var elegibles = catalogo.stream().filter(enemigo -> enemigo.nivel() <= nivelJugador).toList();
+        if (elegibles.isEmpty()) return null;
+        return elegibles.get(azarEncuentros.nextInt(elegibles.size())).crearEnemigo();
     }
 
     static boolean repartirPuntos(Jugador jugador, Scanner entrada, PrintStream salida) {

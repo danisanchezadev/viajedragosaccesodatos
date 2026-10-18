@@ -22,7 +22,7 @@ Requiere JDK 23 y Maven. No utiliza persistencia ni servicios externos.
 
 El menú inicial ofrece `[1] Nueva aventura`, `[2] Velocidad de narración` y `[0] Salir del juego`. Cada aventura crea un
 Aventurero con 48/48 de vida, sin habilidades ni equipamiento. Cada encuentro crea
-un enemigo nuevo del catálogo, sin dificultad automática ni límite de
+un enemigo nuevo del catálogo elegible por nivel, sin escalado automático de atributos ni límite de
 encuentros. Al continuar se conserva la vida restante del Aventurero, salvo los
 incrementos de una subida de nivel; no hay curación automática por continuar. La espada fija se ofrece
 después de la primera victoria real y no vuelve a ofrecerse durante esa aventura,
@@ -188,27 +188,46 @@ iniciar la aventura. Los datos predeterminados permanecen intactos.
 
 ## Catálogo de enemigos
 
-Cada encuentro, incluido el primero, selecciona uniformemente una de estas
-definiciones (25 % cada una). Se permiten repeticiones consecutivas:
+Cada encuentro, incluido el primero, selecciona uniformemente una definición
+cuyo nivel sea menor o igual que el del jugador. Los inferiores siguen disponibles
+y se permiten repeticiones consecutivas. En niveles 1 y 2 participan los cuatro
+iniciales (25 % cada uno); en nivel 3 hay cinco elegibles, en nivel 4 seis y desde
+nivel 5 los siete actuales. No se escalan sus atributos automáticamente.
 
-| Enemigo | Fuerza | Resistencia | Iniciativa | Agilidad | Velocidad | Vida |
-|---|---:|---:|---:|---:|---:|---:|
-| Lobo | 5 | 2 | 2 | 1 | 2 | 18 |
-| Goblin | 3 | 1 | 2 | 2 | 3 | 12 |
-| Bandido | 4 | 1 | 2 | 1 | 2 | 14 |
-| Esqueleto | 3 | 2 | 1 | 1 | 1 | 14 |
+| Enemigo | Nivel | Fuerza | Resistencia | Iniciativa | Agilidad | Velocidad | Vida | EXP |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Lobo | 1 | 5 | 2 | 2 | 1 | 2 | 18 | 10 |
+| Goblin | 1 | 3 | 1 | 2 | 2 | 3 | 12 | 5 |
+| Bandido | 1 | 4 | 1 | 2 | 1 | 2 | 14 | 7 |
+| Esqueleto | 1 | 3 | 2 | 1 | 1 | 1 | 14 | 6 |
+| Goblin guerrero | 3 | 5 | 2 | 3 | 2 | 3 | 20 | 15 |
+| Esqueleto veterano | 4 | 6 | 3 | 2 | 2 | 2 | 24 | 20 |
+| Bandido de élite | 5 | 7 | 3 | 3 | 2 | 3 | 28 | 25 |
 
 `RepositorioEnemigos.obtenerTodos()` devuelve `List<DefinicionEnemigo>` y no
 selecciona enemigos. `RepositorioEnemigosMemoria` contiene una lista inmutable
 de orden estable. El record DefinicionEnemigo guarda identificador, nombre,
-descripción, cinco atributos y vida máxima; crearEnemigo construye una instancia
+descripción, cinco atributos, vida máxima, EXP y nivel; crearEnemigo construye una instancia
 nueva con vida completa, mapas independientes y sin habilidades ni equipo.
 
 La aventura carga una instantánea del catálogo una vez. La selección reside en
 app y utiliza un Random de encuentros independiente, conservado durante toda la
 sesión. No utiliza el Random de botín ni TiradorDado. Catálogos vacíos, entradas
 nulas, identificadores duplicados o definiciones inválidas impiden iniciar la
-aventura con un mensaje; no se inventa un enemigo de respaldo.
+aventura con un mensaje; no se inventa un enemigo de respaldo. Si no hay elegibles
+para el nivel actual, se informa y se vuelve al inicio sin tirar dados ni consumir
+acciones o conceder recompensas. El filtrado usa el nivel actualizado en cada
+encuentro, sin recargar el catálogo. El panel inicial muestra el nombre y nivel del enemigo.
+
+Los constructores anteriores de DefinicionEnemigo y Enemigo se mantienen con nivel
+1. Los orígenes nuevos deben proporcionar `experiencia, nivel` explícitamente;
+nivel < 1 se rechaza. No cambian ConfiguracionRepositorios ni el contrato del repositorio.
+
+Equilibrio de variantes: 18.000 combates de prueba con semillas fijas, al nivel
+mínimo de desbloqueo, vida completa, puntos en fuerza/resistencia/velocidad y
+arma +0/+2. Todas las muestras terminan en victoria sin pociones; medias entre
+2,128 y 3,222 turnos. Esto no garantiza supervivencia empezando herido. La simulación
+histórica de los cuatro iniciales conserva sus resultados y comprobaciones.
 
 Para sustituir el origen, otro desarrollador implementa RepositorioEnemigos y
 conecta su instancia mediante la sobrecarga pública de app.ejecutar que recibe
@@ -708,3 +727,14 @@ pruebas anteriores actualiza los valores esperados de EXP en el catálogo, sin
 alterar sus comprobaciones de estadísticas. Resultado de `mvn clean test`:
 BUILD SUCCESS; 867 pruebas, 0 fallos, 0 errores y 0 omitidas; 49 fuentes principales
 y 57 archivos de pruebas.
+
+Los encuentros por nivel añaden 31 casos: EncuentrosPorNivelTest (16),
+NivelesEnemigosTest (12) y EquilibrioVariantesTest (3, con 18.000 simulaciones).
+Cubren validación, datos sin escalado, compatibilidad de constructores, selección
+de todos los elegibles, desbloqueo dentro de una aventura, catálogos alternativos,
+vacíos/sin elegibles, EXP, paneles y compatibilidad con el motor. Se conservan las
+867 pruebas anteriores, adaptando las expectativas del catálogo a siete entradas,
+las comprobaciones iniciales a los cuatro de nivel 1 y el jugador de la prueba
+automática al nivel mínimo de cada enemigo. Sin aserciones eliminadas.
+Resultado de `mvn clean test`: BUILD SUCCESS; 898 pruebas, 0 fallos, 0 errores y
+0 omitidas; 49 fuentes principales y 60 archivos de pruebas.

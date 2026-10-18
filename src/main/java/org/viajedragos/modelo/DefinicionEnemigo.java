@@ -4,13 +4,20 @@ import java.util.Objects;
 
 public record DefinicionEnemigo(String id, String nombre, String descripcion,
                                int fuerza, int resistencia, int iniciativa,
-                               int agilidad, int velocidad, int vidaMaxima, int experiencia) {
+                               int agilidad, int velocidad, int vidaMaxima, int experiencia, int nivel) {
     // Compatibilidad con catálogos anteriores: recompensa mínima inicial.
     public DefinicionEnemigo(String id, String nombre, String descripcion,
                              int fuerza, int resistencia, int iniciativa,
                              int agilidad, int velocidad, int vidaMaxima) {
         this(id, nombre, descripcion, fuerza, resistencia, iniciativa,
                 agilidad, velocidad, vidaMaxima, 5);
+    }
+
+    public DefinicionEnemigo(String id, String nombre, String descripcion,
+                             int fuerza, int resistencia, int iniciativa,
+                             int agilidad, int velocidad, int vidaMaxima, int experiencia) {
+        this(id, nombre, descripcion, fuerza, resistencia, iniciativa,
+                agilidad, velocidad, vidaMaxima, experiencia, 1);
     }
 
     public DefinicionEnemigo {
@@ -24,10 +31,11 @@ public record DefinicionEnemigo(String id, String nombre, String descripcion,
             throw new IllegalArgumentException("Los atributos deben ser no negativos y la vida máxima positiva");
         }
         if (experiencia <= 0) throw new IllegalArgumentException("La experiencia debe ser positiva");
+        if (nivel < 1) throw new IllegalArgumentException("El nivel debe ser al menos 1");
     }
 
     public Enemigo crearEnemigo() {
         return new Enemigo(nombre, descripcion, fuerza, resistencia, iniciativa, agilidad,
-                velocidad, vidaMaxima, vidaMaxima, experiencia);
+                velocidad, vidaMaxima, vidaMaxima, experiencia, nivel);
     }
 }

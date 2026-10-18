@@ -23,7 +23,10 @@ class EquilibrioAventuraTest {
     @Test
     @Timeout(30)
     void cuatroEncuentrosConSemillasFijasYEspadaDesdeElSegundo() {
-        var catalogo = new RepositorioEnemigosMemoria().obtenerTodos();
+        // Esta regresión mide los cuatro encuentros iniciales, sin progresión ni pociones.
+        var catalogo = new RepositorioEnemigosMemoria().obtenerTodos().stream()
+                .filter(enemigo -> enemigo.nivel() == 1).toList();
+        assertEquals(4, catalogo.size());
         for (int vida : new int[]{24, 28, 32, 36, 40, 48}) {
             int exitos = 0, iniciados = 0, turnos = 0, vidaRestante = 0;
             int[] seleccionados = new int[4];

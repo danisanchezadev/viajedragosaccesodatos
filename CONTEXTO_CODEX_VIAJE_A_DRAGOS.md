@@ -89,7 +89,7 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 ### 3.5 Continuidad entre encuentros: fase 4 confirmada
 
 - Cada aventura crea un único Aventurero con fuerza 6, resistencia 2, iniciativa 3, agilidad 2, velocidad 2 y 48/48 de vida, sin habilidades ni equipo inicial. La vida anterior era 24/24; ajuste autorizado según 3.11. Se conserva la misma instancia durante toda la aventura.
-- Cada encuentro crea un enemigo y un Combate nuevos. Selección uniforme del catálogo desde el primero según 3.11, sin Lobo obligatorio, escalado ni límite de encuentros.
+- Cada encuentro crea un enemigo y un Combate nuevos. Selección uniforme de los elegibles por nivel desde el primero según 3.23, sin Lobo obligatorio, escalado de atributos ni límite de encuentros.
 - El jugador conserva la vida restante y su vida máxima, sin curación automática entre encuentros. Puede utilizar voluntariamente pociones según 3.8. No se reinician atributos ni se eliminan equipo o habilidades; la limpieza temporal sigue en alFinalCombate.
 - Tras victoria, botín y oferta de espada si corresponde: menú de exploración con `1. Revisar inventario`, `2. Usar objeto`, `3. Continuar al siguiente encuentro`, `4. Terminar aventura y volver al menú inicial`, `0. Salir del juego`. Continuar conserva al jugador; terminar lo descarta; salir termina la sesión. Sustituye la numeración inicial de la fase 4.
 - Menú inicial: `1. Nueva aventura`, `0. Salir`. Una nueva aventura crea un personaje nuevo.
@@ -282,6 +282,16 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - PanelConsola anuncia cada nivel alcanzado, mejoras, vida y puntos disponibles; una pausa solo tras cerrar el anuncio. Se reparten todos los puntos acumulados antes de continuar, sin pausas ni opción 0 para escapar. Entradas inválidas no gastan; EOF interrumpe conservando pendientes en Jugador. Si se reutiliza un personaje con pendientes, se reparten antes de otro combate. Tras el reparto se muestra el resultado; inventario y exploración muestran nivel/EXP.
 - Pruebas: ProgresionJugadorTest 34 y ProgresionAventuraTest 15. Se conservan los 818 casos previos; solo se adapta la expectativa de EXP del catálogo, conservando todas las estadísticas/aserciones anteriores. Verificación: mvn clean test, BUILD SUCCESS; 867 pruebas, 0 fallos/errores/omitidas; 49 fuentes principales y 57 archivos de pruebas. Sin commit ni push.
 
+### 3.23 Enemigos por nivel y encuentros progresivos
+
+- DefinicionEnemigo incorpora int nivel como último campo, después de experiencia, y valida >= 1. crearEnemigo transmite ambos datos a Enemigo, que expone getNivel. Los constructores anteriores siguen disponibles con nivel 1; no se generan atributos a partir del nivel.
+- Los cuatro iniciales conservan todas sus estadísticas y EXP y son nivel 1. Nuevos: goblin_guerrero/Goblin guerrero, nivel 3, fuerza 5, resistencia 2, iniciativa 3, agilidad 2, velocidad 3, vida 20, EXP 15; esqueleto_veterano/Esqueleto veterano, nivel 4, fuerza 6, resistencia 3, iniciativa 2, agilidad 2, velocidad 2, vida 24, EXP 20; bandido_elite/Bandido de élite, nivel 5, fuerza 7, resistencia 3, iniciativa 3, agilidad 2, velocidad 3, vida 28, EXP 25.
+- app filtra el catálogo cargado una vez por aventura en cada encuentro: enemigo.nivel <= jugador.getNivel. Selección uniforme entre elegibles, manteniendo los inferiores y el orden del repositorio; sin condiciones por ID, pesos, zonas o mapas. Con memoria: niveles 1–2 cuatro elegibles, 3 cinco, 4 seis, 5+ siete.
+- Catálogo vacío conserva el rechazo anterior. Sin elegibles se informa y vuelve al inicio, sin combate, tiradas, consumo de acciones ni recompensas. Un repositorio externo solo necesita devolver sus definiciones con nivel; ConfiguracionRepositorios e interfaces siguen intactos. El panel de encuentro añade nombre y nivel, sin cambiar pausas.
+- Se conservan fórmulas, recompensas anteriores, objetos y progresión del jugador. GUIA_ACCESO_DATOS documenta campo, constructor, validación y filtro por nivel.
+- Nuevas pruebas: EncuentrosPorNivelTest 16, NivelesEnemigosTest 12 y EquilibrioVariantesTest 3. Las 867 anteriores se conservan adaptando catálogo ampliado, filtro inicial y jugador al nivel de cada enemigo en la prueba automática. Simulación histórica inicial intacta en sus resultados. Variantes: 18.000 combates con semillas fijas, nivel mínimo, vida completa, repartos fuerza/resistencia/velocidad y arma +0/+2, sin pociones: 100 % victorias en la muestra, medias 2,128–3,222 turnos. No representa empezar herido.
+- Verificación: mvn clean test, BUILD SUCCESS; 898 pruebas, 0 fallos/errores/omitidas; 49 fuentes principales y 60 archivos de pruebas. Sin commit ni push.
+
 ## 4. Habilidades
 
 - `Habilidad` es una clase abstracta que implementa una interfaz de eventos (`EventosHabilidad`).
@@ -355,7 +365,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 > **Estado:** 18 de octubre de 2026. Base local 88934c5 (oro/comercio). Interfaz unificada y ritmo narrativo en cambios locales según 3.18–3.19. Codex no ha realizado commit ni push.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia actual:** `mvn clean test`: BUILD SUCCESS; 49 fuentes principales y 57 archivos de pruebas; 867 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 818 casos anteriores y se añaden 49 según 3.22, sin cambios en fórmulas, equipo o recompensas previas ni acceso a datos externo.
+> **Evidencia actual:** `mvn clean test`: BUILD SUCCESS; 49 fuentes principales y 60 archivos de pruebas; 898 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 867 casos anteriores y se añaden 31 según 3.23, sin cambios en fórmulas, equipo o recompensas previas ni acceso a datos externo.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -369,7 +379,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 867 pruebas ejecutadas sin fallos ni errores; 818 casos anteriores y 49 de progresión, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
+- [x] Suite JUnit: 898 pruebas ejecutadas sin fallos ni errores; 867 casos anteriores y 31 de enemigos por nivel, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
@@ -447,6 +457,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Venta unitaria de pociones y armas guardadas/equipadas, confirmación, precio de catálogo dividido entre dos, saldo siempre visible y restauración segura según 3.20.
 - [x] Centralizar selección de repositorios, separar ofertas predeterminadas, validar correspondencias y documentar integración externa sin implementarla según 3.21.
 - [x] Experiencia por victoria desde datos del enemigo, subidas múltiples, mejoras permanentes, vida independiente y reparto obligatorio con presentación/pruebas según 3.22.
+- [x] Nivel en datos de enemigos, tres variantes, encuentros elegibles por nivel y validación/visualización/compatibilidad de repositorios según 3.23.
 - [x] Unificar pantallas con PanelConsola y establecer normas futuras en AGENTS.md; alineación, ANSI, barras y flujos probados según 3.18.
 - [x] Pausas narrativas mediante RitmoConsola, cuatro velocidades, selección persistente durante la sesión y pruebas sin esperas reales según 3.19.
 - [x] Continuidad de fase 4 publicada en 6fc2a8d: misma instancia del jugador, vida restante sin recuperación, Lobos nuevos y sin límite de encuentros; muerte/terminación voluntaria devuelve al inicio y nueva aventura crea otro jugador. La fase 5 añade su primera recompensa fija.

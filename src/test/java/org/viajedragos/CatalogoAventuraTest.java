@@ -182,6 +182,8 @@ class CatalogoAventuraTest {
     void automaticoFuncionaConTodosLosEnemigosDelRepositorio() {
         for (var d : new RepositorioEnemigosMemoria().obtenerTodos()) {
             var j = jugador();
+            while (j.getNivel() < d.nivel()) j.agregarExperiencia((int) j.getExperienciaNecesaria());
+            while (j.getPuntosPendientes() > 0) j.asignarPunto(org.viajedragos.arma.Atributo.FUERZA);
             Enemigo e = d.crearEnemigo();
             Random dados = new Random(1234);
             assertEquals(org.viajedragos.combate.ResultadoCombate.ENEMIGO_MUERE,

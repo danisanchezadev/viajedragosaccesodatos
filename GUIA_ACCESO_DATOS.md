@@ -24,7 +24,8 @@ si existe. `validarProductos` es una utilidad estática; no hay que implementarl
 Los modelos son records en `org.viajedragos.modelo`:
 
 - `DefinicionEnemigo`: ID, nombre, descripción, fuerza, resistencia, iniciativa,
-  agilidad, velocidad, vida máxima y experiencia positiva de recompensa. `crearEnemigo()` crea un combatiente nuevo;
+  agilidad, velocidad, vida máxima, experiencia positiva de recompensa y nivel
+  (entero >= 1). `crearEnemigo()` crea un combatiente nuevo con esos mismos datos;
   el repositorio no debe devolver ni conservar enemigos de partida mutables.
 - `DefinicionArma`: ID, nombre y `Map<Atributo, Integer>` de bonificaciones.
   Copia y protege el mapa. `crearArma()` devuelve una instancia nueva, sin habilidades.
@@ -87,7 +88,7 @@ public final class MisEnemigos implements RepositorioEnemigos {
     public List<DefinicionEnemigo> obtenerTodos() {
         return List.of(new DefinicionEnemigo(
                 "enemigo_ejemplo", "Enemigo de ejemplo", "Datos de prueba",
-                2, 1, 1, 1, 1, 8, 5));
+                2, 1, 1, 1, 1, 8, 5, 1));
     }
 }
 ```
@@ -126,7 +127,7 @@ desconocidos ni se acepta un mismo ID con estadísticas distintas.
 |---|---|
 | Todos los listados | Lista y registros no nulos; preferiblemente listas inmutables |
 | IDs y nombres | Obligatorios y no blancos; comparación exacta, sensible a mayúsculas |
-| Enemigos | IDs únicos dentro de enemigos; descripción no nula, aunque puede estar vacía; atributos no negativos; vida máxima y experiencia de recompensa positivas |
+| Enemigos | IDs únicos dentro de enemigos; descripción no nula, aunque puede estar vacía; atributos no negativos; vida máxima y experiencia de recompensa positivas; nivel >= 1 |
 | Armas | IDs únicos entre todas las armas y pociones; mapas, claves y valores no nulos; bonificaciones enteras positivas, negativas o cero; `VIDA` no admitida |
 | Pociones | IDs únicos entre objetos; tipo obligatorio y único; recuperación estrictamente positiva |
 | Productos | ID único en tienda, heredado del objeto; exactamente una definición; precio de compra entero positivo; definición completa coincidente con el catálogo de objetos |
@@ -136,6 +137,8 @@ de conjunto detectan nulos y duplicados. No se descartan silenciosamente registr
 erróneos, ni se sustituyen por objetos o enemigos de respaldo.
 
 - **Enemigos vacíos:** no se inicia la aventura y se vuelve al menú inicial.
+- **Sin enemigos elegibles:** si todos superan el nivel actual del jugador, se
+  informa y se vuelve al inicio sin combate, tiradas, lectura de acciones ni recompensas.
 - **Objetos vacíos o incompletos:** no se inicia. Se necesitan las armas con IDs
   `espada_desgastada` y `espada_hierro` por las recompensas existentes, y exactamente
   una definición para cada tipo de poción (`PEQUENA` y `GRANDE`).
@@ -151,12 +154,23 @@ erróneos, ni se sustituyen por objetos o enemigos de respaldo.
 
 Los IDs de enemigos forman un espacio separado del de objetos. Los productos
 comparten intencionadamente el ID de su objeto; no generan otro identificador.
-El nuevo último campo de `DefinicionEnemigo` es `int experiencia`: se carga desde
-los datos y se transmite al enemigo. El constructor anterior sigue disponible
-con 5 EXP por compatibilidad; para nuevos orígenes debe usarse el campo explícito.
+Los dos últimos campos de `DefinicionEnemigo` son `int experiencia, int nivel`:
+se cargan desde los datos y se transmiten al enemigo. Los constructores anteriores
+siguen disponibles con nivel 1 y, si no se indica experiencia, 5 EXP por compatibilidad;
+para nuevos orígenes deben usarse ambos campos explícitos.
 Los enemigos iniciales tienen 5–10 EXP, pero otros datos pueden proporcionar
 recompensas mayores. El repositorio no calcula subidas de nivel ni entrega puntos:
 la aventura concede la EXP solo ante victoria y Jugador gestiona su progresión.
+
+`RepositorioEnemigos.obtenerTodos()` devuelve el catálogo completo. Al comenzar
+cada encuentro, la aventura filtra `definicion.nivel() <= jugador.getNivel()` y
+sortea uniformemente entre los elegibles, conservando el orden del listado.
+El filtrado se repite después de subir de nivel, sin volver a leer el repositorio.
+Los enemigos inferiores siguen disponibles; no se busca ningún ID concreto ni se
+impone una lista fija en el motor. Un repositorio alternativo puede devolver otros
+niveles, nombres, estadísticas y recompensas. El nivel no calcula ni escala atributos.
+Los cuatro enemigos iniciales son de nivel 1; las variantes predeterminadas se
+desbloquean en niveles 3, 4 y 5. ConfiguracionRepositorios sigue siendo el punto de selección.
 
 ## Límites actuales
 

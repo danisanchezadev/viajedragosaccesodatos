@@ -197,7 +197,7 @@ class ProgresionJugadorTest {
         assertEquals(5, new Enemigo().getExperiencia());
         assertEquals(5, new Enemigo("Viejo", "", 1, 0, 1, 0, 0, 1, 1).getExperiencia());
         assertEquals(List.of(10, 5, 7, 6), new RepositorioEnemigosMemoria().obtenerTodos()
-                .stream().map(DefinicionEnemigo::experiencia).toList());
+                .stream().filter(enemigo -> enemigo.nivel() == 1).map(DefinicionEnemigo::experiencia).toList());
     }
 
     @ParameterizedTest
