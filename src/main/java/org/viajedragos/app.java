@@ -4,6 +4,8 @@ import org.viajedragos.arma.Arma;
 import org.viajedragos.arma.Equipo;
 import org.viajedragos.catalogo.RepositorioObjetos;
 import org.viajedragos.catalogo.RepositorioObjetosMemoria;
+import org.viajedragos.catalogo.RepositorioTienda;
+import org.viajedragos.catalogo.RepositorioTiendaMemoria;
 import org.viajedragos.modelo.DefinicionArma;
 import org.viajedragos.modelo.DefinicionPocion;
 import org.viajedragos.arma.TipoEquipo;
@@ -48,6 +50,12 @@ public class app {
     public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin,
                                 RepositorioEnemigos repositorio, Random azarEncuentros,
                                 RepositorioObjetos objetos) {
+        ejecutar(entrada, salida, dados, azarBotin, repositorio, azarEncuentros, objetos, null);
+    }
+
+    public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin,
+                                RepositorioEnemigos repositorio, Random azarEncuentros,
+                                RepositorioObjetos objetos, RepositorioTienda tienda) {
         salida.println("=== Viaje a Dragos ===");
         salida.println("Un combate por turnos. La iniciativa decide quién actúa primero.");
         while (true) {
@@ -70,7 +78,7 @@ public class app {
             }
             // Un jugador por aventura; continuar nunca reconstruye este personaje.
             Jugador jugador = new Jugador("Aventurero", "", 6, 2, 3, 2, 2, 48, 48);
-            if (!jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros, objetos)) return;
+            if (!jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros, objetos, tienda)) return;
         }
     }
 
@@ -96,6 +104,14 @@ public class app {
                                  TiradorDado dados, Random azarBotin,
                                  RepositorioEnemigos repositorio, Random azarEncuentros,
                                  RepositorioObjetos objetos) {
+        return jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros, objetos, null);
+    }
+
+    // null selecciona el catálogo comercial en memoria a partir de los objetos de esta aventura.
+    static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
+                                 TiradorDado dados, Random azarBotin,
+                                 RepositorioEnemigos repositorio, Random azarEncuentros,
+                                 RepositorioObjetos objetos, RepositorioTienda tienda) {
         List<DefinicionEnemigo> catalogo;
         try {
             catalogo = List.copyOf(repositorio.obtenerTodos());
@@ -135,6 +151,7 @@ public class app {
             if (espada == null) throw new IllegalArgumentException("Falta la Espada desgastada");
             if (espadaHierro == null) throw new IllegalArgumentException("Falta la Espada de hierro");
             jugador.configurarPociones(pociones);
+            if (tienda == null) tienda = new RepositorioTiendaMemoria(armas, pociones);
         } catch (IllegalArgumentException | NullPointerException datosInvalidos) {
             salida.println("El catálogo de objetos no es válido o está incompleto. No se inicia la aventura.");
             return true;
@@ -164,6 +181,8 @@ public class app {
 
             if (resultado == ResultadoCombate.ENEMIGO_MUERE) {
                 victorias++;
+                jugador.agregarOro(5);
+                salida.printf("Recompensa: +5 monedas. Oro: %d monedas.%n", jugador.getOro());
                 // Solo una vez tras la resolución definitiva, fuera de los menús.
                 obtenerBotin(jugador, azarBotin, salida);
                 if (!espadaOfrecida) {
@@ -193,8 +212,10 @@ public class app {
                             salida == System.out && Boolean.getBoolean("viajedragos.ansi"))) return false;
                 } else if (opcion.equals("2")) {
                     if (!usarObjeto(jugador, entrada, salida)) return false;
+                } else if (opcion.equals("5")) {
+                    if (!consultarTienda(jugador, entrada, salida, tienda)) return false;
                 } else {
-                    salida.println("Entrada inválida. Escribe 1, 2, 3, 4 o 0.");
+                    salida.println("Entrada inválida. Escribe 1, 2, 3, 4, 5 o 0.");
                 }
             }
             encuentro++;
@@ -213,13 +234,50 @@ public class app {
 
     private static void mostrarExploracion(Jugador jugador, PrintStream salida) {
         cabecera("VIAJE A DRAGOS - EXPLORACIÓN", salida);
-        salida.printf("  %s%n  Vida: %d/%d PS%n%n",
-                jugador.getNombre(), jugador.getVida(), jugador.getVidaMaxima());
+        salida.printf("  %s%n  Vida: %d/%d PS%n  Oro: %d monedas%n%n",
+                jugador.getNombre(), jugador.getVida(), jugador.getVidaMaxima(), jugador.getOro());
         salida.println("1. Revisar inventario");
         salida.println("2. Usar objeto");
         salida.println("3. Continuar al siguiente encuentro");
         salida.println("4. Terminar aventura y volver al menú inicial");
+        salida.println("5. Tienda");
         salida.println("0. Salir del juego");
+    }
+
+    static boolean consultarTienda(Jugador jugador, Scanner entrada, PrintStream salida, RepositorioTienda tienda) {
+        List<org.viajedragos.modelo.ProductoTienda> productos;
+        try {
+            productos = List.copyOf(tienda.obtenerTodos());
+            var ids = new HashSet<String>();
+            for (var producto : productos) {
+                if (!ids.add(producto.id())) throw new IllegalArgumentException("Producto repetido");
+            }
+        } catch (RuntimeException catalogoInvalido) {
+            salida.println("El catálogo de la tienda no es válido. No se ha realizado ninguna compra.");
+            return true;
+        }
+        while (true) {
+            cabecera("TIENDA", salida);
+            salida.printf("  Oro disponible: %d monedas%n", jugador.getOro());
+            if (productos.isEmpty()) salida.println("No hay productos disponibles.");
+            for (int i = 0; i < productos.size(); i++) {
+                var producto = productos.get(i);
+                salida.printf("%d. %s - %d monedas%n", i + 1, producto.nombre(), producto.precio());
+            }
+            salida.println("0. Volver a exploración");
+            int indice = leerIndiceEquipo(entrada, salida, productos.size());
+            if (indice == -1) return false;
+            if (indice == 0) return true;
+            var producto = productos.get(indice - 1);
+            switch (jugador.comprar(producto.id(), tienda)) {
+                case COMPRADA -> salida.printf("Has comprado %s por %d monedas. Se guarda en tu inventario.%n",
+                        producto.nombre(), producto.precio());
+                case SALDO_INSUFICIENTE -> salida.println("No tienes suficiente oro para comprar ese producto.");
+                case PRODUCTO_INEXISTENTE -> salida.println("Ese producto ya no está disponible.");
+                case PRODUCTO_INVALIDO -> salida.println("El producto o su definición no son válidos. No se ha realizado la compra.");
+                case INCORPORACION_FALLIDA -> salida.println("No se ha podido incorporar el objeto. Conservas tu oro y tu inventario.");
+            }
+        }
     }
 
     // null representa fin de entrada; los flujos pertenecen al llamador.

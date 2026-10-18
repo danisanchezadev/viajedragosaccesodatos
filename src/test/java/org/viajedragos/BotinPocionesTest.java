@@ -200,7 +200,7 @@ class BotinPocionesTest {
     void repetirOpcionesInvalidasNoDuplicaBotinNiTiradas() {
         Jugador j = jugador();
         AzarBotin azar = new AzarBotin(0, 0);
-        assertFalse(jugar(j, "1\nx\n0\n2\nx\n5\n0\n", new Dados(VICTORIA), azar));
+        assertFalse(jugar(j, "1\nx\n0\n2\nx\n9\n0\n", new Dados(VICTORIA), azar));
         azar.comprobarConsumo();
         assertEquals(4, veces("Entrada inválida"));
         assertEquals(1, j.getCantidadPociones(TipoPocion.PEQUENA));

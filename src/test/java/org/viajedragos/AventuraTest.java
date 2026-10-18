@@ -181,7 +181,7 @@ class AventuraTest {
 
     @Test
     void invalidosEnAmbosMenusNoCreanEncuentrosNiModificanVida() {
-        ejecutar("2\nx\n1\n1\n2\nx\n5\n\n3\n1\n2\n0\n",
+        ejecutar("2\nx\n1\n1\n2\nx\n9\n\n3\n1\n2\n0\n",
                 new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
         assertEquals(5, veces("Entrada inválida"));
         assertEquals(2, veces("Comienza el combate"));

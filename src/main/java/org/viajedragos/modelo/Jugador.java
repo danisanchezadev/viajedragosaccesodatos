@@ -11,12 +11,75 @@ import java.util.HashSet;
 import java.util.ArrayList;
 import org.viajedragos.arma.Equipo;
 import org.viajedragos.arma.TipoEquipo;
+import org.viajedragos.catalogo.RepositorioTienda;
 
 public class Jugador extends Combatiente{
 
     private final Map<TipoPocion, Integer> inventarioPociones = new EnumMap<>(TipoPocion.class);
     private Map<TipoPocion, DefinicionPocion> definicionesPociones;
     private final List<Equipo> inventarioEquipo = new ArrayList<>();
+    private int oro = 15;
+
+    public int getOro() { return oro; }
+
+    public void agregarOro(int cantidad) {
+        if (cantidad <= 0) throw new IllegalArgumentException("La cantidad de oro debe ser positiva");
+        oro = Math.addExact(oro, cantidad);
+    }
+
+    public boolean gastarOro(int cantidad) {
+        if (cantidad <= 0) throw new IllegalArgumentException("La cantidad de oro debe ser positiva");
+        if (cantidad > oro) return false;
+        oro -= cantidad;
+        return true;
+    }
+
+    public ResultadoCompra comprar(String id, RepositorioTienda repositorio) {
+        ProductoTienda producto;
+        try {
+            producto = Objects.requireNonNull(repositorio).buscarPorId(id).orElse(null);
+            if (producto == null) return ResultadoCompra.PRODUCTO_INEXISTENTE;
+            if (!producto.id().equals(id)) return ResultadoCompra.PRODUCTO_INVALIDO;
+            // El inventario cuenta por tipo: no puede almacenar otra definición del mismo tipo.
+            if (producto.pocion() != null && !producto.pocion().equals(
+                    getDefinicionPocion(producto.pocion().tipo()))) return ResultadoCompra.PRODUCTO_INVALIDO;
+        } catch (RuntimeException datosInvalidos) {
+            return ResultadoCompra.PRODUCTO_INVALIDO;
+        }
+        if (producto.precio() > oro) return ResultadoCompra.SALDO_INSUFICIENTE;
+
+        int oroAntes = oro;
+        var pocionesAntes = new EnumMap<>(inventarioPociones);
+        var equipoAntes = new ArrayList<>(inventarioEquipo);
+        try {
+            if (producto.pocion() != null) {
+                TipoPocion tipo = producto.pocion().tipo();
+                var esperadas = new EnumMap<>(pocionesAntes);
+                esperadas.put(tipo, Math.incrementExact(getCantidadPociones(tipo)));
+                agregarPocion(tipo);
+                if (!inventarioPociones.equals(esperadas) || !inventarioEquipo.equals(equipoAntes)) {
+                    throw new IllegalStateException("No se incorporó la poción correctamente");
+                }
+            } else {
+                Equipo arma = producto.arma().crearArma();
+                var esperado = new ArrayList<>(equipoAntes);
+                esperado.add(arma);
+                agregarEquipo(arma);
+                if (!inventarioEquipo.equals(esperado) || !inventarioPociones.equals(pocionesAntes)) {
+                    throw new IllegalStateException("No se incorporó el arma correctamente");
+                }
+            }
+            if (!gastarOro(producto.precio())) throw new IllegalStateException("No se pudo descontar el oro");
+            return ResultadoCompra.COMPRADA;
+        } catch (RuntimeException falloIncorporacion) {
+            oro = oroAntes;
+            inventarioPociones.clear();
+            inventarioPociones.putAll(pocionesAntes);
+            inventarioEquipo.clear();
+            inventarioEquipo.addAll(equipoAntes);
+            return ResultadoCompra.INCORPORACION_FALLIDA;
+        }
+    }
 
     public void agregarEquipo(Equipo equipo) {
         inventarioEquipo.add(Objects.requireNonNull(equipo, "El equipo no puede ser null"));
