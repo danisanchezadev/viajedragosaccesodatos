@@ -16,6 +16,8 @@ import org.viajedragos.modelo.Jugador;
 import org.viajedragos.modelo.TipoPocion;
 import org.viajedragos.habilidad.implementacion.InstintoSupervivencia;
 import org.viajedragos.habilidad.implementacion.SegundoAliento;
+import org.viajedragos.habilidad.implementacion.Rabia;
+import org.viajedragos.habilidad.implementacion.PrimerImpulso;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -227,7 +229,7 @@ class CombateConsolaTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"2\n0\n1\n", "x\n3\n0\n1\n", "2\nx\n3\n\n0\n1\n", "2\n1\n2\n0\n1\n"})
+    @ValueSource(strings = {"2\n0\n1\n", "x\n4\n0\n1\n", "2\nx\n3\n\n0\n1\n", "2\n1\n2\n0\n1\n"})
     void cancelarInvalidosOExistenciasCeroConservanAccionYDados(String entrada) {
         jugador.setVida(20);
         assertEquals(ResultadoCombate.ENEMIGO_MUERE, ejecutar(entrada, 1, 1, 1, 1, 4, 2));
@@ -537,5 +539,273 @@ class CombateConsolaTest {
         assertEquals(2, texto().split("El enemigo elige atacar", -1).length - 1);
         assertTrue(texto().contains("Turno 2. Orden: Enemigo, después Otro"));
         assertFalse(texto().contains("2. Usar objeto"));
+    }
+
+    @Test
+    void huidaExitosaFinalizaSinAtaquesNiAccionPendienteDelEnemigo() {
+        jugador.setVida(20);
+        jugador.agregarPocion(TipoPocion.PEQUENA);
+        assertEquals(ResultadoCombate.JUGADOR_HUYE, ejecutar("3\n", 1, 1, 1, 1, 6, 1));
+        assertEquals(20, jugador.getVida());
+        assertEquals(10, enemigo.getVida());
+        assertEquals(1, jugador.getCantidadPociones(TipoPocion.PEQUENA));
+        assertTrue(texto().contains("3. Huir"));
+        assertTrue(texto().contains("Has conseguido huir"));
+        assertFalse(texto().contains("Actúa Enemigo"));
+        assertFalse(texto().contains("golpea"));
+        assertFalse(texto().contains("falla su ataque"));
+    }
+
+    @Test
+    void las36ParejasProducen15ExitosY21FallosIncluidosTodosLosEmpates() {
+        int exitos = 0;
+        for (int dadoJugador = 1; dadoJugador <= 6; dadoJugador++) {
+            for (int dadoEnemigo = 1; dadoEnemigo <= 6; dadoEnemigo++) {
+                jugador.setVida(30);
+                enemigo.setVida(10);
+                salida.reset();
+                if (dadoJugador > dadoEnemigo) {
+                    assertEquals(ResultadoCombate.JUGADOR_HUYE,
+                            ejecutar("3\n", 1, 1, 1, 1, dadoJugador, dadoEnemigo));
+                    exitos++;
+                } else {
+                    assertEquals(ResultadoCombate.ENEMIGO_MUERE,
+                            ejecutar("3\n1\n", 1, 1, 1, 1, dadoJugador, dadoEnemigo, 4, 2, 1, 6, 4, 2));
+                    assertTrue(texto().contains("La huida ha fracasado"));
+                    assertEquals(22, jugador.getVida());
+                    String primero = texto().substring(0, texto().indexOf("Turno 2."));
+                    assertFalse(primero.contains("Jugador golpea"));
+                    assertEquals(1, primero.split("Actúa Enemigo", -1).length - 1);
+                }
+            }
+        }
+        assertEquals(15, exitos);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,0,2,1,1,1,true", "0,0,-2,0,2,1,true", "1,4,0,0,6,1,true", "0,0,0,0,3,3,false"})
+    void huidaUtilizaVelocidadEfectivaIncluidoEquipoYMinimoCero(
+            int velocidadJugador, int velocidadEnemigo, int modificadorJugador, int modificadorEnemigo,
+            int dadoJugador, int dadoEnemigo, boolean escapa) {
+        jugador.setVelocidad(velocidadJugador);
+        enemigo.setVelocidad(velocidadEnemigo);
+        jugador.equipar(new Arma("Equipo jugador", TipoEquipo.BOTAS,
+                Map.of(Atributo.VELOCIDAD, modificadorJugador), Map.of()));
+        enemigo.equipar(new Arma("Equipo enemigo", TipoEquipo.BOTAS,
+                Map.of(Atributo.VELOCIDAD, modificadorEnemigo), Map.of()));
+        if (escapa) {
+            assertEquals(ResultadoCombate.JUGADOR_HUYE, ejecutar("3\n", 1, 1, 1, 1, dadoJugador, dadoEnemigo));
+        } else {
+            assertEquals(ResultadoCombate.ENEMIGO_MUERE,
+                    ejecutar("3\n1\n", 1, 1, 1, 1, dadoJugador, dadoEnemigo, 4, 2, 1, 6, 4, 2));
+        }
+        assertEquals(modificadorJugador, jugador.getModificadoresEquipo().get(Atributo.VELOCIDAD));
+        assertEquals(modificadorEnemigo, enemigo.getModificadoresEquipo().get(Atributo.VELOCIDAD));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void enemigoQueActuoAntesNoRepiteAccionTrasHuida(boolean escapa) {
+        if (escapa) {
+            assertEquals(ResultadoCombate.JUGADOR_HUYE, ejecutar("3\n", 1, 1, 1, 6, 4, 2, 6, 1));
+        } else {
+            assertEquals(ResultadoCombate.ENEMIGO_MUERE, ejecutar("3\n1\n",
+                    1, 1, 1, 6, 4, 2, 1, 6, 1, 6, 4, 2));
+            assertTrue(texto().contains("Turno 2. Orden: Jugador, después Enemigo"));
+        }
+        assertEquals(22, jugador.getVida());
+        assertEquals(1, texto().split("Actúa Enemigo", -1).length - 1);
+        assertTrue(texto().indexOf("Enemigo golpea") < texto().indexOf("TU TURNO"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void huidaRespetaEventosDeTurnoYAtaqueYLimpieza(boolean escapa) {
+        List<String> eventos = new ArrayList<>();
+        jugador.aprenderHabilidad(new Habilidad("Registro de huida") {
+            @Override
+            public void alInicioTurno(Combatiente p, Combatiente o, EstadoHabilidad estado) {
+                eventos.add("inicio");
+            }
+            @Override
+            public void antesDeAtacar(ContextoAtaque ca, EstadoHabilidad estado) {
+                eventos.add("ataque");
+            }
+            @Override
+            public void antesDeCalcularDanio(ContextoAtaque ca, EstadoHabilidad estado) {
+                eventos.add(ca.getAtacante() == jugador ? "calculo propio" : "calculo enemigo");
+            }
+            @Override
+            public void antesDeAplicarDanio(ContextoAtaque ca, EstadoHabilidad estado) {
+                eventos.add(ca.getAtacante() == jugador ? "aplicacion propia" : "aplicacion enemiga");
+            }
+            @Override
+            public void alHacerDanio(ContextoAtaque ca, EstadoHabilidad estado) {
+                eventos.add("hacer danio");
+            }
+            @Override
+            public void alRecibirDanio(ContextoAtaque ca, EstadoHabilidad estado) {
+                eventos.add("recibir danio");
+            }
+            @Override
+            public void alFinalTurno(Combatiente p, Combatiente o, EstadoHabilidad estado) {
+                eventos.add("fin turno");
+            }
+            @Override
+            public void alFinalCombate(Combatiente p, Combatiente o, EstadoHabilidad estado) {
+                eventos.add("fin combate");
+            }
+            @Override
+            public void alHuir(Combatiente p, Combatiente o, EstadoHabilidad estado) {
+                fail("alHuir no se conecta en esta fase");
+            }
+            @Override
+            public void alPerseguir(Combatiente p, Combatiente o, EstadoHabilidad estado) {
+                fail("alPerseguir no se conecta en esta fase");
+            }
+        }, 1);
+        if (escapa) {
+            assertEquals(ResultadoCombate.JUGADOR_HUYE, ejecutar("3\n", 1, 1, 1, 1, 6, 1));
+            assertEquals(List.of("inicio", "fin combate"), eventos);
+        } else {
+            assertEquals(ResultadoCombate.ENEMIGO_MUERE, ejecutar("3\n1\n",
+                    1, 1, 1, 1, 1, 6, 4, 2, 1, 6, 4, 2));
+            assertEquals(List.of("inicio", "calculo enemigo", "aplicacion enemiga", "recibir danio",
+                    "fin turno", "inicio", "ataque", "calculo propio", "aplicacion propia",
+                    "hacer danio", "fin combate"), eventos);
+        }
+    }
+
+    @Test
+    void escaparLimpiaHabilidadesTemporalesSinPerderEstadoEquipoNiPociones() {
+        jugador.setVida(5);
+        Rabia rabia = new Rabia();
+        PrimerImpulso impulso = new PrimerImpulso(3);
+        InstintoSupervivencia instinto = new InstintoSupervivencia();
+        jugador.aprenderHabilidad(rabia, 1);
+        jugador.aprenderHabilidad(impulso, 3);
+        jugador.aprenderHabilidad(instinto, 1);
+        Arma arma = new Arma("Equipo", TipoEquipo.ARMA, Map.of(Atributo.FUERZA, 1), Map.of());
+        jugador.equipar(arma);
+        jugador.agregarPocion(TipoPocion.GRANDE);
+        var estados = Map.copyOf(jugador.getHabilidades());
+        assertEquals(ResultadoCombate.JUGADOR_HUYE, ejecutar("3\n", 1, 1, 1, 1, 6, 1));
+        assertEquals(5, jugador.getVida());
+        assertEquals(30, jugador.getVidaMaxima());
+        assertEquals(10, jugador.getAtributoBase(Atributo.FUERZA));
+        assertEquals(11, jugador.getFuerza());
+        assertEquals(3, jugador.getIniciativa());
+        assertEquals(0, jugador.getAgilidad());
+        assertEquals(0, jugador.getResistencia());
+        assertSame(arma, jugador.getEquipoEquipado().get(TipoEquipo.ARMA));
+        assertEquals(1, jugador.getCantidadPociones(TipoPocion.GRANDE));
+        estados.forEach((h, e) -> assertSame(e, jugador.getHabilidades().get(h)));
+        assertEquals(3, jugador.getHabilidades().get(impulso).getNivel());
+    }
+
+    @Test
+    void velocidadActivaEnElMomentoDelIntentoSeUsaYSeRestauraAlEscapar() {
+        jugador.aprenderHabilidad(new Habilidad("Velocidad temporal de prueba") {
+            @Override
+            public void alInicioTurno(Combatiente p, Combatiente o, EstadoHabilidad estado) {
+                p.setVelocidad(p.getAtributoBase(Atributo.VELOCIDAD) + 2);
+            }
+            @Override
+            public void alFinalCombate(Combatiente p, Combatiente o, EstadoHabilidad estado) {
+                p.setVelocidad(p.getAtributoBase(Atributo.VELOCIDAD) - 2);
+            }
+        }, 1);
+        assertEquals(ResultadoCombate.JUGADOR_HUYE, ejecutar("3\n", 1, 1, 1, 1, 1, 2));
+        assertEquals(0, jugador.getVelocidad());
+    }
+
+    @Test
+    void muerteTrasFallarHuidaSeResuelveSinPedirOtraAccion() {
+        jugador.setVida(5);
+        int[] muertes = {0};
+        int[] finales = {0};
+        jugador.aprenderHabilidad(new Habilidad("Registro de muerte") {
+            @Override
+            public void alMorir(Combatiente p, Combatiente o, EstadoHabilidad estado) {
+                muertes[0]++;
+            }
+            @Override
+            public void alFinalCombate(Combatiente p, Combatiente o, EstadoHabilidad estado) {
+                finales[0]++;
+            }
+        }, 1);
+        assertEquals(ResultadoCombate.JUGADOR_MUERE, ejecutar("3\n", 1, 1, 1, 1, 1, 6, 4, 2));
+        assertEquals(1, muertes[0]);
+        assertEquals(1, finales[0]);
+        assertEquals(0, jugador.getVida());
+        assertFalse(texto().contains("Jugador golpea"));
+    }
+
+    @Test
+    void resurreccionTrasFallarPermiteHuirEnElSiguienteTurno() {
+        jugador.setVida(5);
+        int[] muertes = {0};
+        jugador.aprenderHabilidad(new Habilidad("Resurrección de prueba") {
+            @Override
+            public void alMorir(Combatiente p, Combatiente o, EstadoHabilidad estado) {
+                muertes[0]++;
+                p.curarse(20);
+            }
+        }, 1);
+        assertEquals(ResultadoCombate.JUGADOR_HUYE, ejecutar("3\n3\n",
+                1, 1, 1, 1, 1, 6, 4, 2, 1, 6, 6, 1));
+        assertEquals(1, muertes[0]);
+        assertEquals(20, jugador.getVida());
+        assertEquals(1, texto().split("Actúa Enemigo", -1).length - 1);
+    }
+
+    @Test
+    void jugadorMuertoPorAtaquePrevioNoPuedeIntentarHuir() {
+        jugador.setVida(5);
+        assertEquals(ResultadoCombate.JUGADOR_MUERE, ejecutar("3\n", 1, 1, 1, 6, 4, 2));
+        assertFalse(texto().contains("3. Huir"));
+        assertFalse(texto().contains("huir del combate"));
+    }
+
+    @Test
+    void noJugadorRechazaHuidaSinTirarNiConsumirAccion() {
+        Combatiente participante = new Enemigo("Otro", "", 10, 0, 3, 0, 0, 30, 30);
+        int[] tiradas = {1, 1, 1, 1, 4, 2};
+        int[] usadas = {0};
+        assertEquals(ResultadoCombate.ENEMIGO_MUERE, new Combate(participante, enemigo, () -> {
+            assertTrue(usadas[0] < tiradas.length);
+            return tiradas[usadas[0]++];
+        }).combatir(new Scanner("3\n2\n1\n"), new PrintStream(salida, true, StandardCharsets.UTF_8)));
+        assertEquals(tiradas.length, usadas[0]);
+        assertEquals(30, participante.getVida());
+        assertFalse(texto().contains("3. Huir"));
+    }
+
+    @Test
+    void cancelarPocionEInvalidosAntesDeHuirNoRepitenInicioNiDados() {
+        int[] inicios = {0};
+        jugador.aprenderHabilidad(new Habilidad("Registro inicio") {
+            @Override
+            public void alInicioTurno(Combatiente p, Combatiente o, EstadoHabilidad estado) {
+                inicios[0]++;
+            }
+        }, 1);
+        assertEquals(ResultadoCombate.JUGADOR_HUYE, ejecutar("x\n4\n2\n3\n0\n3\n",
+                1, 1, 1, 1, 6, 1));
+        assertEquals(1, inicios[0]);
+        assertEquals(3, texto().split("Entrada inválida", -1).length - 1);
+    }
+
+    @Test
+    void cierreDeEntradaTrasHuidaFallidaNoSeConvierteEnHuidaExitosa() {
+        int[] tiradas = {1, 1, 1, 1, 1, 6, 4, 2, 1, 6};
+        int[] usadas = {0};
+        assertThrows(NoSuchElementException.class, () -> new Combate(jugador, enemigo, () -> {
+            assertTrue(usadas[0] < tiradas.length);
+            return tiradas[usadas[0]++];
+        }).combatir(new Scanner("3\n"), new PrintStream(salida, true, StandardCharsets.UTF_8)));
+        assertEquals(tiradas.length, usadas[0]);
+        assertEquals(22, jugador.getVida());
+        assertFalse(texto().contains("Has conseguido huir"));
     }
 }

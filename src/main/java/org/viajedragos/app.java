@@ -62,6 +62,7 @@ public class app {
     static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
                                  TiradorDado dados, Random azarBotin) {
         int encuentro = 1;
+        boolean espadaOfrecida = false;
         while (true) {
             Enemigo enemigo = new Enemigo("Lobo", "", 5, 2, 2, 1, 2, 18, 18);
             salida.printf("%nEncuentro %d.%n", encuentro);
@@ -85,7 +86,12 @@ public class app {
             if (resultado == ResultadoCombate.ENEMIGO_MUERE) {
                 // Solo una vez tras la resolución definitiva, fuera de los menús.
                 obtenerBotin(jugador, azarBotin, salida);
-                if (encuentro == 1 && !ofrecerEspada(jugador, entrada, salida)) return false;
+                if (!espadaOfrecida) {
+                    espadaOfrecida = true;
+                    if (!ofrecerEspada(jugador, entrada, salida)) return false;
+                }
+            } else if (resultado == ResultadoCombate.JUGADOR_HUYE) {
+                salida.println("Regresas a exploración sin recompensas. Conservas tu personaje y sus pertenencias.");
             }
 
             while (true) {
@@ -261,6 +267,7 @@ public class app {
             case ENEMIGO_MUERE -> "Victoria. " + resultado.getDescripcion();
             case JUGADOR_MUERE -> "Derrota. " + resultado.getDescripcion();
             case AMBOS_MUEREN -> "Ambos han muerto. " + resultado.getDescripcion();
+            case JUGADOR_HUYE -> "Has escapado. " + resultado.getDescripcion();
             default -> resultado.getDescripcion();
         });
     }

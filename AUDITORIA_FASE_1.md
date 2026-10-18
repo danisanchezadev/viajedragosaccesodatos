@@ -2,7 +2,7 @@
 
 Fecha: 14 de octubre de 2026.
 
-> **Estado actual (16 de octubre de 2026):** base publicada e363c95, exploración y consumo fuera del combate; botín publicado en c1d20d. Cambios locales: uso de pociones durante la acción del jugador, sin perder la compatibilidad con otros Combatiente. `mvn clean test`: 398 pruebas pasan, sin fallos, errores ni omisiones. Sin commit ni push de esta fase. Los apartados siguientes conservan el historial de cada etapa; la más reciente se documenta al final.
+> **Estado actual (18 de octubre de 2026):** base publicada f97e7fc, pociones durante el combate. Cambios locales: huida del jugador y oferta de espada tras primera victoria real, conservando los demás Combatiente y el modo automático. `mvn clean test`: 422 pruebas pasan, sin fallos, errores ni omisiones. Sin commit ni push de esta fase. Los apartados siguientes conservan el historial de cada etapa; la más reciente se documenta al final.
 
 ## Alcance y resultado
 
@@ -715,6 +715,9 @@ Pendientes: objetos en combate, huida, mazmorra, cofres, otros consumibles y com
 
 ## Uso de pociones durante el combate — 16 de octubre de 2026
 
+Nota de continuidad: esta fase se publicó posteriormente en f97e7fc. Las notas
+siguientes conservan el estado y alcance que tenía al entregarse.
+
 Base: main e363c95, árbol inicialmente limpio. Tras aprobar el análisis, el autor
 autoriza modificar solo Combate.java, pruebas y documentación. Exige conservar
 el constructor con Combatiente y los participantes que no sean Jugador. No se
@@ -777,3 +780,74 @@ README, contexto y checklist actualizados. Se reconoce e363c95 como la fase de
 exploración publicada y se conserva el historial de entregas previas. Pendientes:
 huida, otros consumibles, cofres, mazmorra, nuevos enemigos y comercio. Sin nuevas
 reglas, persistencia ni arquitectura genérica de acciones.
+
+## Huida del combate — 18 de octubre de 2026
+
+Base main f97e7fc, árbol comprobado limpio antes de editar. Implementación tras
+autorización expresa de fórmula, empate, acción directa, continuidad, espada y
+ausencia de eventos alHuir/alPerseguir. Sin commit ni push.
+
+### Cambios y compatibilidad
+
+- Combate.ejecutarAccionJugador sustituye el selector booleano privado. Ejecuta
+  el ataque existente o el consumo de poción, o intenta huir; devuelve CONTINUA
+  tras consumir la acción sin escapar y JUGADOR_HUYE solo tras éxito. Cancelación
+  de poción e inválidos permanecen en sus bucles sin consumir acción ni dados.
+- intentarHuir usa exactamente dos llamadas de TiradorDado, primero jugador y
+  después enemigo: velocidad efectiva + dado del jugador > velocidad efectiva +
+  dado del enemigo. Incluye equipo y efectos activos. Empate falla sin repetir;
+  no se añaden límites de probabilidad, penalizaciones ni daño adicional.
+- combatirInterno recibe el resultado de la acción. La huida exitosa devuelve
+  finalDelCombate(JUGADOR_HUYE) antes de la acción enemiga pendiente y del fin de
+  turno. Restaura temporales mediante alFinalCombate del jugador, conservando
+  vida y posesiones. La fallida continúa con la comprobación de muertes, acción
+  enemiga pendiente, eventos de fin de turno y alternancia existentes.
+- Solo Jugador dispone de opciones 2 Usar objeto y 3 Huir. Otros Combatiente
+  conservan Atacar. El modo automático conserva su rama de ataque, sin consumir
+  pociones ni intentar huir. No cambian contratos públicos ni otras reglas.
+- alHuir y alPerseguir permanecen sin conectar. No hay ContextoAtaque ni eventos
+  del ataque por intentar escapar. No se modifican habilidades, atributos,
+  equipamiento, dados ni operaciones de inventario. El EOF sigue siendo una
+  interrupción, no un resultado JUGADOR_HUYE.
+- app.jugarAventura trata JUGADOR_HUYE explícitamente y muestra exploración sin
+  recompensas ni curación. Continuar conserva el mismo Jugador y crea otro Lobo;
+  el abandonado no se reutiliza. mostrarResultado incorpora su mensaje específico.
+- espadaOfrecida es un booleano local por aventura que sustituye encuentro == 1.
+  Solo ENEMIGO_MUERE permite botín y primera oferta. Huir no la marca; aceptar
+  o rechazar la primera oferta impide repetirla, aunque haya más huidas/victorias.
+  Una aventura nueva vuelve a tener su propia oferta.
+
+### Pruebas y resultado real
+
+Se conservan los 398 casos previos, adaptando únicamente un dato de la prueba
+de inválidos: 3 del menú principal pasa a 4. El 3 del submenú de pociones sigue
+siendo inválido. No se eliminan ni deshabilitan casos.
+
+- CombateConsolaTest añade 18 casos (55 totales): éxito/fallo/empates, enumeración
+  de 36 parejas con 15 éxitos, dos tiradas exactas, velocidad efectiva de ambos
+  con equipo/penalización y efecto activo de prueba; acción enemiga antes/después,
+  ausencia de ataque por huida, eventos de turno, limpieza, inventario/equipo/
+  estados y niveles. También muerte tras fallo, resurrección y nueva huida, muerte
+  previa que impide elegir, otros Combatiente, cancelación/inválidos y EOF.
+- RecompensaTest añade 6 casos (17 totales): escape sin premios hacia exploración,
+  vida/inventario/equipo intactos; huida inicial y dos victorias con oferta única
+  aceptada o rechazada, Lobos nuevos y misma instancia del jugador; victoria,
+  huida y victoria sin repetir oferta; aventura nueva sin equipo/pociones;
+  interrupción tras fallo sin resultado ficticio ni botín. Aleatoriedad de botín
+  controlada por separado. El modo automático se conserva en sus regresiones.
+
+La primera ejecución mvn test detectó un import ausente de Combatiente en las
+pruebas nuevas y una expectativa incorrecta del caso de velocidad penalizada:
+el atributo efectivo es cero, no negativo. Se corrigieron ambos errores de
+prueba sin cambiar las reglas ni la implementación productiva.
+
+Resultado posterior real: **mvn clean test, BUILD SUCCESS; 422 pruebas,
+0 fallos, 0 errores, 0 omitidas**; 34 fuentes principales y 30 archivos de pruebas
+recompilados. Se añaden 24 casos sobre los 398 anteriores. README, contexto y
+checklist actualizados, reconociendo f97e7fc como pociones en combate publicadas.
+Las comprobaciones de consola se realizan con Scanner/PrintStream en memoria;
+no se atribuye a esta fase una partida manual desde IntelliJ.
+
+Fuera de alcance: huida enemiga, persecución, penalizaciones, nuevas habilidades,
+objetos de escape, cofres, mazmorra y arquitecturas genéricas. Sin cambios en
+ResultadoCombate: se reutiliza JUGADOR_HUYE existente.

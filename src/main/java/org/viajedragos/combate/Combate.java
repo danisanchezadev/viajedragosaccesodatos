@@ -249,9 +249,8 @@ public class Combate {
                     mostrarEstado(salida);
                     salida.printf("Actúa %s.%n", actual.getNombre());
                     if (actual == jugador) {
-                        if (elegirAtaque(entrada, salida)) {
-                            ataque(actual, determinarOponente(actual), salida);
-                        }
+                        resultado = ejecutarAccionJugador(entrada, salida);
+                        if (resultado != ResultadoCombate.CONTINUA) return finalDelCombate(resultado);
                     } else {
                         salida.println("El enemigo elige atacar.");
                         ataque(actual, determinarOponente(actual), salida);
@@ -278,29 +277,46 @@ public class Combate {
                 enemigo.getNombre(), enemigo.getVida(), enemigo.getVidaMaxima());
     }
 
-    // true: atacar; false: la acción ya se ha consumido utilizando una poción.
-    private boolean elegirAtaque(Scanner entrada, PrintStream salida) {
+    // Ejecuta una acción válida; cancelar o introducir inválidos mantiene la elección.
+    private ResultadoCombate ejecutarAccionJugador(Scanner entrada, PrintStream salida) {
         while (true) {
             salida.printf("%n----------------------------------------%n  TU TURNO%n----------------------------------------%n");
             salida.printf("  %s%n  Vida: %d/%d PS%n%n", jugador.getNombre(), jugador.getVida(), jugador.getVidaMaxima());
             salida.println("1. Atacar");
-            if (jugador instanceof Jugador) salida.println("2. Usar objeto");
+            if (jugador instanceof Jugador) {
+                salida.println("2. Usar objeto");
+                salida.println("3. Huir");
+            }
             salida.print("Elige una opción > ");
             salida.flush();
             // El cierre de la entrada interrumpe la sesión; no representa una huida.
             String opcion = entrada.nextLine().trim();
-            if (opcion.equals("1")) return true;
+            if (opcion.equals("1")) {
+                ataque(jugador, enemigo, salida);
+                return ResultadoCombate.CONTINUA;
+            }
+            if (opcion.equals("3") && jugador instanceof Jugador) {
+                return intentarHuir(salida) ? ResultadoCombate.JUGADOR_HUYE : ResultadoCombate.CONTINUA;
+            }
             if (opcion.equals("2") && jugador instanceof Jugador portador) {
                 if (usarPocionEnCombate(portador, entrada, salida)) {
                     salida.println("Tu acción ha terminado.");
-                    return false;
+                    return ResultadoCombate.CONTINUA;
                 }
             } else {
                 salida.println(jugador instanceof Jugador
-                        ? "Entrada inválida. Escribe 1 para atacar o 2 para usar objeto."
+                        ? "Entrada inválida. Escribe 1 para atacar, 2 para usar objeto o 3 para huir."
                         : "Entrada inválida. Escribe 1 para atacar.");
             }
         }
+    }
+
+    private boolean intentarHuir(PrintStream salida) {
+        int dadoJugador = tirador.tirarDado();
+        int dadoEnemigo = tirador.tirarDado();
+        boolean escapa = jugador.getVelocidad() + dadoJugador > enemigo.getVelocidad() + dadoEnemigo;
+        salida.println(escapa ? "Has conseguido huir del combate." : "La huida ha fracasado. Tu acción ha terminado.");
+        return escapa;
     }
 
     // true solo tras consumir; cancelar devuelve false y no termina la acción.

@@ -9,8 +9,8 @@ Requiere JDK 23 y Maven. No utiliza persistencia ni servicios externos.
 2. Selecciona JDK 23 como SDK del proyecto.
 3. Abre `src/main/java/org/viajedragos/app.java` y ejecuta su método `main`.
 4. En el menú inicial escribe `1` y pulsa Intro para comenzar una nueva aventura.
-5. Cuando llegue la acción de Aventurero, escribe `1` para atacar o `2` para
-   utilizar una poción que hayas obtenido en encuentros anteriores.
+5. Cuando llegue la acción de Aventurero, escribe `1` para atacar, `2` para
+   utilizar una poción que hayas obtenido en encuentros anteriores o `3` para huir.
 6. Tras la primera victoria, encontrarás la **Espada desgastada**: `1` la equipa
    y `2` la rechaza definitivamente. Aporta **Fuerza +1** y ninguna habilidad.
 7. Después del botín y de la oferta de espada aparece el menú de exploración:
@@ -22,7 +22,8 @@ Aventurero con 24/24 de vida, sin habilidades ni equipamiento. Cada encuentro cr
 un Lobo nuevo con los valores actuales, sin dificultad automática ni límite de
 encuentros. Al continuar se conserva exactamente la vida restante del Aventurero:
 no hay curación automática entre encuentros ni progresión. La espada fija se ofrece
-después del primer Lobo y no vuelve a ofrecerse durante esa aventura. Además, cada
+después de la primera victoria real y no vuelve a ofrecerse durante esa aventura,
+aunque se rechace. Huir no cuenta como victoria. Además, cada
 enemigo derrotado definitivamente puede dejar pociones.
 
 La espada permanece equipada y su bonificación no se acumula. La fuerza base
@@ -81,7 +82,7 @@ No se añaden habilidades al Aventurero de la demo. No hay curación automática
 ## Pociones durante el combate
 
 Cuando llega la acción del jugador se muestra TU TURNO: `1. Atacar` y
-`2. Usar objeto`. El submenú conserva `1. Poción pequeña`, `2. Poción grande` y
+`2. Usar objeto` y `3. Huir`. El submenú conserva `1. Poción pequeña`, `2. Poción grande` y
 `0. Cancelar`, incluso cuando sus cantidades sean cero. Una poción utilizada
 correctamente sustituye al ataque de esa acción: no hay ataque ni eventos de
 ataque del jugador por el consumo. Se muestran recuperación real, vida resultante,
@@ -102,8 +103,33 @@ interrumpe la sesión como antes, sin resultado ni botín ficticio.
 
 El constructor de Combate sigue aceptando Combatiente. Si el participante que
 ocupa el lugar del jugador no es una instancia de Jugador, conserva únicamente
-Atacar; elegir 2 es inválido y no consume su acción. No hay conversión forzada.
-El modo automático siempre ataca y nunca consume pociones.
+Atacar; elegir 2 o 3 es inválido y no consume su acción. No hay conversión forzada.
+El modo automático siempre ataca y nunca consume pociones ni intenta huir.
+
+## Huida del combate
+
+Seleccionar `3. Huir` realiza el intento inmediatamente, sin confirmación. Usa
+exactamente dos tiradas del TiradorDado existente: escapa si
+`velocidad efectiva del jugador + 1D6 > velocidad efectiva del enemigo + 1D6`.
+Incluye equipo y efectos activos; un empate falla y no se repite. No hay límites
+adicionales de probabilidad: con igual velocidad, 15 de las 36 parejas dan éxito.
+
+El éxito devuelve JUGADOR_HUYE y termina inmediatamente, sin ataque del jugador,
+acción enemiga pendiente ni eventos finales de ese turno. Sí ejecuta la limpieza
+alFinalCombate existente. No es victoria ni derrota y no concede botín o espada.
+Conserva la vida, inventario, equipo y habilidades, retirando los efectos temporales
+que deban restaurarse. Regresa a exploración con el mismo personaje, sin curación
+automática. Continuar crea un nuevo enemigo; el abandonado no se conserva.
+
+El fallo consume una acción sin ataque del jugador, sin eventos de su ataque y
+sin penalizaciones ni daño adicional. El enemigo conserva su acción pendiente,
+pero no recibe otra si ya actuó. Eventos finales de turno, iniciativa, muertes y
+resurrecciones siguen su recorrido habitual. No hay persecución ni huida enemiga;
+alHuir y alPerseguir permanecen sin conectar.
+
+La Espada desgastada se ofrece una sola vez tras la primera victoria efectiva:
+si huyes del encuentro 1 y ganas el 2, entonces aparece su oferta. Aceptarla o
+rechazarla marca la oferta como realizada. Una aventura nueva tiene su propia oferta.
 
 Si muere el Aventurero, incluso si mueren ambos, se muestra el resultado y se
 regresa al menú inicial. Terminar voluntariamente la aventura también descarta
@@ -129,7 +155,7 @@ enemigo/Combate por encuentro y deja la limpieza de efectos a alFinalCombate.
 no modifica fuerza directamente ni llama a aplicarEfectos manualmente.
 El primer combate es de aprendizaje: ambos comienzan sin habilidades. Su
 adquisición mediante progresión, recompensas o equipamiento se definirá más adelante.
-Esta demo ofrece Atacar y usar las dos pociones en combate. Huida, otros
+Esta demo ofrece Atacar, usar las dos pociones y Huir en combate. Otros
 consumibles, cofres, tiradas de mazmorra, desplazamiento y comercio quedan pendientes.
 
 ## Comprobar el proyecto
@@ -156,7 +182,7 @@ las pruebas de integración, sin asignarlas a la demo ni añadir narración.
 restauración, niveles y equipo. `RolesModificadoresDanioTest` comprueba los roles
 confirmados: Caparazón, Defensa perfecta y Guardia férrea solo en defensa;
 Castigo al torpe y Golpe certero solo en ataque. Incluye condiciones de activación,
-instancias compartidas y reglas especiales. La suite completa pasa con 398 pruebas.
+instancias compartidas y reglas especiales. La suite completa pasa con 422 pruebas.
 El análisis y la corrección están en `ANALISIS_ROLES_MODIFICADORES_DANIO.md`.
 
 `AventuraTest` añade 12 casos de continuidad: identidad del jugador, enemigos
@@ -174,8 +200,9 @@ También comprueba que una ranura ocupada no se sustituye ni se anuncia como éx
 La continuidad entre encuentros está publicada en `main`, commit `6fc2a8d`.
 La Espada desgastada está publicada en `ec9dc46` y el botín de pociones en
 `c1d20d`. El menú de exploración, consulta y consumo fuera de combate están
-publicados en `e363c95`. El uso de pociones durante el combate es el cambio local
-de esta fase; no se ha hecho commit ni push.
+publicados en `e363c95`. El uso de pociones durante el combate está publicado en
+`f97e7fc`. La huida y la oferta de espada tras la primera victoria real son los
+cambios locales de esta fase; no se ha hecho commit ni push.
 
 `InventarioPocionesTest` añade 8 casos de cantidades, datos de recuperación,
 independencia entre jugadores, encapsulación y ausencia de curación automática.
@@ -197,9 +224,17 @@ actividad/estado/nivel y el efecto real de Instinto con equipo y limpieza poster
 recuperación real, cancelación, entradas inválidas/cierre y dos encuentros
 conservando vida/pociones/equipo sin repetir botín ni consumir dados adicionales.
 En la fase publicada de exploración se adaptaron Continuar de 1 a 3 y Terminar de
-2 a 4. Esta fase conserva los 369 casos anteriores sin adaptarlos y añade 29:
+2 a 4. La fase de pociones en combate conservó los 369 casos anteriores y añadió 29:
 25 en CombateConsolaTest (37 en total) y 4 en ExploracionTest (21 en total).
 Verifican ambas pociones, sustitución de ataque, orden/eventos/estados, recuperación
 real, cancelación/rechazo, muerte/resurrección, limpieza, participantes no Jugador,
 modo automático, interrupciones y continuidad hacia exploración. Los dados de
 combate y el generador de botín se controlan por separado.
+
+La fase de huida conserva los 398 casos previos, cambiando solo el 3 utilizado
+como inválido del menú principal por 4. Añade 18 casos a CombateConsolaTest
+(55 en total) y 6 a RecompensaTest (17 en total). Se comprueban las 36 parejas,
+empates, velocidad efectiva, iniciativa, ausencia de ataques/eventos adicionales,
+enemigo antes/después, limpieza, muerte/resurrección, interrupción y continuidad
+sin premios por escapar. Aceptar/rechazar la espada tras huir y ganar no repite
+oferta ni botín. La verificación de consola usa entradas y dados controlados.

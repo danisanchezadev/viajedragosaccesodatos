@@ -1,6 +1,8 @@
 package org.viajedragos;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.viajedragos.arma.Arma;
 import org.viajedragos.arma.Atributo;
 import org.viajedragos.arma.Equipo;
@@ -15,13 +17,17 @@ import org.viajedragos.habilidad.implementacion.InstintoSupervivencia;
 import org.viajedragos.habilidad.implementacion.PrimerImpulso;
 import org.viajedragos.habilidad.implementacion.Rabia;
 import org.viajedragos.modelo.Enemigo;
+import org.viajedragos.modelo.Combatiente;
 import org.viajedragos.modelo.Jugador;
+import org.viajedragos.modelo.TipoPocion;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -275,6 +281,149 @@ class RecompensaTest {
         assertEquals(11, j.getFuerza());
         assertTrue(texto().contains("ranura de arma está ocupada"));
         assertFalse(texto().contains("Espada desgastada equipada"));
+    }
+
+    @Test
+    void huirVuelveAExploracionSinPremiosNiCambiosDeVidaEquipoOInventario() {
+        Jugador j = jugador();
+        j.setVida(13);
+        j.agregarPocion(TipoPocion.PEQUENA);
+        Arma arma = new Arma("Arma de prueba", TipoEquipo.ARMA, Map.of(Atributo.FUERZA, 1), Map.of());
+        j.equipar(arma);
+        Dados dados = new Dados(new int[]{1, 1, 1, 1, 6, 1});
+        Random sinBotin = new Random(0) {
+            @Override
+            public int nextInt(int bound) {
+                fail("Escapar no genera botín");
+                return 0;
+            }
+        };
+        assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
+                app.jugarAventura(j, new Scanner("3\n0\n"), consola(), dados, sinBotin)));
+        dados.comprobarConsumo();
+        assertEquals(13, j.getVida());
+        assertEquals(24, j.getVidaMaxima());
+        assertEquals(1, j.getCantidadPociones(TipoPocion.PEQUENA));
+        assertSame(arma, j.getEquipoEquipado().get(TipoEquipo.ARMA));
+        assertEquals(7, j.getFuerza());
+        assertTrue(texto().contains("Has escapado."));
+        assertTrue(texto().contains("Regresas a exploración sin recompensas"));
+        assertTrue(texto().contains("EXPLORACIÓN"));
+        assertTrue(texto().contains("Vida: 13/24 PS"));
+        assertFalse(texto().contains("Botín:"));
+        assertFalse(texto().contains("Has encontrado"));
+        assertFalse(texto().contains("Victoria."));
+        assertFalse(texto().contains("Derrota."));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void primeraVictoriaRealTrasHuirOfreceEspadaUnaSolaVez(boolean equipar) {
+        Jugador j = jugador();
+        List<Combatiente> enemigos = new ArrayList<>();
+        j.aprenderHabilidad(new Habilidad("Registro de encuentros") {
+            @Override
+            public void alInicioCombate(Combatiente portador, Combatiente oponente, EstadoHabilidad estado) {
+                assertSame(j, portador);
+                assertEquals(24, portador.getVida());
+                assertEquals(18, oponente.getVida());
+                assertEquals(18, oponente.getVidaMaxima());
+                enemigos.add(oponente);
+            }
+        }, 1);
+        Dados dados = new Dados(new int[]{1, 1, 1, 1, 6, 1}, VICTORIA, VICTORIA);
+        int[] botin = {0};
+        Random azar = new Random(0) {
+            @Override
+            public int nextInt(int bound) {
+                assertEquals(100, bound);
+                assertTrue(enemigos.size() >= 2, "La huida inicial no concede botín");
+                assertTrue(botin[0]++ < 4);
+                return 0;
+            }
+        };
+        String entrada = "3\n3\n1\n" + (equipar ? "1" : "2") + "\n3\n1\n0\n";
+        assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
+                app.jugarAventura(j, new Scanner(entrada), consola(), dados, azar)));
+        dados.comprobarConsumo();
+        assertEquals(4, botin[0]);
+        assertEquals(3, enemigos.size());
+        assertNotSame(enemigos.get(0), enemigos.get(1));
+        assertNotSame(enemigos.get(1), enemigos.get(2));
+        assertEquals(18, enemigos.get(0).getVida(), "El enemigo abandonado no se vuelve a usar");
+        assertEquals(1, veces("Has encontrado una Espada desgastada"));
+        assertEquals(2, veces("Victoria."));
+        assertEquals(equipar, j.getEquipoEquipado().containsKey(TipoEquipo.ARMA));
+        assertEquals(equipar ? 7 : 6, j.getFuerza());
+        assertEquals(2, j.getCantidadPociones(TipoPocion.PEQUENA));
+        assertEquals(2, j.getCantidadPociones(TipoPocion.GRANDE));
+        String primero = texto().substring(0, texto().indexOf("Encuentro 2."));
+        assertFalse(primero.contains("Has encontrado"));
+        assertFalse(primero.contains("Botín:"));
+        assertTrue(texto().indexOf("Encuentro 2.") < texto().indexOf("Has encontrado"));
+    }
+
+    @Test
+    void victoriaHuidaVictoriaNoRepitenOfertaRechazadaNiPremianLaHuida() {
+        Jugador j = jugador();
+        Dados dados = new Dados(VICTORIA, new int[]{1, 1, 1, 1, 6, 1}, VICTORIA);
+        int[] botin = {0};
+        Random azar = new Random(0) {
+            @Override
+            public int nextInt(int bound) {
+                assertEquals(100, bound);
+                assertTrue(botin[0]++ < 4);
+                return 99;
+            }
+        };
+        assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
+                app.jugarAventura(j, new Scanner("1\n2\n3\n3\n3\n1\n0\n"), consola(), dados, azar)));
+        dados.comprobarConsumo();
+        assertEquals(4, botin[0]);
+        assertEquals(1, veces("Has encontrado una Espada desgastada"));
+        assertEquals(2, veces("Victoria."));
+        assertTrue(j.getEquipoEquipado().isEmpty());
+        assertTrue(j.getInventarioPociones().isEmpty());
+        assertEquals(24, j.getVida());
+    }
+
+    @Test
+    void terminarTrasHuirPermiteAventuraNuevaSinEquipoNiPociones() {
+        Dados dados = new Dados(VICTORIA_CON_VIDA_6, new int[]{1, 1, 1, 1, 6, 1},
+                new int[]{1, 1, 1, 1, 6, 1});
+        assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.ejecutar(
+                new Scanner("1\n1\n1\n3\n3\n4\n1\n3\n1\n0\n0\n"), consola(), dados, new Random(0)));
+        dados.comprobarConsumo();
+        assertEquals(2, veces("Encuentro 1."));
+        assertEquals(1, veces("Has encontrado una Espada desgastada"));
+        String nueva = texto().substring(texto().lastIndexOf("Encuentro 1."));
+        assertTrue(nueva.contains("Aventurero: 24/24 de vida"));
+        assertTrue(nueva.contains("No tienes consumibles"));
+        assertTrue(nueva.contains("No tienes equipo equipado"));
+        assertTrue(texto().contains("Vida final: Aventurero 6/24"));
+    }
+
+    @Test
+    void entradaCerradaTrasFallarHuidaNoGeneraResultadoNiPremios() {
+        Jugador j = jugador();
+        Dados dados = new Dados(new int[]{1, 1, 1, 1, 1, 6, 4, 2, 1, 6});
+        Random sinBotin = new Random(0) {
+            @Override
+            public int nextInt(int bound) {
+                fail("Un combate interrumpido no concede botín");
+                return 0;
+            }
+        };
+        assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
+                app.jugarAventura(j, new Scanner("3\n"), consola(), dados, sinBotin)));
+        dados.comprobarConsumo();
+        assertEquals(20, j.getVida());
+        assertTrue(texto().contains("el combate queda sin terminar"));
+        assertFalse(texto().contains("Has escapado."));
+        assertFalse(texto().contains("Victoria."));
+        assertFalse(texto().contains("Derrota."));
+        assertFalse(texto().contains("EXPLORACIÓN"));
+        assertFalse(texto().contains("Has encontrado"));
     }
 
     private static class Dados implements TiradorDado {

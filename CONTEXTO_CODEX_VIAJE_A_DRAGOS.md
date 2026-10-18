@@ -1,7 +1,7 @@
 ﻿# Viaje a Dragos — contexto de producto, reglas y plan de implementación para Codex
 
 > **Naturaleza:** documento vivo de referencia para un agente de programación.
-> **Fecha:** 16 de octubre de 2026.
+> **Fecha:** 18 de octubre de 2026.
 > **Fuente de verdad del estado del código:** el repositorio actual. Las descripciones de implementación aquí proceden de conversaciones y fragmentos compartidos; **no sustituyen una inspección del código**.
 > **Objetivo inmediato:** MVP Java de consola, sin ningún acceso a datos, que permita jugar y sirva como banco de pruebas para que otra persona aprenda posteriormente diferentes técnicas de persistencia.
 
@@ -70,10 +70,10 @@ Estas reglas proceden del diseño de combate previamente discutido; **Codex debe
 3. Se comprueba si alguien ha muerto como consecuencia de esos efectos.
 4. Si hay muertos, se ejecuta la resolución de muertes, que puede activar habilidades `alMorir` y cambiar el desenlace.
 5. Si ambos siguen vivos, se determina el primer turno (`primerTurno()`).
-6. El bucle compartido ejecuta inicio de turno para ambos vivos por prioridad y resuelve muertes. `atacante()` determina el orden de las dos acciones. Ejecuta la primera y resuelve muertes; si ambos siguen vivos, ejecuta la segunda y vuelve a resolver muertes. Si continúa, ejecuta final de turno para ambos y alterna el poseedor. En consola el enemigo ataca automáticamente y el jugador elige Atacar o usar una poción solo al llegar su acción, según 3.9. Huida sigue pendiente.
+6. El bucle compartido ejecuta inicio de turno para ambos vivos por prioridad y resuelve muertes. `atacante()` determina el orden de las dos acciones. Ejecuta la primera y resuelve muertes; si ambos siguen vivos, ejecuta la segunda y vuelve a resolver muertes. Si continúa, ejecuta final de turno para ambos y alterna el poseedor. En consola el enemigo ataca automáticamente y el jugador elige Atacar, usar una poción o Huir solo al llegar su acción, según 3.9/3.10. La huida exitosa cierra inmediatamente mediante limpieza final, sin acción pendiente ni fin de turno.
 7. Regla final confirmada: una muerte definitiva cierra el combate sin eventos normales posteriores ni alFinalTurno. Solo el jugador ejecuta alFinalCombate, siempre, incluso muerto, como excepción de limpieza y contingencias. El enemigo no ejecuta alFinalCombate.
 
-Decisiones expresas del autor para completar combatir: ambos pueden ejecutar habilidades en las fases correspondientes; la prioridad se determina por la iniciativa en ese momento, en ausencia de prioridad se usa el poseedor del turno, y si no lo hay se tira para determinar quién empieza. Si alguien muere antes de ejecutar su inicio, ejecuta alMorir en vez de ese inicio. El límite de una activación de muerte por participante y resolución se conserva. PrimerTurno mantiene iniciativa × 1D6 y el autor confirmó la excepción de comparación directa de dados si ambas iniciativas son cero. La huida queda para otra tarea y no se inventa un resultado o límite para combates sin progreso.
+Decisiones expresas del autor para completar combatir: ambos pueden ejecutar habilidades en las fases correspondientes; la prioridad se determina por la iniciativa en ese momento, en ausencia de prioridad se usa el poseedor del turno, y si no lo hay se tira para determinar quién empieza. Si alguien muere antes de ejecutar su inicio, ejecuta alMorir en vez de ese inicio. El límite de una activación de muerte por participante y resolución se conserva. PrimerTurno mantiene iniciativa × 1D6 y el autor confirmó la excepción de comparación directa de dados si ambas iniciativas son cero. La huida se integra según 3.10; no se inventa un resultado o límite para combates sin progreso.
 
 Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a morir en otro momento, comienza otra resolución y puede ejecutar de nuevo alMorir una vez en esa resolución. Las fases de turno comprueban muertes después de cada participante; el muerto definitivo no ejecuta el siguiente evento ordinario. La operación ataque conserva toda su secuencia ya validada antes de resolver sus muertes.
 
@@ -100,14 +100,14 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 
 ### 3.6 Primera recompensa de equipamiento: fase 5 confirmada
 
-- Solo después de vencer al primer Lobo de cada aventura: mostrar el resultado y ofrecer una Espada desgastada, TipoEquipo.ARMA, FUERZA +1, sin habilidades otorgadas. El primer combate sigue sin equipo ni habilidades iniciales.
+- Solo después de la primera victoria efectiva de cada aventura: mostrar el resultado y ofrecer una Espada desgastada, TipoEquipo.ARMA, FUERZA +1, sin habilidades otorgadas. Huir no cuenta como victoria; si se huye del primer Lobo y se vence al segundo, se ofrece entonces. El primer combate sigue sin equipo ni habilidades iniciales.
 - Pregunta independiente: `1. Equipar Espada desgastada`, `2. Rechazar Espada desgastada`. Después aparece el menú habitual entre encuentros. Entradas inválidas repiten la pregunta sin crear otra pieza, aplicar efectos o consumir dados.
 - Aceptar llama una sola vez a jugador.equipar y comprueba su booleano antes de anunciar éxito. No se modifica fuerza directamente ni se llama a aplicarEfectos manualmente. Si la ranura está ocupada, se informa del rechazo sin sustituirla.
 - Rechazar descarta definitivamente la pieza; el inventario de pociones no almacena armas y no permite recuperarla. No se vuelve a ofrecer en encuentros posteriores, se acepte o se rechace.
 - La espada y su FUERZA +1 permanecen con la misma instancia del jugador en los encuentros posteriores. Base de fuerza 6, efectiva 7 en el Aventurero sin otros efectos. No se modifica vida actual/máxima.
 - Morir o terminar aventura descarta personaje y equipo. Una aventura nueva empieza sin equipo y puede recibir su propia espada tras su primera victoria.
 - Si se cierra la entrada durante la oferta, termina la sesión sin equipar ni iniciar otro encuentro. La victoria ya obtenida conserva su resultado real.
-- Implementación en app.ofrecerEspada, llamado desde jugarAventura únicamente con ENEMIGO_MUERE y encuentro == 1. Sin catálogo, motor de recompensas, sustitución, clases productivas nuevas ni cambios de combate/modelo.
+- Implementación en app.ofrecerEspada, llamado desde jugarAventura con ENEMIGO_MUERE y espadaOfrecida == false. El booleano local se marca antes de la oferta, tanto para aceptar como para rechazar; sustituye el antiguo encuentro == 1. Sin catálogo, motor de recompensas, sustitución ni clases productivas nuevas.
 
 ### 3.7 Botín de pociones publicado en c1d20d
 
@@ -129,19 +129,29 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - La consola calcula el resultado mediante la recuperación devuelta y muestra vida y cantidad restante. Con 22/24, una pequeña cura 2 PS. Nunca se supera la vida máxima mediante la recuperación de la poción.
 - Se conservan los eventos alCurarse activos y sus estados/niveles. Instinto de supervivencia mantiene sus efectos según vida, aun fuera de combate; el siguiente combate conserva su restauración final. No se añaden habilidades a la demo.
 - app conserva el bucle entre encuentros y contiene métodos sencillos de presentación, consulta, uso y lectura de opciones. Cabeceras y separadores ASCII, sin nuevas clases productivas ni bibliotecas. El cierre de entrada en los submenús termina la sesión sin otra acción o encuentro.
-- El consumo durante el combate está implementado según 3.9. Siguen pendientes huida, cofres, mazmorra y otros consumibles.
+- El consumo durante el combate está implementado según 3.9 y la huida según 3.10. Siguen pendientes cofres, mazmorra y otros consumibles.
 
 ### 3.9 Pociones durante la acción del jugador en combate
 
-- Cambio local autorizado sobre e363c95. En modo interactivo, Combate muestra TU TURNO solo al llegar la acción del jugador, después de resolver cualquier acción previa del enemigo. Opciones 1 Atacar y 2 Usar objeto; sin huida.
+- Publicado en f97e7fc sobre e363c95. En modo interactivo, Combate muestra TU TURNO solo al llegar la acción del jugador, después de resolver cualquier acción previa del enemigo. Opciones 1 Atacar y 2 Usar objeto, ampliadas con 3 Huir según 3.10.
 - El submenú mantiene 1 pequeña, 2 grande y 0 cancelar, aunque la cantidad sea cero. Reutiliza exclusivamente Jugador.usarPocion para curación/descuento; muestra recuperación real, vida y unidades restantes.
 - Un resultado de recuperación positiva consume la acción y sustituye al ataque: no se crea ContextoAtaque ni se ejecutan eventos/tiradas de ataque por usar la poción. Después se conserva la comprobación de muertes, la acción pendiente del enemigo, los eventos de fin de turno y la alternancia actuales.
 - Cancelar vuelve al menú del turno; inválidos, poción inexistente, vida completa o consumo rechazado permiten seguir eligiendo sin consumir acción, dados ni eventos de turno adicionales.
-- elegirAtaque es un método privado que devuelve true para atacar y false solo si una poción ya consumió la acción. usarPocionEnCombate devuelve true tras éxito y false al cancelar; no son contratos públicos ni un sistema genérico de acciones.
-- El constructor conserva Combatiente. Si el participante en el lugar del jugador no es Jugador, solo ofrece Atacar y rechaza 2 sin perder la acción, sin conversión inválida ni acceso a inventario. El modo automático no muestra menús y siempre ataca, aunque un Jugador tenga pociones.
+- ejecutarAccionJugador sustituye al antiguo booleano privado elegirAtaque: ejecuta la acción y devuelve CONTINUA o JUGADOR_HUYE según 3.10. usarPocionEnCombate conserva true tras éxito y false al cancelar; no son contratos públicos ni un sistema genérico de acciones.
+- El constructor conserva Combatiente. Si el participante en el lugar del jugador no es Jugador, solo ofrece Atacar y rechaza 2 o 3 sin perder la acción, sin conversión inválida ni acceso a inventario. El modo automático no muestra menús y siempre ataca, aunque un Jugador tenga pociones.
 - Se conservan alCurarse, actividad/estados/niveles y las fórmulas de habilidades. Instinto puede retirar su fuerza al curarse y reactivarla tras daño según su umbral; la limpieza conserva el equipo. Segundo aliento puede completar vida al inicio del turno y hacer innecesaria una poción.
 - Scanner.nextLine mantiene NoSuchElementException al cerrar la entrada en cualquiera de los menús. app ya captura esa excepción: interrumpe sin resultado ficticio, botín ni finalización de un combate incompleto.
-- Solo cambia Combate.java, sus pruebas y documentación. No se cambian firmas públicas, Jugador, app, habilidades, dados, equipo ni recompensas. Presentación ASCII sencilla en Combate sin dependencia hacia app ni nuevas clases productivas; las reglas de consumo siguen centralizadas en Jugador.
+- En la fase publicada de pociones solo cambió Combate.java, sus pruebas y documentación. No se cambiaron firmas públicas, Jugador, app, habilidades, dados, equipo ni recompensas. La fase de huida amplía Combate y app según 3.10. Presentación ASCII sencilla en Combate sin dependencia hacia app ni nuevas clases productivas; las reglas de consumo siguen centralizadas en Jugador.
+
+### 3.10 Huida del jugador — implementación autorizada
+
+- Cambio local sobre main f97e7fc. Seleccionar 3 Huir realiza inmediatamente dos tiradas de TiradorDado, una del jugador y otra del enemigo, sin confirmación. Éxito si velocidad efectiva del jugador + dado > velocidad efectiva del enemigo + dado. Incluye equipo y efectos activos; empate falla sin repetición ni límites adicionales de probabilidad.
+- ejecutarAccionJugador ejecuta ataque, consumo o intento de huida. Devuelve CONTINUA tras ataque/poción/huida fallida y JUGADOR_HUYE tras éxito. No añade clases, estados ni contratos públicos. Solo Jugador dispone de opciones 2 y 3; otros Combatiente conservan Atacar. El modo automático siempre ataca.
+- En combatirInterno, JUGADOR_HUYE termina inmediatamente mediante finalDelCombate: sin ataque del jugador, acción enemiga pendiente ni alFinalTurno. Sí ejecuta alFinalCombate del jugador para restaurar temporales y conserva vida, equipo, inventario y habilidades. alHuir y alPerseguir siguen sin conectar por decisión expresa.
+- Fallar consume una acción sin ataque, eventos de ataque, daño ni penalización adicionales. El enemigo pendiente actúa; si ya actuó, no repite. Se conserva resolución de muertes/resurrecciones después de acciones y los eventos finales/alternancia si el combate continúa. Navegar o cancelar pociones no repite iniciativa ni inicio de turno.
+- app trata explícitamente JUGADOR_HUYE: mensaje de escape y regreso a exploración, sin victoria/derrota, botín ni espada. Continuar usa el mismo Jugador con vida restante y crea un Lobo/Combate nuevos; el abandonado no se conserva. Terminar o morir mantiene el descarte habitual del personaje.
+- La espada se ofrece una vez tras la primera victoria real, usando espadaOfrecida local según 3.6. Huir no marca ese booleano; aceptar o rechazar la primera oferta impide repetirla.
+- El cierre de entrada conserva NoSuchElementException e interrupción sin resultado ficticio ni recompensas. No hay huida enemiga, persecución, nuevas habilidades/consumibles ni cambios de reglas de ataque o iniciativa.
 
 ## 4. Habilidades
 
@@ -179,7 +189,7 @@ Estas áreas forman parte del objetivo del producto, pero **no se han establecid
 - **Inventario actual:** cantidades de las dos pociones según 3.7, encapsuladas en Jugador, consultables y consumibles entre combates según 3.8 y utilizables durante su acción según 3.9. Cualquier inventario general sigue pendiente. No se inventan límites de capacidad ni otros objetos.
 - **Comercio:** previsto como mecánica sencilla de compra/venta o interacción con una tienda; precios, moneda, descuentos y restricciones **no están confirmados para esta aplicación**. No importar reglas de ejercicios independientes sobre Strategy y tipos de cliente.
 - **Progresión:** no hay aquí una especificación confirmada de experiencia, niveles, clases de personaje o distribución de atributos para el MVP. No inventarla.
-- **Huida:** pendiente de reglas e implementación. **Objetos en combate:** únicamente las dos pociones, según 3.9; otros objetos siguen pendientes.
+- **Huida:** implementada para el jugador según 3.10, sin persecución ni huida enemiga. **Objetos en combate:** únicamente las dos pociones, según 3.9; otros objetos siguen pendientes.
 - **Continuidad actual:** mismo jugador y sus pociones, vida restante sin curación automática, Lobos nuevos y menús según 3.5. Espada según 3.6 y botín según 3.7. Muerte termina aventura; sin persistencia ni otras recompensas.
 
 ## 7. Estructura de código conocida (orientativa; verificar)
@@ -214,9 +224,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 16 de octubre de 2026. Base publicada e363c95, exploración y consumo fuera de combate; botín publicado en c1d20d. En local se implementa el uso de pociones durante la acción del jugador, sustituyendo al ataque y conservando participantes Combatiente que no son Jugador. Sin commit ni push de esta fase.
+> **Estado:** 18 de octubre de 2026. Base publicada f97e7fc, pociones en combate; exploración publicada en e363c95. En local se implementan huida del jugador y oferta de espada tras la primera victoria efectiva. Sin commit ni push de esta fase.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 34 fuentes principales y 30 archivos de pruebas recompilados; 398 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 369 escenarios previos sin adaptación y se añaden 25 en CombateConsolaTest y 4 en ExploracionTest. Dados controlados y generador de botín separado. Solo Combate.java cambia en producción; no se modifican firmas públicas ni clases de modelo/habilidades/equipo.
+> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 34 fuentes principales y 30 archivos de pruebas recompilados; 422 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 398 escenarios anteriores (solo se cambia 3 a 4 como entrada inválida del menú principal). Se añaden 18 casos en CombateConsolaTest y 6 en RecompensaTest. Se enumeran las 36 parejas de dados; solo Combate.java y app.java cambian en producción, sin nuevas clases o firmas públicas.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -224,20 +234,20 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Enum `Atributo`, mapas separados de base/equipo y getters/setters; VIDA se gestiona por campos y no por los mapas.
 - [x] Métodos `aumentarAtributo`, `disminuirAtributo` y `modificarAtributo`; las habilidades corregidas leen la base, no valores efectivos. Los métodos genéricos rechazan VIDA explícitamente.
 - [x] `TiradorDado`, `Dado`, `ContextoAtaque` y lógica inicial de iniciativa.
-- [x] `Combate` y `ResultadoCombate`, incluyendo resultados de huida sin mecánica implementada.
+- [x] `Combate` y `ResultadoCombate`, con JUGADOR_HUYE integrado según 3.10. ENEMIGO_HUYE conserva su declaración sin mecánica implementada.
 - [x] Resolución de muertes y final integrados en inicio/turnos/ataques; una invocación de muerte por participante y resolución, continuación tras resurrección y limpieza final solo del jugador.
 - [x] `Habilidad` / `EstadoHabilidad` y mapa por combatiente; las 13 habilidades con efectos heredan ahora de Habilidad y su igualdad por clase. FuriaMaximaBerserker sigue siendo un borrador sin efectos.
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 398 pruebas ejecutadas sin fallos ni errores; 369 escenarios anteriores y 29 nuevos de pociones en combate, sin pruebas eliminadas ni deshabilitadas.
+- [x] Suite JUnit: 422 pruebas ejecutadas sin fallos ni errores; 398 escenarios anteriores y 24 nuevos de huida, sin pruebas eliminadas ni deshabilitadas.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
 - [x] Auditar clases, paquetes, firmas, dependencias y referencias del repositorio.
 - [x] Comprobar compilación del código principal: `mvn compile` termina correctamente.
 - [x] Ejecutar las pruebas existentes con `mvn test`.
-- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 398 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
+- [x] Conseguir compilación de las pruebas y suite pasando: `mvn clean test`, 422 pruebas pasan. Se conservan las adaptaciones de firmas del primer bloque.
 - [x] Revisar `EventosHabilidad`: todas sus firmas actuales y overrides implementados reciben `EstadoHabilidad` y compilan en el código principal.
 - [x] Revisar y corregir las seis llamadas del borrador a `dispararHabilidades`: las lambdas reciben habilidad y estado y pasan ese estado al evento.
 - [x] Activar el auxiliar existente `dispararHabilidades` para usarlo desde ataque, recorriendo habilidad y estado juntos.
@@ -283,7 +293,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [ ] Crear catálogos Java de enemigos, armas, objetos y habilidades en memoria.
 - [ ] Integrar encuentros desde esos catálogos, sin Factory ni persistencia.
 - [x] Implementar Atacar desde el menú en su momento real de acción.
-- [ ] Implementar huir; no se ofrece en el menú actual.
+- [x] Implementar huida directa con dos dados y velocidad efectiva, empate fallido, sin ataque por intento. Éxito limpia y vuelve a exploración; fallo consume acción y conserva la acción enemiga pendiente.
+- [x] Conservar personaje/posesiones tras escapar, sin botín ni espada por huida. Ofrecer espada una vez tras primera victoria real, aunque antes se haya huido.
+- [x] Añadir 24 casos de huida/continuidad, con 36 parejas de dados, velocidad/equipo/efectos activos, turnos, limpieza, muerte/resurrección, otros Combatiente, inválidos y cierre de entrada.
 - [x] Implementar las dos pociones en combate según 3.9, sustituyendo al ataque solo tras éxito. Sin perder acción por cancelar/inválidos/rechazo ni modificar iniciativa, eventos de turno o resolución de muertes.
 - [x] Conservar Combatiente no Jugador con su selección de Atacar y modo automático sin consumo de pociones. Sin conversiones forzadas, nuevas clases ni contratos públicos.
 - [x] Añadir 29 casos de consumo en combate, eventos/estados/habilidades reales, muerte/resurrección, recuperación real, dados exactos, interrupción y continuidad con exploración/botín/espada.
@@ -350,7 +362,7 @@ Después de programar, informa de:
 
 - La secuencia del ataque individual y el contraataque están confirmados, integrados y probados. El turno tiene dos acciones ordenadas y resuelve muertes entre ellas, según la aclaración expresa del autor durante la fase 3.
 - No existe un modificador de agilidad del turno: el +2 se aplica exclusivamente al cálculo de iniciativa del poseedor.
-- ¿Qué reglas concretas rigen huida y comercio? Las pociones, su consulta y consumo están confirmados en 3.7/3.8/3.9. El consumo exitoso en combate sustituye al ataque; cancelar/inválidos/rechazos no consumen la acción.
+- ¿Qué reglas concretas rigen comercio y futuros encuentros? La huida del jugador está confirmada en 3.10. alHuir/alPerseguir, persecución y huida enemiga permanecen fuera de alcance. Las pociones se confirman en 3.7/3.8/3.9; el consumo exitoso en combate sustituye al ataque y cancelar/inválidos/rechazos no consumen acción.
 - Confirmado: alFinalCombate solo del jugador, siempre, como limpieza incluso muerto; el enemigo no participa.
 - Confirmado: tras victoria se permite consultar inventario/usar poción/continuar/terminar aventura/salir, sin recuperación automática. Espada única tras primera victoria y botín de pociones tras cada victoria definitiva. Futuras ampliaciones necesitan reglas propias.
 - ¿Qué catálogo mínimo de enemigos y objetos quiere el autor para la primera demo?
