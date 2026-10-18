@@ -33,5 +33,11 @@ public record DefinicionArma(String id, String nombre, Map<Atributo, Integer> bo
         return new Arma(id, nombre, TipoEquipo.ARMA, bonificaciones, Map.of());
     }
 
+    public Arma crearArma(int mejoras) {
+        return new Arma(id, nombre, TipoEquipo.ARMA, bonificaciones, Map.of(), mejoras);
+    }
+
+    public Arma crearArma(java.util.Random azar) { return crearArma(Objects.requireNonNull(azar).nextInt(4)); }
+
     public DefinicionEquipo comoEquipo() { return new DefinicionEquipo(id, nombre, TipoEquipo.ARMA, bonificaciones); }
 }

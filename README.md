@@ -168,7 +168,7 @@ atributos, vida, habilidades y sus estados. No se consumen pociones ni se dispar
 eventos de curación por venderlas; las compras conservan su funcionamiento.
 
 Las piezas creadas desde catálogo conservan su ID original. Se exige coincidencia
-por ese ID y por nombre, ranura, bonificaciones y ausencia de habilidades adicionales;
+por ese ID y por nombre, ranura, bonificaciones originales y ausencia de habilidades adicionales;
 las pociones deben coincidir con su definición completa configurada en Jugador.
 Una correspondencia desconocida, ambigua o incoherente entre listado y búsqueda
 no permite vender. Se usan los precios del repositorio proporcionado, también si
@@ -319,7 +319,7 @@ por el máximo intermedio. La curación posterior respeta el máximo efectivo.
 Los +6 PS por nivel se añaden una sola vez a la base y a la vida actual.
 
 Inventario: `[1] Comparar`, `[2] Cambiar equipamiento`, `[3] Desequipar una pieza`,
-`[0] Volver`. Cambiar exige elegir una pieza compatible y confirmar. Desequipar
+`[4] Utilizar pergaminos`, `[0] Volver`. Cambiar exige elegir una pieza compatible y confirmar. Desequipar
 muestra las ocupadas y solicita confirmación; devuelve el mismo ejemplar al final
 del inventario. Cancelar/EOF no confirman ni retiran efectos. Los paneles muestran
 todas las ranuras, incluidas vacías, y VIDA se presenta como Vida máxima.
@@ -330,8 +330,56 @@ añade las seis piezas de la tabla. Pueden comprarse, equiparse, desequiparse y
 venderse, incluidas equipadas. La venta usa ID y contenido para no valorar una
 pieza desconocida o modificada como otra definición. No hay botín aleatorio nuevo.
 Los intercambios y ventas reutilizan la recuperación segura de ranuras, atributos,
-vida y estados de habilidades. Siguen pendientes pergaminos, puntos de mejora,
-bonificaciones aleatorias, rarezas y habilidades en las definiciones generales.
+vida y estados de habilidades. Los pergaminos y las mejoras individuales se
+describen a continuación; no hay rarezas ni habilidades desde definiciones generales.
+
+## Pergaminos y mejoras individuales
+
+Cada ejemplar nuevo de las siete categorías recibe una sola tirada `nextInt(4)`:
+0, 1, 2 o 3 mejoras disponibles, con igual probabilidad. Se genera al crear la pieza
+inicial, comprada o encontrada; nunca al mostrar ofertas, equipar, desequipar,
+comparar o vender. Las definiciones siguen inmutables y sin puntos de mejora.
+Dos ejemplares del mismo modelo pueden tener distintos puntos y mejoras añadidas.
+
+Cada victoria definitiva hace una comprobación del 10 % para obtener como máximo
+un pergamino. Si tiene éxito, elige uniformemente FUERZA, RESISTENCIA, INICIATIVA,
+AGILIDAD, VELOCIDAD o VIDA máxima. Hay una tirada `nextInt(100) < 10` y solo en caso
+de éxito otra `nextInt(6)`. Su generador es independiente del de pociones, encuentros
+y dados, y se conserva durante la sesión. Derrotas, muerte simultánea, huida o
+combates interrumpidos no hacen tiradas. La comprobación ocurre antes del reparto
+de nivel para que EOF en esa selección no omita una recompensa de una victoria real.
+El oro, EXP, las dos tiradas de pociones y las ofertas de armas conservan sus reglas.
+
+Los seis pergaminos se nombran automáticamente por atributo y mejoran siempre +1.
+Se almacenan por cantidad en Jugador sin límite artificial y no pertenecen a
+RepositorioObjetos ni RepositorioTienda: no se compran ni venden. Nueva aventura:
+nuevo inventario vacío. Se conservan mientras se utiliza el mismo personaje.
+
+En inventario, `[4] Utilizar pergaminos`: elegir pergamino, seleccionar una pieza
+equipada o guardada y confirmar. La vista previa muestra sus bonificaciones, el
+atributo antes/después y los puntos disponibles antes/después. `[0]` retrocede un
+nivel; cancelar, inválidos o EOF no consumen nada. Con cero puntos no se admite mejora.
+Tras éxito se muestra el resultado y se vuelve a acciones de inventario. No hay
+pausas en las selecciones; solo al obtener realmente un pergamino como recompensa.
+
+`Jugador.usarPergamino(atributo, pieza)` es la operación de consumo: verifica
+propiedad, cantidad y puntos; aplica exactamente +1 y consume un punto y una unidad.
+Una pieza equipada actualiza inmediatamente solo ese modificador, sin retirar ni
+volver a aplicar habilidades. La recuperación segura existente restaura al portador
+ante fallos; la pieza se modifica solo después de comprobar el incremento activo.
+Los mapas de bonos originales, adicionales y totales siguen protegidos desde fuera.
+Las mejoras permanecen al mover la pieza y al retirar sus efectos se descuenta su
+bonificación total. Mejorar VIDA máxima no cura, y los +6 PS por nivel permanecen.
+
+La venta identifica la definición original y compara los bonos originales:
+las mejoras adicionales no alteran `precioCompra / 2`. Vender equipada retira
+todos sus efectos y solo el ejemplar seleccionado. Las habilidades de armas
+y sus estados no cambian por mejorar otro atributo.
+
+Para pruebas deterministas existen `crearEquipo(int/Random)`, `crearArma(int/Random)`,
+el constructor de Equipo/Arma con puntos explícitos y `Jugador.comprar(..., Random)`.
+La sobrecarga completa de app acepta al final el Random de pergaminos. Los
+constructores anteriores siguen disponibles y generan puntos normalmente.
 
 ## Equilibrio inicial
 
@@ -797,3 +845,15 @@ ranuras, acumulación/ciclos, vida máxima/curación/niveles, ejemplares, habili
 recuperación ante fallos, compra/venta y repositorio alternativo con menús inmediatos.
 Resultado de `mvn clean test`: BUILD SUCCESS; 962 pruebas, 0 fallos, 0 errores y
 0 omitidas; 50 fuentes principales y 63 archivos de pruebas.
+
+Pergaminos añade 84 casos: MejorasPergaminosTest (49), BotinPergaminosTest (17) y
+PergaminosConsolaTest (18), conservando los 962 anteriores. Enumeración exacta del
+10 % y seis atributos, límites de generación, siete categorías, aplicación guardada
+y equipada, consumo/agotamiento, fallos parciales/no aplicación, desbordamiento,
+vida/niveles, habilidades, venta al precio original, recompensas, EOF y navegación.
+Cuatro pruebas de consola anteriores se adaptan para controlar la nueva fuente de
+botín y sustituir el inválido 4 por 5. En la comparación instantáneo/normal se
+normaliza solo el nuevo contador aleatorio de mejoras; se comparan todos los textos
+previos y resultados. No se eliminan casos ni aserciones de juego.
+Resultado de `mvn clean test`: BUILD SUCCESS; 1046 pruebas, 0 fallos, 0 errores y
+0 omitidas; 51 fuentes principales y 66 archivos de pruebas.

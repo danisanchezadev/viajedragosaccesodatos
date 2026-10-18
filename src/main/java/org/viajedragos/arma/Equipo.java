@@ -11,10 +11,15 @@ import org.viajedragos.consola.PanelConsola;
 
 public class Equipo extends Objeto implements Equipable {
 
+    private static final Random AZAR_MEJORAS = new Random();
+
     private final String idDefinicion;
 
     private final TipoEquipo tipoEquipo;
     private final Map<Atributo, Integer> bonificaciones;
+    private final Map<Atributo, Integer> bonificacionesBase;
+    private final Map<Atributo, Integer> mejoras = new EnumMap<>(Atributo.class);
+    private int mejorasDisponibles;
     private final Map<Habilidad, Integer> habilidadesOtorgadas;
 
     public Equipo(String nombre, TipoEquipo tipoEquipo,
@@ -25,8 +30,16 @@ public class Equipo extends Objeto implements Equipable {
 
     public Equipo(String idDefinicion, String nombre, TipoEquipo tipoEquipo,
                   Map<Atributo, Integer> bonificaciones, Map<Habilidad, Integer> habilidadesOtorgadas) {
+        this(idDefinicion, nombre, tipoEquipo, bonificaciones, habilidadesOtorgadas, AZAR_MEJORAS.nextInt(4));
+    }
+
+    public Equipo(String idDefinicion, String nombre, TipoEquipo tipoEquipo,
+                  Map<Atributo, Integer> bonificaciones, Map<Habilidad, Integer> habilidadesOtorgadas,
+                  int mejorasDisponibles) {
 
         super(nombre);
+        if (mejorasDisponibles < 0 || mejorasDisponibles > 3) throw new IllegalArgumentException("Mejoras entre 0 y 3");
+        this.mejorasDisponibles = mejorasDisponibles;
         if (idDefinicion != null && idDefinicion.isBlank()) throw new IllegalArgumentException("ID vacío");
         this.idDefinicion = idDefinicion;
         this.tipoEquipo = Objects.requireNonNull(tipoEquipo, "El tipo de equipo no puede ser null");
@@ -46,7 +59,8 @@ public class Equipo extends Objeto implements Equipable {
             }
             copiaHabilidades.put(habilidad, niveles);
         });
-        this.bonificaciones = Collections.unmodifiableMap(copiaBonificaciones);
+        this.bonificaciones = copiaBonificaciones;
+        this.bonificacionesBase = Collections.unmodifiableMap(new EnumMap<>(copiaBonificaciones));
         this.habilidadesOtorgadas = Collections.unmodifiableMap(copiaHabilidades);
     }
 
@@ -89,7 +103,37 @@ public class Equipo extends Objeto implements Equipable {
     }
 
     public Map<Atributo, Integer> getBonificaciones() {
-        return bonificaciones;
+        return Collections.unmodifiableMap(bonificaciones);
+    }
+
+    public Map<Atributo, Integer> getBonificacionesBase() { return bonificacionesBase; }
+    public Map<Atributo, Integer> getBonificacionesAdicionales() { return Collections.unmodifiableMap(mejoras); }
+    public int getMejorasDisponibles() { return mejorasDisponibles; }
+    public int getMejorasConsumidas() { return mejoras.values().stream().mapToInt(Integer::intValue).sum(); }
+
+    // Primitiva de mejora: Jugador coordina el pergamino y Combatiente protege el estado activo.
+    public final boolean aplicarMejora(Atributo atributo, Combatiente portador) {
+        if (atributo == null || portador == null || mejorasDisponibles == 0) return false;
+        int bono = Math.incrementExact(bonificaciones.getOrDefault(atributo, 0));
+        int adicional = Math.incrementExact(mejoras.getOrDefault(atributo, 0));
+        boolean equipada = portador.getEquipoEquipado().get(tipoEquipo) == this;
+        if (!equipada && (!(portador instanceof org.viajedragos.modelo.Jugador jugador)
+                || jugador.getInventarioEquipo().stream().noneMatch(pieza -> pieza == this))) return false;
+        if (equipada) {
+            int modificador = Math.incrementExact(portador.getModificadoresEquipo().getOrDefault(atributo, 0));
+            if (atributo != Atributo.VIDA) {
+                Math.addExact(portador.getAtributoBase(atributo), modificador);
+            }
+            aplicarBonificacion(portador, atributo, 1);
+            if (portador.getModificadoresEquipo().getOrDefault(atributo, 0) != modificador) {
+                throw new IllegalStateException("No se aplicó el incremento al portador");
+            }
+        }
+        // Tras actualizar al portador no hay llamadas externas ni operaciones que puedan rechazar la mejora.
+        bonificaciones.put(atributo, bono);
+        mejoras.put(atributo, adicional);
+        mejorasDisponibles--;
+        return true;
     }
 
     public Map<Habilidad, Integer> getHabilidadesOtorgadas() {

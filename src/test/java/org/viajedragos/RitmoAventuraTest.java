@@ -90,7 +90,7 @@ class RitmoAventuraTest {
         assertFalse(app.jugarAventura(jugador, new Scanner(entrada), consola(), () -> {
             assertTrue(++tiradas[0] <= 6);
             return 4;
-        }, sinBotin(), enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, registrar(momentos)));
+        }, sinBotin(), enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, registrar(momentos), sinBotin()));
         assertEquals(6, tiradas[0]);
         assertEquals(6, momentos.size());
         assertTrue(momentos.get(0).contains("ENCUENTRO 1"));
@@ -154,14 +154,18 @@ class RitmoAventuraTest {
         Jugador jugador = new Jugador("Jugador", "", 6, 2, 3, 2, 2, 48, 48);
         RitmoConsola ritmo = new RitmoConsola(Velocidad.INSTANTANEA, ms -> fail("Instantáneo no espera"));
         assertFalse(app.jugarAventura(jugador, new Scanner("1\n2\n0\n"), consola(), () -> 4,
-                sinBotin(), enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, ritmo));
+                sinBotin(), enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, ritmo, sinBotin()));
         String instantaneo = texto();
         salida.reset();
         Jugador otro = new Jugador("Jugador", "", 6, 2, 3, 2, 2, 48, 48);
         assertFalse(app.jugarAventura(otro, new Scanner("1\n2\n0\n"), consola(), () -> 4,
                 sinBotin(), enemigos(), new Random(0), new RepositorioObjetosMemoria(), null,
-                new RitmoConsola(Velocidad.NORMAL, ms -> {})));
-        assertEquals(instantaneo, texto());
+                new RitmoConsola(Velocidad.NORMAL, ms -> {}), sinBotin()));
+        // Son dos ejemplares distintos: solo su nuevo contador aleatorio puede variar.
+        assertTrue(instantaneo.matches("(?s).*Mejoras disponibles: [0-3].*"));
+        assertTrue(texto().matches("(?s).*Mejoras disponibles: [0-3].*"));
+        assertEquals(instantaneo.replaceAll("Mejoras disponibles: [0-3]", "Mejoras disponibles: X"),
+                texto().replaceAll("Mejoras disponibles: [0-3]", "Mejoras disponibles: X"));
         assertEquals(jugador.getVida(), otro.getVida());
         assertEquals(jugador.getOro(), otro.getOro());
     }
@@ -183,7 +187,7 @@ class RitmoAventuraTest {
             @Override public int nextInt(int limite) { encuentros[0]++; return 0; }
         };
         app.ejecutar(new Scanner("2\n2\n1\n1\n2\n4\n1\n1\n2\n4\n2\n1\n1\n1\n2\n0\n"),
-                consola(), () -> 4, sinBotin(), enemigos(), azarEncuentros, new RepositorioObjetosMemoria(), null, ritmo);
+                consola(), () -> 4, sinBotin(), enemigos(), azarEncuentros, new RepositorioObjetosMemoria(), null, ritmo, sinBotin());
         assertEquals(3, encuentros[0]);
         assertEquals(12, esperas.size(), "Seis pausas por cada una de las dos primeras aventuras");
         assertTrue(esperas.stream().allMatch(ms -> ms == 250));
@@ -197,7 +201,7 @@ class RitmoAventuraTest {
         Jugador jugador = new Jugador("Jugador", "", 6, 2, 3, 2, 2, 48, 48);
         List<String> momentos = new ArrayList<>();
         assertFalse(app.jugarAventura(jugador, new Scanner("1\n2\n3\n1\n2\n0\n"), consola(), () -> 4,
-                sinBotin(), enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, registrar(momentos)));
+                sinBotin(), enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, registrar(momentos), sinBotin()));
         assertEquals(12, momentos.size());
         assertTrue(momentos.getLast().contains("Has encontrado una Espada de hierro"));
         assertTrue(momentos.getLast().stripTrailing().endsWith("┘"));
@@ -212,7 +216,7 @@ class RitmoAventuraTest {
         List<String> momentos = new ArrayList<>();
         int[] tiradas = {0};
         assertTrue(app.jugarAventura(jugador, new Scanner(""), consola(), () -> { tiradas[0]++; return 4; },
-                sinBotin(), fuerte, new Random(0), new RepositorioObjetosMemoria(), null, registrar(momentos)));
+                sinBotin(), fuerte, new Random(0), new RepositorioObjetosMemoria(), null, registrar(momentos), sinBotin()));
         assertEquals(6, tiradas[0]);
         assertEquals(5, momentos.size());
         assertTrue(momentos.getLast().contains("Derrota."));

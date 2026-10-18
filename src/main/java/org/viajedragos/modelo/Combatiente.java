@@ -214,6 +214,22 @@ public abstract class Combatiente {
     }
 
     private boolean modificarEquipoSeguro(TipoEquipo tipo, Equipo nuevo) {
+        int vidaAntes = vida;
+        return ejecutarCambioSeguro(nuevo, () -> {
+            if (nuevo == null) return desequipar(tipo) && !equipoEquipado.containsKey(tipo);
+            if ((!equipoEquipado.containsKey(tipo) || desequipar(tipo)) && equipar(nuevo)) {
+                vida = Math.min(vidaAntes, getVidaMaxima());
+                return true;
+            }
+            return false;
+        });
+    }
+
+    protected boolean mejorarEquipoSeguro(Equipo equipo, Atributo atributo) {
+        return ejecutarCambioSeguro(equipo, () -> equipo.aplicarMejora(atributo, this));
+    }
+
+    private boolean ejecutarCambioSeguro(Equipo nuevo, java.util.function.BooleanSupplier cambio) {
         var ranurasAntes = new EnumMap<>(equipoEquipado);
         var modificadoresAntes = new EnumMap<>(modificadoresEquipo);
         var baseAntes = new EnumMap<>(atributosBase);
@@ -229,13 +245,7 @@ public abstract class Combatiente {
         if (nuevo != null) instancias.addAll(nuevo.getHabilidadesOtorgadas().keySet());
         var restauracionesTemporales = instancias.stream().map(Habilidad::guardarEstadoTemporal).toList();
         try {
-            if (nuevo == null) {
-                if (desequipar(tipo) && !equipoEquipado.containsKey(tipo)) return true;
-            } else if ((!equipoEquipado.containsKey(tipo) || desequipar(tipo)) && equipar(nuevo)) {
-                // El intercambio es una operación: no perder vida por un máximo intermedio menor.
-                vida = Math.min(vidaAntes, getVidaMaxima());
-                return true;
-            }
+            if (cambio.getAsBoolean()) return true;
         } catch (RuntimeException falloEfectos) {
             // No se intentan efectos inversos: podrían volver a fallar o retirar otras contribuciones.
         }

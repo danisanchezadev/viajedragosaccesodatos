@@ -24,4 +24,11 @@ public record DefinicionEquipo(String id, String nombre, TipoEquipo tipo, Map<At
         return tipo == TipoEquipo.ARMA ? new Arma(id, nombre, tipo, bonificaciones, Map.of())
                 : new Equipo(id, nombre, tipo, bonificaciones, Map.of());
     }
+
+    public Equipo crearEquipo(int mejoras) {
+        return tipo == TipoEquipo.ARMA ? new Arma(id, nombre, tipo, bonificaciones, Map.of(), mejoras)
+                : new Equipo(id, nombre, tipo, bonificaciones, Map.of(), mejoras);
+    }
+
+    public Equipo crearEquipo(Random azar) { return crearEquipo(Objects.requireNonNull(azar).nextInt(4)); }
 }

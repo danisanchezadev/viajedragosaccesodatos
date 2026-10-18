@@ -19,6 +19,7 @@ public class Jugador extends Combatiente{
     private final Map<TipoPocion, Integer> inventarioPociones = new EnumMap<>(TipoPocion.class);
     private Map<TipoPocion, DefinicionPocion> definicionesPociones;
     private final List<Equipo> inventarioEquipo = new ArrayList<>();
+    private final Map<Atributo, Integer> pergaminos = new EnumMap<>(Atributo.class);
     private int oro = 15;
     private int nivel = 1;
     private long experiencia;
@@ -85,6 +86,14 @@ public class Jugador extends Combatiente{
     }
 
     public ResultadoCompra comprar(String id, RepositorioTienda repositorio) {
+        return comprarInterno(id, repositorio, null);
+    }
+
+    public ResultadoCompra comprar(String id, RepositorioTienda repositorio, java.util.Random azarMejoras) {
+        return comprarInterno(id, repositorio, Objects.requireNonNull(azarMejoras));
+    }
+
+    private ResultadoCompra comprarInterno(String id, RepositorioTienda repositorio, java.util.Random azarMejoras) {
         ProductoTienda producto;
         try {
             producto = Objects.requireNonNull(repositorio).buscarPorId(id).orElse(null);
@@ -111,7 +120,7 @@ public class Jugador extends Combatiente{
                     throw new IllegalStateException("No se incorporó la poción correctamente");
                 }
             } else {
-                Equipo arma = producto.equipo().crearEquipo();
+                Equipo arma = azarMejoras == null ? producto.equipo().crearEquipo() : producto.equipo().crearEquipo(azarMejoras);
                 var esperado = new ArrayList<>(equipoAntes);
                 esperado.add(arma);
                 agregarEquipo(arma);
@@ -133,6 +142,27 @@ public class Jugador extends Combatiente{
 
     public void agregarEquipo(Equipo equipo) {
         inventarioEquipo.add(Objects.requireNonNull(equipo, "El equipo no puede ser null"));
+    }
+
+    public void agregarPergamino(Pergamino pergamino) {
+        pergaminos.merge(Objects.requireNonNull(pergamino).atributo(), 1, Math::addExact);
+    }
+    public int getCantidadPergaminos(Atributo atributo) {
+        return pergaminos.getOrDefault(Objects.requireNonNull(atributo), 0);
+    }
+    public Map<Atributo, Integer> getPergaminos() { return Collections.unmodifiableMap(pergaminos); }
+
+    public boolean usarPergamino(Atributo atributo, Equipo pieza) {
+        if (atributo == null || pieza == null) return false;
+        int cantidad = getCantidadPergaminos(atributo);
+        if (cantidad == 0) return false;
+        boolean equipada = getEquipoEquipado().get(pieza.getTipoEquipo()) == pieza;
+        long guardadas = inventarioEquipo.stream().filter(e -> e == pieza).count();
+        if (equipada ? guardadas != 0 : guardadas != 1) return false;
+        if (!mejorarEquipoSeguro(pieza, atributo)) return false;
+        if (cantidad == 1) pergaminos.remove(atributo);
+        else pergaminos.put(atributo, cantidad - 1);
+        return true;
     }
 
     // No se asigna un precio a objetos desconocidos ni a correspondencias ambiguas.

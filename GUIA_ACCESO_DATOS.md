@@ -217,7 +217,42 @@ una vez y pasa las mismas definiciones a la configuración comercial.
 Los repositorios no devuelven Equipo ni Arma mutables. Dos llamadas a crearEquipo
 producen dos ejemplares distintos con el mismo ID de definición. El inventario y
 las ranuras guardan esas referencias; sus posiciones numeradas distinguen los
-ejemplares. No se añaden todavía ID persistente de ejemplar, pergaminos o mejoras.
+ejemplares. No se añade ID persistente de ejemplar. Cada creación genera 0–3 puntos
+de mejora propios; conservar el ejemplar en el inventario, sin reconstruirlo desde
+la definición al consultarlo, moverlo o venderlo, para no perder su estado.
+
+## Definiciones frente a estado de mejora
+
+Los contratos de los tres repositorios no cambian en esta fase. DefinicionEquipo y
+DefinicionArma solo contienen los datos originales, inmutables. Crear un ejemplar
+genera una vez 0–3 puntos de mejora uniformes, independientemente de su origen.
+Las ofertas de ProductoTienda muestran definiciones; no crear piezas para mostrar
+precios ni catálogos, porque eso ejecutaría una generación innecesaria.
+
+Equipo guarda separadamente bonos base, mejoras añadidas y puntos disponibles.
+Sus mapas se consultan mediante vistas no modificables. Jugador.usarPergamino es
+la entrada de negocio: consume exactamente una unidad por +1 y mantiene sincronizado
+el modificador del portador si la pieza está equipada. No debe modificarse el mapa
+ni retirar/reaplicar habilidades para mejorar un solo atributo. Los cambios no
+vuelven al repositorio ni modifican otras piezas creadas con la misma definición.
+
+Pergamino(atributo, cantidad) es un record interno generado por el juego, con
+cantidad obligatoriamente 1 y nombre calculado. Los seis atributos incluyen VIDA
+como vida máxima. Jugador almacena cantidades por atributo. No añadir pergaminos,
+sus cantidades o puntos de mejora a los métodos de RepositorioObjetos ni a productos
+comerciales; no hay compra/venta de pergaminos ni persistencia de inventarios.
+
+La venta de una pieza mejorada usa ID y definición original: el precio sigue siendo
+la mitad entera del precio de compra, sin premio por mejoras. La comprobación de
+correspondencia utiliza getBonificacionesBase(), no el mapa efectivo mejorado.
+Los otros datos del modelo y las reglas de piezas antiguas sin ID se conservan.
+
+Para pruebas, crearEquipo(int puntos) y crearArma(int puntos) permiten valores
+explícitos 0–3; sus sobrecargas Random exigen una única nextInt(4). Hay constructores
+de Equipo/Arma con puntos explícitos y comprar(id, repositorio, Random). El flujo
+completo de app permite inyectar al final el generador de pergaminos, independiente
+del botín de pociones y de los dados. No se necesitan archivos, configuraciones
+globales de pruebas ni bases de datos.
 
 VIDA no es vida actual: se aplica a los modificadores de vida máxima. El máximo
 efectivo es base permanente más equipo, limitado a cero; equipar no cura. Quitar
@@ -241,12 +276,12 @@ vidaMaxima y su setter representan la base; consultar getVidaMaxima para el tota
 - Las recompensas siguen usando los dos IDs obligatorios; no hay botín de armas
   genérico ni múltiples tiendas.
 - Las piezas de catálogo conservan el ID para venderse, además de comprobar nombre,
-  ranura, bonificaciones y ausencia de habilidades adicionales. Dos modelos iguales
+  ranura, bonificaciones originales y ausencia de habilidades adicionales. Dos modelos iguales
   con IDs diferentes se distinguen correctamente. Los constructores antiguos sin
   ID conservan la búsqueda estructural única; no usarlos para contenido nuevo.
-- La segunda fase definirá pergaminos, puntos de mejora y bonificaciones individuales.
-  No están implementados; actualmente una pieza modificada que no coincide con su
-  definición no se vende como si fuera otra. El inventario sigue siendo ilimitado.
+- Los pergaminos y puntos de mejora están implementados solo en la partida, sin
+  cargarse ni guardarse en los repositorios. No hay rarezas, potencias mayores que
+  +1 ni más de tres mejoras por ejemplar. El inventario sigue siendo ilimitado.
 - No hay persistencia de jugadores, inventarios, oro o partidas. Los repositorios
   describen contenido; no guardan el estado de una aventura. No hay cierre automático
   de conexiones ni contratos de recursos externos implementados.

@@ -305,6 +305,20 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - Pruebas añadidas: EquipoGeneralTest 25, CatalogoEquipoGeneralTest 17 y EquipoGeneralConsolaTest 21. Base local comprobada: 899 casos (la documentación anterior registraba 898); se conservan, adaptando solo las reglas estructurales de VIDA, tienda de diez productos, ranuras vacías, el inválido 3 a 4 y una pieza antigua sin ID en la regresión de venta ambigua.
 - Verificación: mvn clean test, BUILD SUCCESS; 962 pruebas, 0 fallos/errores/omitidas; 50 fuentes principales y 63 archivos de pruebas. README y GUIA_ACCESO_DATOS actualizados. Sin cambios en fórmulas, enemigos, recompensas ni sistema de habilidades/pausas; sin persistencia. Pendientes pergaminos, mejoras individuales/aleatorias, rarezas y habilidades desde datos. Sin commit ni push.
 
+### 3.25 Pergaminos y mejoras individuales
+
+- Todos los ejemplares nuevos de Equipo/Arma generan una única nextInt(4), uniformemente 0–3 puntos disponibles. Generador predeterminado central en Equipo, sin reinicializarlo por pieza; constructores anteriores conservados. DefinicionEquipo/DefinicionArma añaden sobrecargas de creación con int o Random; Jugador.comprar añade Random para controlar pruebas. Las definiciones permanecen inmutables y sin puntos. Consultar, equipar, desequipar, comparar o vender no vuelve a generar.
+- Equipo conserva bonos originales, adicionales y totales con vistas externas protegidas, puntos restantes y contador de consumidos. La mejora controlada añade +1 y resta un punto; máximo tres en cada ejemplar según su tirada inicial. No comparte estado con otra pieza de la misma definición.
+- Pergamino es un record interno con atributo y cantidad obligatoriamente 1; nombre calculado (vida máxima para VIDA). Los seis atributos son elegibles. Jugador almacena cantidades ilimitadas por atributo, separadas de pociones/equipo; no hay catálogo, compra ni venta de pergaminos. Nueva aventura crea inventario vacío.
+- Una comprobación del 10 % por victoria definitiva y, solo si tiene éxito, nextInt(6) uniforme para un atributo; máximo una unidad por victoria. Generador independiente de pociones, encuentros y dados. La sobrecarga completa de ejecutar acepta Random azarPergaminos y lo conserva entre encuentros y aventuras; las firmas anteriores delegan con un generador real. No se consulta por derrota, muerte simultánea, huida o combate incompleto.
+- La comprobación de pergamino se hace después del panel de oro/EXP y antes de cualquier reparto de nivel, para no omitirla si se cierra la entrada tras vencer. Mensaje y pausa solo cuando se obtiene. Se mantienen las dos tiradas de pociones y sus resultados, el oro, experiencia y ofertas de espadas.
+- Jugador.usarPergamino valida propiedad por identidad/ubicación, cantidad y puntos. Combatiente reutiliza sus snapshots para incrementar el modificador activo sin retirar/reaplicar habilidades. Equipo valida magnitudes, actualiza y comprueba el portador antes de confirmar sus mapas/puntos; después solo se descuenta el pergamino en la colección privada. Fallos o rechazos conservan el estado y no consumen. No hay hilos ni transacciones nuevas.
+- VIDA añade solo +1 al máximo efectivo, sin curar. Retirar equipo descuenta su total mejorado y ajusta actual si supera el máximo. Cambios, ciclos y +6 PS permanentes por nivel conservan las reglas de 3.24. Las habilidades de armas mantienen contribuciones, niveles y estados.
+- Comercio reconoce ID, nombre, ranura y bonos originales; los adicionales no aumentan precio ni impiden vender. Mitad entera del precio original, guardada o equipada; en equipada se retira el total. Otros ejemplares del mismo modelo no se modifican.
+- Inventario muestra pergaminos/cantidades y mejoras disponibles de cada pieza. Añade 4 utilizar pergaminos sin renumerar 0–3. Elegir pergamino, pieza guardada/equipada, vista previa de bono y puntos antes/después, confirmar o cancelar. 0 retrocede un nivel; éxito muestra resultado y vuelve a acciones de inventario; inválidos/EOF no consumen. Sin pausas dentro de menús.
+- Pruebas nuevas: MejorasPergaminosTest 49, BotinPergaminosTest 17 y PergaminosConsolaTest 18. Los 962 casos previos se mantienen; cuatro archivos de consola se adaptan a generador de pergaminos controlado, inválido 4 a 5 y normalización exclusiva del nuevo contador aleatorio en la comparación de texto instantáneo/normal. No se eliminan comprobaciones anteriores de reglas/resultados.
+- Verificación: mvn clean test, BUILD SUCCESS; 1046 pruebas, 0 fallos/errores/omitidas; 51 fuentes principales y 66 archivos de pruebas. README y GUIA_ACCESO_DATOS actualizados. Sin contratos nuevos de repositorios, persistencia, habilidades, categorías o rarezas. Sin cambios de enemigos, combate, experiencia o precios. Sin commit ni push.
+
 ## 4. Habilidades
 
 - `Habilidad` es una clase abstracta que implementa una interfaz de eventos (`EventosHabilidad`).
@@ -378,7 +392,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 > **Estado:** 18 de octubre de 2026. Base local 88934c5 (oro/comercio). Interfaz unificada y ritmo narrativo en cambios locales según 3.18–3.19. Codex no ha realizado commit ni push.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia actual:** `mvn clean test`: BUILD SUCCESS; 50 fuentes principales y 63 archivos de pruebas; 962 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 899 casos del estado local previo y se añaden 63 según 3.24, sin cambios en fórmulas de combate, enemigos o recompensas ni acceso a datos externo.
+> **Evidencia actual:** `mvn clean test`: BUILD SUCCESS; 51 fuentes principales y 66 archivos de pruebas; 1046 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 962 casos anteriores y se añaden 84 según 3.25, sin cambios de fórmulas, enemigos o recompensas anteriores ni acceso a datos externo.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -392,7 +406,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 962 pruebas ejecutadas sin fallos ni errores; 899 casos anteriores y 63 de equipo general, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
+- [x] Suite JUnit: 1046 pruebas ejecutadas sin fallos ni errores; 962 casos anteriores y 84 de pergaminos/mejoras, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
@@ -472,6 +486,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Experiencia por victoria desde datos del enemigo, subidas múltiples, mejoras permanentes, vida independiente y reparto obligatorio con presentación/pruebas según 3.22.
 - [x] Nivel en datos de enemigos, tres variantes, encuentros elegibles por nivel y validación/visualización/compatibilidad de repositorios según 3.23.
 - [x] Generalizar equipo, ID de catálogo y ejemplares, siete ranuras, vida máxima, desequipado, tienda y repositorios compatibles según 3.24.
+- [x] Generación 0–3 por ejemplar, botín de pergamino 10 %, mejora +1 segura, inventario y venta por definición original según 3.25.
 - [x] Unificar pantallas con PanelConsola y establecer normas futuras en AGENTS.md; alineación, ANSI, barras y flujos probados según 3.18.
 - [x] Pausas narrativas mediante RitmoConsola, cuatro velocidades, selección persistente durante la sesión y pruebas sin esperas reales según 3.19.
 - [x] Continuidad de fase 4 publicada en 6fc2a8d: misma instancia del jugador, vida restante sin recuperación, Lobos nuevos y sin límite de encuentros; muerte/terminación voluntaria devuelve al inicio y nueva aventura crea otro jugador. La fase 5 añade su primera recompensa fija.

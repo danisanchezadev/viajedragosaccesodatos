@@ -36,7 +36,7 @@ public record ProductoTienda(DefinicionArma arma, DefinicionPocion pocion, int p
                 && (pieza.getIdDefinicion() == null || equipo.id().equals(pieza.getIdDefinicion()))
                 && equipo.tipo() == pieza.getTipoEquipo()
                 && equipo.nombre().equals(pieza.getNombre())
-                && equipo.bonificaciones().equals(pieza.getBonificaciones())
+                && equipo.bonificaciones().equals(pieza.getBonificacionesBase())
                 && pieza.getHabilidadesOtorgadas().isEmpty();
     }
 }

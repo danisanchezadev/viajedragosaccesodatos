@@ -19,6 +19,7 @@ import org.viajedragos.modelo.DefinicionEnemigo;
 import org.viajedragos.modelo.Enemigo;
 import org.viajedragos.modelo.Jugador;
 import org.viajedragos.modelo.TipoPocion;
+import org.viajedragos.modelo.Pergamino;
 
 import java.io.PrintStream;
 import org.viajedragos.consola.PanelConsola;
@@ -75,7 +76,15 @@ public class app {
     public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin,
                                 RepositorioEnemigos repositorio, Random azarEncuentros,
                                 RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo) {
+        ejecutar(entrada, salida, dados, azarBotin, repositorio, azarEncuentros, objetos, tienda, ritmo, new Random());
+    }
+
+    public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin,
+                                RepositorioEnemigos repositorio, Random azarEncuentros,
+                                RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo,
+                                Random azarPergaminos) {
         java.util.Objects.requireNonNull(ritmo);
+        java.util.Objects.requireNonNull(azarPergaminos);
 
         while (true) {
             PanelConsola panel = new PanelConsola(salida, "VIAJE A DRAGOS");
@@ -115,7 +124,7 @@ public class app {
             Jugador jugador = new Jugador("Aventurero", "", 6, 2, 3, 2, 2, 48, 48);
 
             if (!jugarAventura(jugador, entrada, salida, dados, azarBotin,
-                    repositorio, azarEncuentros, objetos, tienda, ritmo)) {
+                    repositorio, azarEncuentros, objetos, tienda, ritmo, azarPergaminos)) {
                 return;
             }
         }
@@ -178,7 +187,17 @@ public class app {
                                  TiradorDado dados, Random azarBotin,
                                  RepositorioEnemigos repositorio, Random azarEncuentros,
                                  RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo) {
+        return jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros,
+                objetos, tienda, ritmo, new Random());
+    }
+
+    static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
+                                 TiradorDado dados, Random azarBotin,
+                                 RepositorioEnemigos repositorio, Random azarEncuentros,
+                                 RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo,
+                                 Random azarPergaminos) {
         java.util.Objects.requireNonNull(ritmo);
+        java.util.Objects.requireNonNull(azarPergaminos);
         List<DefinicionEnemigo> catalogo;
         try {
             catalogo = List.copyOf(repositorio.obtenerTodos());
@@ -284,6 +303,8 @@ public class app {
                         + jugador.getExperiencia() + "/" + jugador.getExperienciaNecesaria());
                 panelRecompensa.cerrar();
                 ritmo.pausar(salida);
+                // Una comprobación por victoria, antes de cualquier selección que pueda terminar por EOF.
+                obtenerPergamino(jugador, azarPergaminos, salida, ritmo);
                 if (jugador.getNivel() > nivelAnterior) {
                     PanelConsola subida = new PanelConsola(salida, "SUBIDA DE NIVEL");
                     for (int nivel = nivelAnterior + 1; nivel <= jugador.getNivel(); nivel++) {
@@ -553,6 +574,12 @@ public class app {
         if (!tienePociones) panel.linea("No tienes consumibles");
 
         panel.separador();
+        panel.titulo("PERGAMINOS");
+        if (jugador.getPergaminos().isEmpty()) panel.linea("No tienes pergaminos");
+        jugador.getPergaminos().forEach((atributo, cantidad) ->
+                panel.linea(new Pergamino(atributo).nombre() + " x" + cantidad));
+
+        panel.separador();
         panel.titulo("EQUIPO");
         if (jugador.getEquipoEquipado().isEmpty()) panel.linea("No tienes equipo equipado");
         for (TipoEquipo ranura : TipoEquipo.values()) {
@@ -572,6 +599,7 @@ public class app {
             acciones.opcion(1, "Comparar equipamiento");
             acciones.opcion(2, "Cambiar equipamiento");
             acciones.opcion(3, "Desequipar una pieza");
+            acciones.opcion(4, "Utilizar pergaminos");
             acciones.opcion(0, "Volver a exploración");
             acciones.cerrar();
             String opcion = leerOpcion(entrada, salida);
@@ -583,8 +611,10 @@ public class app {
                 if (!cambiarEquipamiento(jugador, entrada, salida, coloresAnsi)) return false;
             } else if (opcion.equals("3")) {
                 if (!desequiparEquipamiento(jugador, entrada, salida)) return false;
+            } else if (opcion.equals("4")) {
+                if (!utilizarPergaminos(jugador, entrada, salida)) return false;
             } else {
-                salida.println("Entrada inválida. Escribe 1, 2, 3 o 0 para volver.");
+                salida.println("Entrada inválida. Escribe 1, 2, 3, 4 o 0 para volver.");
             }
         }
     }
@@ -595,6 +625,84 @@ public class app {
                 panel.linea(String.format("%s %+d", atributo == Atributo.VIDA ? "Vida máxima" : atributo, cantidad)));
         equipo.getHabilidadesOtorgadas().forEach((habilidad, nivel) ->
                 panel.linea(habilidad.getNombre() + ": nivel otorgado " + nivel));
+        panel.linea("Mejoras disponibles: " + equipo.getMejorasDisponibles());
+    }
+
+    private static boolean utilizarPergaminos(Jugador jugador, Scanner entrada, PrintStream salida) {
+        while (true) {
+            var atributos = java.util.Arrays.stream(Atributo.values())
+                    .filter(a -> jugador.getCantidadPergaminos(a) > 0).toList();
+            PanelConsola panel = new PanelConsola(salida, "UTILIZAR PERGAMINOS");
+            if (atributos.isEmpty()) panel.linea("No tienes pergaminos disponibles.");
+            for (int i = 0; i < atributos.size(); i++) {
+                Atributo a = atributos.get(i);
+                panel.opcion(i + 1, new Pergamino(a).nombre() + " x" + jugador.getCantidadPergaminos(a));
+            }
+            panel.opcion(0, "Volver al inventario");
+            panel.cerrar();
+            int seleccion = leerIndiceEquipo(entrada, salida, atributos.size());
+            if (seleccion == -1) return false;
+            if (seleccion == 0) return true;
+            Atributo atributo = atributos.get(seleccion - 1);
+            while (true) {
+                var piezas = new java.util.ArrayList<Equipo>();
+                for (TipoEquipo tipo : TipoEquipo.values()) {
+                    Equipo pieza = jugador.getEquipoEquipado().get(tipo);
+                    if (pieza != null) piezas.add(pieza);
+                }
+                piezas.addAll(jugador.getInventarioEquipo());
+                PanelConsola lista = new PanelConsola(salida, "MEJORAR - SELECCIONA PIEZA");
+                if (piezas.isEmpty()) lista.linea("No tienes equipamiento.");
+                for (int i = 0; i < piezas.size(); i++) {
+                    Equipo pieza = piezas.get(i);
+                    boolean equipada = jugador.getEquipoEquipado().get(pieza.getTipoEquipo()) == pieza;
+                    lista.opcion(i + 1, pieza.getNombre() + " (" + pieza.getTipoEquipo().getNombre()
+                            + (equipada ? ", equipada" : ", guardada") + ") - Mejoras: " + pieza.getMejorasDisponibles());
+                }
+                lista.opcion(0, "Volver a los pergaminos");
+                lista.cerrar();
+                int indice = leerIndiceEquipo(entrada, salida, piezas.size());
+                if (indice == -1) return false;
+                if (indice == 0) break;
+                Equipo pieza = piezas.get(indice - 1);
+                if (pieza.getMejorasDisponibles() == 0) {
+                    salida.println("Esta pieza no tiene mejoras disponibles.");
+                    continue;
+                }
+                PanelConsola confirmar = new PanelConsola(salida, "CONFIRMAR MEJORA");
+                mostrarEquipo(confirmar, pieza);
+                confirmar.linea(new Pergamino(atributo).nombre() + " (+1)");
+                int anterior = pieza.getBonificaciones().getOrDefault(atributo, 0);
+                confirmar.linea((atributo == Atributo.VIDA ? "Vida máxima" : atributo)
+                        + ": " + anterior + " -> " + ((long) anterior + 1));
+                confirmar.linea("Mejoras disponibles: " + pieza.getMejorasDisponibles() + " -> "
+                        + (pieza.getMejorasDisponibles() - 1));
+                confirmar.opcion(1, "Aplicar pergamino");
+                confirmar.opcion(0, "Cancelar");
+                confirmar.cerrar();
+                int opcion = leerIndiceEquipo(entrada, salida, 1);
+                if (opcion == -1) return false;
+                if (opcion == 0) continue;
+                if (jugador.usarPergamino(atributo, pieza)) {
+                    PanelConsola resultado = new PanelConsola(salida, "MEJORA APLICADA");
+                    mostrarEquipo(resultado, pieza);
+                    resultado.linea("Pergamino consumido: " + new Pergamino(atributo).nombre());
+                    resultado.linea("Vida: " + jugador.getVida() + "/" + jugador.getVidaMaxima() + " PS");
+                    resultado.cerrar();
+                    return true;
+                }
+                salida.println("No se ha podido aplicar la mejora. Conservas el pergamino y el estado anterior.");
+            }
+        }
+    }
+
+    static void obtenerPergamino(Jugador jugador, Random azar, PrintStream salida, RitmoConsola ritmo) {
+        if (azar.nextInt(100) >= 10) return;
+        Atributo[] atributos = Atributo.values();
+        Pergamino pergamino = new Pergamino(atributos[azar.nextInt(atributos.length)]);
+        jugador.agregarPergamino(pergamino);
+        salida.println("Has obtenido un " + pergamino.nombre() + ".");
+        ritmo.pausar(salida);
     }
 
     private static boolean desequiparEquipamiento(Jugador jugador, Scanner entrada, PrintStream salida) {
@@ -822,7 +930,16 @@ public class app {
 
     private static boolean ofrecerArmaGuardada(Jugador jugador, Scanner entrada, PrintStream salida,
                                               DefinicionArma definicion, RitmoConsola ritmo) {
-        Arma arma = definicion.crearArma();
+        return ofrecerArmaGuardadaEjemplar(jugador, entrada, salida, definicion.crearArma(), ritmo);
+    }
+
+    static boolean ofrecerArmaGuardada(Jugador jugador, Scanner entrada, PrintStream salida,
+                                       DefinicionArma definicion, RitmoConsola ritmo, Random azarMejoras) {
+        return ofrecerArmaGuardadaEjemplar(jugador, entrada, salida, definicion.crearArma(azarMejoras), ritmo);
+    }
+
+    private static boolean ofrecerArmaGuardadaEjemplar(Jugador jugador, Scanner entrada, PrintStream salida,
+                                                      Arma arma, RitmoConsola ritmo) {
         PanelConsola panel = new PanelConsola(salida, "BOTÍN - ARMA ENCONTRADA");
         panel.linea("Has encontrado una " + arma.getNombre() + ".");
         mostrarEquipo(panel, arma);
@@ -856,8 +973,16 @@ public class app {
 
     static boolean ofrecerEspada(Jugador jugador, Scanner entrada,
                                  PrintStream salida, DefinicionArma definicion, RitmoConsola ritmo) {
+        return ofrecerEspadaEjemplar(jugador, entrada, salida, definicion.crearArma(), ritmo);
+    }
 
-        Arma espada = definicion.crearArma();
+    static boolean ofrecerEspada(Jugador jugador, Scanner entrada, PrintStream salida,
+                                 DefinicionArma definicion, RitmoConsola ritmo, Random azarMejoras) {
+        return ofrecerEspadaEjemplar(jugador, entrada, salida, definicion.crearArma(azarMejoras), ritmo);
+    }
+
+    private static boolean ofrecerEspadaEjemplar(Jugador jugador, Scanner entrada, PrintStream salida,
+                                                Arma espada, RitmoConsola ritmo) {
 
         PanelConsola panel = new PanelConsola(salida, "BOTÍN - ARMA ENCONTRADA");
         panel.linea("Has encontrado una " + espada.getNombre() + ".");
