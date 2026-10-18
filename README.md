@@ -88,16 +88,18 @@ El saldo pertenece al mismo Jugador durante toda la aventura. `getOro`,
 las cantidades deben ser positivas, el gasto insuficiente falla y el desbordamiento
 al sumar se rechaza. Una aventura nueva comienza con 15 monedas, sin pertenencias.
 
-La opción `[5] Tienda` conserva las opciones anteriores de exploración. Muestra
-saldo y productos; elegir uno compra una unidad y permite seguir comprando. `[0]`
-vuelve sin comprar. No hay venta ni stock limitado.
+La opción `[5] Tienda` conserva las opciones anteriores de exploración. Su menú
+ofrece `[1] Comprar objetos`, `[2] Vender objetos` y `[0] Volver a exploración`.
+El oro se consulta directamente en Jugador y aparece en tienda, compra, venta y
+confirmación; se actualiza inmediatamente tras cada operación. No hay stock limitado
+ni pausas narrativas en estos menús.
 
-| Producto | Precio |
-|---|---:|
-| Poción pequeña | 5 |
-| Poción grande | 10 |
-| Espada desgastada | 12 |
-| Espada de hierro | 20 |
+| Producto | Compra | Venta |
+|---|---:|---:|
+| Poción pequeña | 5 | 2 |
+| Poción grande | 10 | 5 |
+| Espada desgastada | 12 | 6 |
+| Espada de hierro | 20 | 10 |
 
 `ProductoTienda` enlaza una definición existente con su precio; su identificador
 y nombre proceden de esa definición. `RepositorioTienda` permite listar y buscar
@@ -109,6 +111,27 @@ incrementan su cantidad y las armas se crean independientes y se guardan, sin
 equiparlas automáticamente. Solo se cobra tras incorporarlas; un fallo recupera
 saldo e inventarios. Una poción debe coincidir con la definición configurada en
 el jugador, ya que su inventario cuenta unidades por tipo.
+
+`ProductoTienda.precioVenta()` centraliza la división entera `precio / 2`.
+La venta muestra cada poción con su cantidad y cada arma guardada o equipada;
+vende una unidad tras confirmar. Las equipadas se identifican y requieren
+confirmar explícitamente su desequipado y venta. `[0]` en compra/venta vuelve
+a tienda; cancelar la confirmación también vuelve a tienda sin cambios.
+
+`Jugador.venderPocion` y `venderEquipo` validan catálogo, pertenencia y saldo
+antes de retirar el objeto. Solo acreditan oro después de retirarlo. El desequipado
+seguro reutiliza la restauración del intercambio: un fallo recupera ranuras,
+atributos, vida, habilidades y sus estados. No se consumen pociones ni se disparan
+eventos de curación por venderlas; las compras conservan su funcionamiento.
+
+Las armas actuales no guardan el ID del catálogo. Se exige una correspondencia
+única por nombre, ranura ARMA, bonificaciones y ausencia de habilidades adicionales;
+las pociones deben coincidir con su definición completa configurada en Jugador.
+Una correspondencia desconocida, ambigua o incoherente entre listado y búsqueda
+no permite vender. Se usan los precios del repositorio proporcionado, también si
+es alternativo. Las referencias al mismo objeto duplicadas manualmente entre
+inventario/ranuras no se venden; las armas independientes de un mismo tipo sí.
+No se añaden restricciones al inventario ni se cambian precios de compra.
 
 Para otro origen comercial, implementar `RepositorioTienda` y proporcionar la
 instancia a la sobrecarga de `app.ejecutar` que acepta también dicho repositorio.
@@ -610,3 +633,13 @@ y equivalencia de texto y resultados con ritmo instantáneo. Solo se cambia a 9
 una entrada inválida del menú principal en AventuraTest, porque 2 ahora configura
 el ritmo; se conservan sus aserciones. Resultado: mvn clean test, BUILD SUCCESS;
 751 pruebas, 0 fallos/errores/omitidas; 47 fuentes principales y 51 archivos de pruebas.
+
+La venta conserva los 751 casos anteriores y añade 42: VentaObjetosTest (28) y
+VentaConsolaTest (14). Solo se adaptan entradas de ComercioAventuraTest e
+InterfazConsolaTest al nuevo submenú de compra, conservando sus aserciones.
+Se verifican precios y redondeo, venta unitaria, ambas ubicaciones de armas,
+cancelación/EOF/inválidos, catálogo alternativo y ambiguo, objetos inexistentes,
+duplicaciones, desbordamiento y recuperación tras fallos, conservación de habilidades
+y otras piezas, saldo mostrado y alineación. Resultado de `mvn clean test`:
+BUILD SUCCESS; 793 pruebas, 0 fallos, 0 errores y 0 omitidas; 47 fuentes principales
+y 53 archivos de pruebas. Sin cambios de combate, recompensas o probabilidades.

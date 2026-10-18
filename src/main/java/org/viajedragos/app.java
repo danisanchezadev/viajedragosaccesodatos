@@ -337,11 +337,30 @@ public class app {
             PanelConsola panel = new PanelConsola(salida, "TIENDA");
             panel.linea("Oro disponible: " + jugador.getOro() + " monedas");
             if (productos.isEmpty()) panel.linea("No hay productos disponibles.");
+            panel.opcion(1, "Comprar objetos");
+            panel.opcion(2, "Vender objetos");
+            panel.opcion(0, "Volver a exploración");
+            panel.cerrar();
+            int opcion = leerIndiceEquipo(entrada, salida, 2);
+            if (opcion == -1) return false;
+            if (opcion == 0) return true;
+            if (opcion == 1) {
+                if (!comprarObjetos(jugador, entrada, salida, tienda, productos)) return false;
+            } else if (!venderObjetos(jugador, entrada, salida, tienda)) return false;
+        }
+    }
+
+    private static boolean comprarObjetos(Jugador jugador, Scanner entrada, PrintStream salida,
+            RepositorioTienda tienda, List<org.viajedragos.modelo.ProductoTienda> productos) {
+        while (true) {
+            PanelConsola panel = new PanelConsola(salida, "COMPRAR OBJETOS");
+            panel.linea("Oro disponible: " + jugador.getOro() + " monedas");
+            if (productos.isEmpty()) panel.linea("No hay productos disponibles.");
             for (int i = 0; i < productos.size(); i++) {
                 var producto = productos.get(i);
                 panel.opcion(i + 1, producto.nombre() + " - " + producto.precio() + " monedas");
             }
-            panel.opcion(0, "Volver a exploración");
+            panel.opcion(0, "Volver a la tienda");
             panel.cerrar();
             int indice = leerIndiceEquipo(entrada, salida, productos.size());
             if (indice == -1) return false;
@@ -355,6 +374,64 @@ public class app {
                 case PRODUCTO_INVALIDO -> salida.println("El producto o su definición no son válidos. No se ha realizado la compra.");
                 case INCORPORACION_FALLIDA -> salida.println("No se ha podido incorporar el objeto. Conservas tu oro y tu inventario.");
             }
+        }
+    }
+
+    private record Venta(org.viajedragos.modelo.ProductoTienda producto, Equipo equipo,
+                         boolean equipado, int cantidad) { }
+
+    private static boolean venderObjetos(Jugador jugador, Scanner entrada, PrintStream salida,
+            RepositorioTienda tienda) {
+        while (true) {
+            var ventas = new java.util.ArrayList<Venta>();
+            for (TipoPocion tipo : TipoPocion.values()) {
+                int cantidad = jugador.getCantidadPociones(tipo);
+                if (cantidad > 0) jugador.productoVenta(tipo, tienda)
+                        .ifPresent(p -> ventas.add(new Venta(p, null, false, cantidad)));
+            }
+            for (Equipo equipo : jugador.getInventarioEquipo()) {
+                if (jugador.getInventarioEquipo().stream().filter(p -> p == equipo).count() != 1
+                        || jugador.getEquipoEquipado().containsValue(equipo)) continue;
+                jugador.productoVenta(equipo, tienda)
+                        .ifPresent(p -> ventas.add(new Venta(p, equipo, false, 1)));
+            }
+            for (Equipo equipo : jugador.getEquipoEquipado().values()) {
+                if (jugador.getInventarioEquipo().contains(equipo)) continue;
+                jugador.productoVenta(equipo, tienda)
+                        .ifPresent(p -> ventas.add(new Venta(p, equipo, true, 1)));
+            }
+            PanelConsola panel = new PanelConsola(salida, "VENDER OBJETOS");
+            panel.linea("Oro disponible: " + jugador.getOro() + " monedas");
+            if (ventas.isEmpty()) panel.linea("No tienes objetos vendibles.");
+            for (int i = 0; i < ventas.size(); i++) {
+                Venta venta = ventas.get(i);
+                panel.opcion(i + 1, venta.producto().nombre() + (venta.equipado() ? " (equipada)" : "")
+                        + " - Cantidad: " + venta.cantidad() + " - Venta: "
+                        + venta.producto().precioVenta() + " monedas");
+            }
+            panel.opcion(0, "Volver a la tienda");
+            panel.cerrar();
+            int indice = leerIndiceEquipo(entrada, salida, ventas.size());
+            if (indice == -1) return false;
+            if (indice == 0) return true;
+            Venta venta = ventas.get(indice - 1);
+            PanelConsola confirmar = new PanelConsola(salida, "CONFIRMAR VENTA");
+            confirmar.linea("Oro disponible: " + jugador.getOro() + " monedas");
+            confirmar.linea("Vender una unidad de " + venta.producto().nombre()
+                    + " por " + venta.producto().precioVenta() + " monedas.");
+            if (venta.equipado()) confirmar.linea("Está equipada: se desequipará y perderás sus efectos.");
+            confirmar.opcion(1, venta.equipado() ? "Desequipar y vender" : "Confirmar venta");
+            confirmar.opcion(0, "Cancelar y volver a la tienda");
+            confirmar.cerrar();
+            int opcion = leerIndiceEquipo(entrada, salida, 1);
+            if (opcion == -1) return false;
+            if (opcion == 0) return true;
+            boolean vendida = venta.equipo() == null
+                    ? jugador.venderPocion(venta.producto().pocion().tipo(), tienda)
+                    : jugador.venderEquipo(venta.equipo(), venta.equipado(), tienda);
+            if (vendida) salida.printf("Has vendido %s por %d monedas. Oro disponible: %d monedas.%n",
+                    venta.producto().nombre(), venta.producto().precioVenta(), jugador.getOro());
+            else salida.println("No se ha podido vender el objeto. Conservas tus objetos y tu oro.");
         }
     }
 

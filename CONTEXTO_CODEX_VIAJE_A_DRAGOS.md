@@ -252,6 +252,16 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - AGENTS.md establece el estándar de ritmo futuro. Se conservan los cambios visuales y las 723 pruebas anteriores; el único inválido principal 2 de AventuraTest se sustituye por 9 sin cambiar aserciones. 28 casos nuevos (9 de componente y 19 de integración) comprueban configuración, sesión, puntos de pausa, paneles, instantáneo/automático e interrupción sin esperas reales.
 - Verificación: mvn clean test, BUILD SUCCESS; 751 pruebas, 0 fallos/errores/omitidas; 47 fuentes principales y 51 archivos de pruebas. Sin commit ni push.
 
+### 3.20 Venta sencilla de objetos
+
+- Tienda: 1 comprar, 2 vender, 0 exploración. Las pantallas de compra/venta vuelven a tienda con 0; cancelar la confirmación también vuelve sin cambios. EOF conserva el comportamiento de salida. Saldo visible en todas las pantallas y confirmaciones, leído de Jugador, sin copia independiente ni pausas.
+- ProductoTienda.precioVenta centraliza precio / 2 entero. Precios de compra intactos; venta de pequeña 2, grande 5, desgastada 6 y hierro 10. Un repositorio alternativo determina sus propios precios mediante la misma fórmula.
+- Jugador.productoVenta busca una correspondencia única y valida listado/búsqueda e IDs. Pociones: definición completa configurada. Armas: instancia de Arma, ranura ARMA, nombre/bonificaciones de la definición y sin habilidades adicionales. No hay IDs en las armas actuales: objetos desconocidos o correspondencias ambiguas no se valoran ni venden.
+- Jugador.venderPocion retira una unidad sin curar. venderEquipo comprueba identidad y ubicación: guardada o equipada, nunca ambas. Las equipadas requieren confirmación explícita en consola y se retiran mediante desequiparSeguro; no hay arma obligatoria ni prohibición normal de desequipar. Las referencias duplicadas manualmente al mismo objeto se rechazan para evitar monetizar dos veces un objeto físico; las piezas independientes repetidas siguen admitidas.
+- El saldo final se calcula con Math.addExact antes de retirar; se acredita solo tras éxito. Combatiente reutiliza la recuperación de cambiarEquipoSeguro para desequipar sin reemplazo, sin cambiar firmas previas. Fallos parciales recuperan atributos, vida, ranuras, mapa/identidad de habilidades y estados temporales. Restricciones previas de retirada de habilidades se conservan.
+- 42 pruebas nuevas: VentaObjetosTest 28 y VentaConsolaTest 14. Se adaptan únicamente entradas de dos pruebas de consola para entrar/salir de comprar, sin eliminar aserciones ni casos. Se conserva combate, exploración, catálogos/repositorios, botín, ofertas y precios de compra.
+- Verificación real: mvn clean test, BUILD SUCCESS; 793 pruebas, 0 fallos/errores/omitidas; 47 fuentes principales y 53 archivos de pruebas. Sin commit ni push.
+
 ## 4. Habilidades
 
 - `Habilidad` es una clase abstracta que implementa una interfaz de eventos (`EventosHabilidad`).
@@ -286,7 +296,7 @@ Estas áreas forman parte del objetivo del producto, pero **no se han establecid
 
 - **Encuentros y exploración:** el personaje podrá encontrar enemigos y objetos. Quedan pendientes el procedimiento de selección de encuentros, desplazamiento, zonas, eventos y recompensas concretas.
 - **Inventario actual:** cantidades de las dos pociones según 3.7, encapsuladas en Jugador, consultables y consumibles entre combates según 3.8 y utilizables durante su acción según 3.9. Cualquier inventario general sigue pendiente. No se inventan límites de capacidad ni otros objetos.
-- **Comercio:** compras sencillas confirmadas e implementadas según 3.17; venta, descuentos y otras ampliaciones quedan fuera de alcance. No importar reglas de ejercicios independientes sobre Strategy y tipos de cliente.
+- **Comercio:** compras según 3.17 y ventas según 3.20 implementadas. Descuentos y otras ampliaciones quedan fuera de alcance. No importar reglas de ejercicios independientes sobre Strategy y tipos de cliente.
 - **Progresión:** no hay aquí una especificación confirmada de experiencia, niveles, clases de personaje o distribución de atributos para el MVP. No inventarla.
 - **Huida:** implementada para el jugador según 3.10, sin persecución ni huida enemiga. **Objetos en combate:** únicamente las dos pociones, según 3.9; otros objetos siguen pendientes.
 - **Continuidad actual:** mismo jugador, oro y pertenencias; vida restante sin curación automática, enemigos nuevos del catálogo 3.11 y menús según 3.5/3.17. Espadas, botín y oro mantienen sus reglas. Muerte termina aventura; sin persistencia.
@@ -325,7 +335,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 > **Estado:** 18 de octubre de 2026. Base local 88934c5 (oro/comercio). Interfaz unificada y ritmo narrativo en cambios locales según 3.18–3.19. Codex no ha realizado commit ni push.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia:** `mvn clean test`: BUILD SUCCESS; 47 fuentes principales y 51 archivos de pruebas; 751 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 723 casos anteriores y se añaden 28 según 3.19, sin esperas reales ni cambios de fórmulas, disparo o mecánicas.
+> **Evidencia actual:** `mvn clean test`: BUILD SUCCESS; 47 fuentes principales y 53 archivos de pruebas; 793 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 751 casos anteriores y se añaden 42 según 3.20, sin cambios de combate ni esperas reales en las pruebas.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -339,7 +349,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 751 pruebas ejecutadas sin fallos ni errores; 723 casos anteriores y 28 de ritmo, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
+- [x] Suite JUnit: 793 pruebas ejecutadas sin fallos ni errores; 751 casos anteriores y 42 de venta, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
@@ -414,6 +424,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Menú de exploración 1/2/3/4/5/0, consulta de pociones/equipo y uso con opciones fijas 1/2/0; paneles Unicode, cancelación, inválidos y cierre de entrada.
 - [x] Añadir 31 casos de consumo/exploración; conservar vida/pociones/equipo entre encuentros sin curación automática, botín duplicado ni dados adicionales. Verificar alCurarse con actividad/estado/nivel e Instinto de supervivencia y su restauración posterior.
 - [x] Oro y comercio mínimo de cuatro productos, repositorio en memoria sustituible, compras encapsuladas y recompensa fija según 3.17.
+- [x] Venta unitaria de pociones y armas guardadas/equipadas, confirmación, precio de catálogo dividido entre dos, saldo siempre visible y restauración segura según 3.20.
 - [x] Unificar pantallas con PanelConsola y establecer normas futuras en AGENTS.md; alineación, ANSI, barras y flujos probados según 3.18.
 - [x] Pausas narrativas mediante RitmoConsola, cuatro velocidades, selección persistente durante la sesión y pruebas sin esperas reales según 3.19.
 - [x] Continuidad de fase 4 publicada en 6fc2a8d: misma instancia del jugador, vida restante sin recuperación, Lobos nuevos y sin límite de encuentros; muerte/terminación voluntaria devuelve al inicio y nueva aventura crea otro jugador. La fase 5 añade su primera recompensa fija.
@@ -472,7 +483,7 @@ Después de programar, informa de:
 
 - La secuencia del ataque individual y el contraataque están confirmados, integrados y probados. El turno tiene dos acciones ordenadas y resuelve muertes entre ellas, según la aclaración expresa del autor durante la fase 3.
 - No existe un modificador de agilidad del turno: el +2 se aplica exclusivamente al cálculo de iniciativa del poseedor.
-- El comercio mínimo está confirmado en 3.17; venta y otras ampliaciones requieren decisiones nuevas. La huida del jugador está confirmada en 3.10. alHuir/alPerseguir, persecución y huida enemiga permanecen fuera de alcance. Las pociones se confirman en 3.7/3.8/3.9; el consumo exitoso en combate sustituye al ataque y cancelar/inválidos/rechazos no consumen acción.
+- El comercio mínimo está confirmado en 3.17 y la venta en 3.20; otras ampliaciones requieren decisiones nuevas. La huida del jugador está confirmada en 3.10. alHuir/alPerseguir, persecución y huida enemiga permanecen fuera de alcance. Las pociones se confirman en 3.7/3.8/3.9; el consumo exitoso en combate sustituye al ataque y cancelar/inválidos/rechazos no consumen acción.
 - Confirmado: alFinalCombate solo del jugador, siempre, como limpieza incluso muerto; el enemigo no participa.
 - Confirmado: tras victoria se permite consultar inventario/usar poción/continuar/terminar aventura/salir, sin recuperación automática. Espada única tras primera victoria y botín de pociones tras cada victoria definitiva. Futuras ampliaciones necesitan reglas propias.
 - Catálogo de enemigos confirmado en 3.11 y objetos en 3.12. Otros catálogos o fuentes externas requieren su propia autorización.

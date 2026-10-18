@@ -58,7 +58,7 @@ class ComercioAventuraTest {
     @Test
     void victoriaConcedeCincoYLaTiendaMuestraElSaldoYLosCuatroProductos() {
         Jugador jugador = jugador();
-        assertFalse(aventura(jugador, "1\n2\n5\n0\n0\n", 6));
+        assertFalse(aventura(jugador, "1\n2\n5\n1\n0\n0\n0\n", 6));
         assertEquals(20, jugador.getOro());
         assertTrue(texto().contains("Oro obtenido: +5 monedas Oro total: 20 monedas"));
         assertTrue(texto().contains("5. Tienda"));
@@ -88,7 +88,7 @@ class ComercioAventuraTest {
                 }
             }
         }, 1);
-        String entrada = "1\n2\n5\n1\n3\n0\n2\n1\n1\n2\n1\n1\n1\n0\n3\n1\n2\n0\n";
+        String entrada = "1\n2\n5\n1\n1\n3\n0\n0\n2\n1\n1\n2\n1\n1\n1\n0\n3\n1\n2\n0\n";
         assertFalse(aventura(jugador, entrada, 12));
         assertEquals(2, inicios[0]);
         assertEquals(8, jugador.getOro());
@@ -137,7 +137,7 @@ class ComercioAventuraTest {
 
     @Test
     void volverAlMenuInicialYNuevaAventuraReiniciaSaldoYPertenencias() {
-        app.ejecutar(new Scanner("1\n1\n2\n5\n1\n0\n4\n1\n1\n2\n5\n0\n0\n"), consola(),
+        app.ejecutar(new Scanner("1\n1\n2\n5\n1\n1\n0\n0\n4\n1\n1\n2\n5\n0\n0\n"), consola(),
                 dados(12), sinBotin(), enemigos(), new Random(0));
         assertEquals(2, texto().split("Oro obtenido: \\+5 monedas Oro total: 20 monedas", -1).length - 1);
         assertEquals(1, texto().split("Has comprado", -1).length - 1);
@@ -159,7 +159,7 @@ class ComercioAventuraTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", "1\n"})
+    @ValueSource(strings = {"", "1\n1\n"})
     void finDeEntradaEnLaTiendaNoRepiteNiCancelaComprasYaCompletadas(String entrada) {
         Jugador jugador = jugador();
         assertFalse(app.consultarTienda(jugador, new Scanner(entrada), consola(), new RepositorioTiendaMemoria()));
@@ -171,7 +171,7 @@ class ComercioAventuraTest {
     @Test
     void compraConSaldoInsuficienteSeInformaYSigueEnLaTienda() {
         Jugador jugador = jugador();
-        assertTrue(app.consultarTienda(jugador, new Scanner("4\n0\n"), consola(), new RepositorioTiendaMemoria()));
+        assertTrue(app.consultarTienda(jugador, new Scanner("1\n4\n0\n0\n"), consola(), new RepositorioTiendaMemoria()));
         assertTrue(texto().contains("No tienes suficiente oro"));
         assertEquals(15, jugador.getOro());
         assertTrue(jugador.getInventarioEquipo().isEmpty());
@@ -206,7 +206,7 @@ class ComercioAventuraTest {
         var objetos = new RepositorioObjetosMemoria();
         ProductoTienda oferta = new ProductoTienda(objetos.obtenerArmas().get(1), 7);
         RepositorioTienda alternativo = () -> List.of(oferta);
-        app.ejecutar(new Scanner("1\n1\n2\n5\n1\n0\n1\n0\n0\n"), consola(), dados(6), sinBotin(),
+        app.ejecutar(new Scanner("1\n1\n2\n5\n1\n1\n0\n0\n1\n0\n0\n"), consola(), dados(6), sinBotin(),
                 enemigos(), new Random(0), objetos, alternativo);
         assertTrue(texto().contains("1. Espada de hierro - 7 monedas"));
         assertTrue(texto().contains("Oro disponible: 13 monedas"));
@@ -232,7 +232,7 @@ class ComercioAventuraTest {
             }
         };
         Jugador jugador = jugador();
-        assertFalse(app.jugarAventura(jugador, new Scanner("1\n2\n5\n1\n0\n2\n1\n5\n0\n0\n"), consola(),
+        assertFalse(app.jugarAventura(jugador, new Scanner("1\n2\n5\n1\n1\n0\n0\n2\n1\n5\n0\n0\n"), consola(),
                 dados(6), sinBotin(), enemigos(), new Random(0), objetos));
         assertEquals(1, lecturas[0]);
         assertEquals(1, lecturas[1]);

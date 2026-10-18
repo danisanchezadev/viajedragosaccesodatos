@@ -72,7 +72,7 @@ class InterfazConsolaTest {
                 return 99;
             }
         };
-        String entrada = "1\n2\n5\n1\n3\n0\n2\n1\n1\n2\n1\n1\n1\n0\n0\n";
+        String entrada = "1\n2\n5\n1\n1\n3\n0\n0\n2\n1\n1\n2\n1\n1\n1\n0\n0\n";
         assertFalse(app.jugarAventura(jugador, new Scanner(entrada), consola(), () -> {
             assertTrue(++tiradas[0] <= 6);
             return 4;

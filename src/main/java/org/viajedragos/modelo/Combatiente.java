@@ -197,7 +197,14 @@ public abstract class Combatiente {
 
     // El intercambio reutiliza las operaciones normales, restaurando su estado si fallan.
     protected boolean cambiarEquipoSeguro(Equipo nuevo) {
-        TipoEquipo tipo = nuevo.getTipoEquipo();
+        return modificarEquipoSeguro(nuevo.getTipoEquipo(), nuevo);
+    }
+
+    protected boolean desequiparSeguro(TipoEquipo tipo) {
+        return modificarEquipoSeguro(tipo, null);
+    }
+
+    private boolean modificarEquipoSeguro(TipoEquipo tipo, Equipo nuevo) {
         var ranurasAntes = new EnumMap<>(equipoEquipado);
         var modificadoresAntes = new EnumMap<>(modificadoresEquipo);
         var baseAntes = new EnumMap<>(atributosBase);
@@ -210,10 +217,12 @@ public abstract class Combatiente {
                 new EstadoHabilidad(estado)));
         var instancias = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Habilidad, Boolean>());
         instancias.addAll(habilidades.keySet());
-        instancias.addAll(nuevo.getHabilidadesOtorgadas().keySet());
+        if (nuevo != null) instancias.addAll(nuevo.getHabilidadesOtorgadas().keySet());
         var restauracionesTemporales = instancias.stream().map(Habilidad::guardarEstadoTemporal).toList();
         try {
-            if ((!equipoEquipado.containsKey(tipo) || desequipar(tipo)) && equipar(nuevo)) return true;
+            if (nuevo == null) {
+                if (desequipar(tipo) && !equipoEquipado.containsKey(tipo)) return true;
+            } else if ((!equipoEquipado.containsKey(tipo) || desequipar(tipo)) && equipar(nuevo)) return true;
         } catch (RuntimeException falloEfectos) {
             // No se intentan efectos inversos: podrían volver a fallar o retirar otras contribuciones.
         }

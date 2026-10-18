@@ -19,4 +19,14 @@ public record ProductoTienda(DefinicionArma arma, DefinicionPocion pocion, int p
 
     public String id() { return arma != null ? arma.id() : pocion.id(); }
     public String nombre() { return arma != null ? arma.nombre() : pocion.nombre(); }
+
+    public int precioVenta() { return precio / 2; }
+
+    public boolean corresponde(org.viajedragos.arma.Equipo equipo) {
+        return arma != null && equipo instanceof org.viajedragos.arma.Arma
+                && equipo.getTipoEquipo() == org.viajedragos.arma.TipoEquipo.ARMA
+                && arma.nombre().equals(equipo.getNombre())
+                && arma.bonificaciones().equals(equipo.getBonificaciones())
+                && equipo.getHabilidadesOtorgadas().isEmpty();
+    }
 }

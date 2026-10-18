@@ -85,6 +85,71 @@ public class Jugador extends Combatiente{
         inventarioEquipo.add(Objects.requireNonNull(equipo, "El equipo no puede ser null"));
     }
 
+    // No se asigna un precio a objetos desconocidos ni a correspondencias ambiguas.
+    private java.util.Optional<ProductoTienda> productoVenta(RepositorioTienda repositorio,
+            java.util.function.Predicate<ProductoTienda> corresponde) {
+        try {
+            var productos = List.copyOf(repositorio.obtenerTodos());
+            var ids = new HashSet<String>();
+            for (var producto : productos) {
+                if (!ids.add(producto.id())) return java.util.Optional.empty();
+            }
+            var candidatos = productos.stream().filter(corresponde).toList();
+            if (candidatos.size() != 1) return java.util.Optional.empty();
+            var producto = candidatos.getFirst();
+            return repositorio.buscarPorId(producto.id()).filter(producto::equals);
+        } catch (RuntimeException catalogoInvalido) {
+            return java.util.Optional.empty();
+        }
+    }
+
+    public java.util.Optional<ProductoTienda> productoVenta(TipoPocion tipo, RepositorioTienda repositorio) {
+        return productoVenta(repositorio, p -> tipo != null && p.pocion() != null
+                && p.pocion().equals(getDefinicionPocion(tipo)));
+    }
+
+    public java.util.Optional<ProductoTienda> productoVenta(Equipo equipo, RepositorioTienda repositorio) {
+        return productoVenta(repositorio, p -> p.corresponde(equipo));
+    }
+
+    public boolean venderPocion(TipoPocion tipo, RepositorioTienda repositorio) {
+        var producto = productoVenta(tipo, repositorio);
+        if (producto.isEmpty() || getCantidadPociones(tipo) <= 0) return false;
+        final int saldo;
+        try { saldo = Math.addExact(oro, producto.get().precioVenta()); }
+        catch (ArithmeticException exceso) { return false; }
+        int cantidad = getCantidadPociones(tipo);
+        if (cantidad == 1) inventarioPociones.remove(tipo);
+        else inventarioPociones.put(tipo, cantidad - 1);
+        oro = saldo;
+        return true;
+    }
+
+    public boolean venderEquipo(Equipo equipo, boolean equipado, RepositorioTienda repositorio) {
+        var producto = productoVenta(equipo, repositorio);
+        if (producto.isEmpty()) return false;
+        final int saldo;
+        try { saldo = Math.addExact(oro, producto.get().precioVenta()); }
+        catch (ArithmeticException exceso) { return false; }
+        if (equipado) {
+            if (getEquipoEquipado().get(equipo.getTipoEquipo()) != equipo) return false;
+            // Una referencia duplicada manualmente no representa dos objetos físicos.
+            if (inventarioEquipo.stream().anyMatch(pieza -> pieza == equipo)) return false;
+            if (!desequiparSeguro(equipo.getTipoEquipo())) return false;
+        } else {
+            if (getEquipoEquipado().containsValue(equipo)) return false;
+            if (inventarioEquipo.stream().filter(pieza -> pieza == equipo).count() != 1) return false;
+            int indice = -1;
+            for (int i = 0; i < inventarioEquipo.size(); i++) {
+                if (inventarioEquipo.get(i) == equipo) { indice = i; break; }
+            }
+            if (indice < 0) return false;
+            inventarioEquipo.remove(indice);
+        }
+        oro = saldo;
+        return true;
+    }
+
     public List<Equipo> getInventarioEquipo() {
         return Collections.unmodifiableList(inventarioEquipo);
     }
