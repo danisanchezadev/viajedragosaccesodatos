@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.ArrayList;
 import org.viajedragos.arma.Equipo;
 import org.viajedragos.arma.TipoEquipo;
+import org.viajedragos.arma.Atributo;
 import org.viajedragos.catalogo.RepositorioTienda;
 
 public class Jugador extends Combatiente{
@@ -19,6 +20,54 @@ public class Jugador extends Combatiente{
     private Map<TipoPocion, DefinicionPocion> definicionesPociones;
     private final List<Equipo> inventarioEquipo = new ArrayList<>();
     private int oro = 15;
+    private int nivel = 1;
+    private long experiencia;
+    private int puntosPendientes;
+
+    public int getNivel() { return nivel; }
+    public long getExperiencia() { return experiencia; }
+    public long getExperienciaNecesaria() { return (nivel + 1L) * 10; }
+    public int getPuntosPendientes() { return puntosPendientes; }
+
+    // Devuelve los niveles alcanzados; no contiene entrada/salida ni reglas de recompensas.
+    public int agregarExperiencia(int cantidad) {
+        if (cantidad <= 0) throw new IllegalArgumentException("La experiencia debe ser positiva");
+        long restante = Math.addExact(experiencia, cantidad);
+        int nuevoNivel = nivel;
+        while (restante >= (nuevoNivel + 1L) * 10) {
+            restante -= (nuevoNivel + 1L) * 10;
+            nuevoNivel = Math.incrementExact(nuevoNivel);
+        }
+        int subidas = nuevoNivel - nivel;
+        int puntos = Math.addExact(puntosPendientes, Math.multiplyExact(subidas, 2));
+        int vidaExtra = Math.multiplyExact(subidas, 6);
+        int maxima = Math.addExact(getVidaMaxima(), vidaExtra);
+        int actual = (int) Math.min(maxima, (long) getVida() + vidaExtra);
+        // Validar todos los incrementos antes de modificar el estado.
+        for (Atributo atributo : Atributo.values()) {
+            if (atributo != Atributo.VIDA) Math.addExact(getAtributoBase(atributo), subidas);
+        }
+        if (subidas > 0) {
+            for (Atributo atributo : Atributo.values()) {
+                if (atributo != Atributo.VIDA) aumentarAtributo(atributo, subidas);
+            }
+            setVidaMaxima(maxima);
+            setVida(actual);
+        }
+        nivel = nuevoNivel;
+        experiencia = restante;
+        puntosPendientes = puntos;
+        return subidas;
+    }
+
+    // Cada llamada asigna exactamente un punto permanente.
+    public boolean asignarPunto(Atributo atributo) {
+        if (atributo == null || atributo == Atributo.VIDA || puntosPendientes == 0) return false;
+        if (getAtributoBase(atributo) == Integer.MAX_VALUE) return false;
+        aumentarAtributo(atributo, 1);
+        puntosPendientes--;
+        return true;
+    }
 
     public int getOro() { return oro; }
 

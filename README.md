@@ -23,12 +23,49 @@ Requiere JDK 23 y Maven. No utiliza persistencia ni servicios externos.
 El menú inicial ofrece `[1] Nueva aventura`, `[2] Velocidad de narración` y `[0] Salir del juego`. Cada aventura crea un
 Aventurero con 48/48 de vida, sin habilidades ni equipamiento. Cada encuentro crea
 un enemigo nuevo del catálogo, sin dificultad automática ni límite de
-encuentros. Al continuar se conserva exactamente la vida restante del Aventurero:
-no hay curación automática entre encuentros ni progresión. La espada fija se ofrece
+encuentros. Al continuar se conserva la vida restante del Aventurero, salvo los
+incrementos de una subida de nivel; no hay curación automática por continuar. La espada fija se ofrece
 después de la primera victoria real y no vuelve a ofrecerse durante esa aventura,
 aunque se rechace. Huir no cuenta como victoria. Además, cada
 enemigo derrotado definitivamente puede dejar pociones. El Aventurero empieza con
 15 monedas y recibe 5 por cada victoria definitiva; huir o perder no concede oro.
+
+## Experiencia y subida de nivel
+
+El Aventurero empieza en nivel 1, con 0 EXP y sin puntos pendientes. Cada victoria
+definitiva concede la EXP definida en los datos del enemigo, además de las cinco
+monedas, el botín y las ofertas de armas existentes. El catálogo inicial concede:
+Goblin 5, Esqueleto 6, Bandido 7 y Lobo 10 EXP. Sus estadísticas no cambian.
+Derrotas, muerte simultánea, huidas o combates interrumpidos no conceden EXP.
+
+Para alcanzar el nivel 2 se necesitan 20 EXP; desde el 2 al 3 otras 30; desde el
+3 al 4 otras 40, etc. Se descuenta cada umbral y se conserva el sobrante; una
+recompensa puede provocar varias subidas. El indicador `EXP actual/necesaria`
+muestra el progreso hacia el siguiente nivel, no la experiencia histórica total.
+
+Cada subida añade permanentemente +1 a FUERZA, RESISTENCIA, AGILIDAD, INICIATIVA
+y VELOCIDAD, +6 PS de vida máxima y +6 PS de vida actual, limitada al nuevo máximo.
+VIDA se trata por separado. Estos aumentos modifican la base, sin duplicar las
+bonificaciones de equipo. El aumento de vida por nivel no usa `curarse()` ni
+activa habilidades `alCurarse`.
+
+Después se reparten dos puntos por nivel alcanzado entre los cinco atributos:
+se puede repetir atributo o elegir varios. La pantalla muestra base, valor
+efectivo y puntos pendientes; no hay opción de salir sin repartirlos. Entradas
+inválidas no consumen puntos. Si finaliza la entrada se interrumpe la sesión y
+los puntos sin gastar quedan en el objeto Jugador; reutilizar ese personaje obliga
+a asignarlos antes de iniciar otro combate. No existe guardado de partidas.
+Si hay varias subidas se muestran todos los niveles y se reparten juntos todos
+los puntos. El resultado final y el estado del inventario/exploración muestran
+nivel y EXP. Solo el anuncio de subida utiliza una pausa narrativa; la selección
+de atributos y sus validaciones son inmediatas.
+
+La lógica está en `Jugador.agregarExperiencia` y `asignarPunto`, sin consola.
+`app` concede las recompensas después de que `Combate` haya terminado y limpiado
+los efectos temporales. Ejecutar solo el motor de combate no concede recompensas.
+`DefinicionEnemigo` incluye `experiencia` positiva y `crearEnemigo` la transmite
+al enemigo; los constructores anteriores se conservan con 5 EXP por compatibilidad.
+Los repositorios nuevos deben indicar explícitamente la recompensa de cada registro.
 
 ## Presentación de consola
 
@@ -133,11 +170,21 @@ es alternativo. Las referencias al mismo objeto duplicadas manualmente entre
 inventario/ranuras no se venden; las armas independientes de un mismo tipo sí.
 No se añaden restricciones al inventario ni se cambian precios de compra.
 
-Para otro origen comercial, implementar `RepositorioTienda` y proporcionar la
-instancia a la sobrecarga de `app.ejecutar` que acepta también dicho repositorio.
+Para otro origen, seleccionar las implementaciones en `ConfiguracionRepositorios`:
+`enemigos()`, `objetos()` y `tienda(armas, pociones)`. También se puede proporcionar
+la instancia a la sobrecarga de `app.ejecutar` que acepta los repositorios.
 Las firmas anteriores siguen disponibles. Actualmente solo existe memoria:
 no hay implementaciones de ficheros, JDBC ni JPA. No cambian las ofertas de espadas,
 el botín, la selección de enemigos ni los dados por comprar o recibir oro.
+
+La [guía de acceso a datos](GUIA_ACCESO_DATOS.md) explica contratos, modelos,
+configuración, validaciones y límites, con un ejemplo mínimo sin persistencia.
+`CatalogoTiendaMemoria` contiene las ofertas predeterminadas; el repositorio valida,
+copia e indexa. Su nuevo constructor acepta otra lista de productos y precios.
+La aventura valida también las tiendas externas contra las definiciones completas
+del catálogo de objetos, sin exigir las cuatro ofertas predeterminadas. Una tienda
+vacía es válida; registros nulos, duplicados, desconocidos o incoherentes impiden
+iniciar la aventura. Los datos predeterminados permanecen intactos.
 
 ## Catálogo de enemigos
 
@@ -643,3 +690,21 @@ duplicaciones, desbordamiento y recuperación tras fallos, conservación de habi
 y otras piezas, saldo mostrado y alineación. Resultado de `mvn clean test`:
 BUILD SUCCESS; 793 pruebas, 0 fallos, 0 errores y 0 omitidas; 47 fuentes principales
 y 53 archivos de pruebas. Sin cambios de combate, recompensas o probabilidades.
+
+La preparación de repositorios externos conserva los 793 casos y añade 25:
+RepositoriosAlternativosTest (12) e IntegracionCatalogosTest (13), sin modificar
+pruebas anteriores. Verifican datos nuevos, carga única de enemigos/objetos,
+combate, compra/venta con precios alternativos, configuración predeterminada,
+definiciones equivalentes, catálogos vacíos e inválidos y errores de los orígenes.
+Resultado de `mvn clean test`: BUILD SUCCESS; 818 pruebas, 0 fallos, 0 errores y
+0 omitidas; 49 fuentes principales y 55 archivos de pruebas. No se implementa
+ningún acceso a archivos, bases de datos ni servicios externos.
+
+La progresión añade 49 casos: ProgresionJugadorTest (34) y ProgresionAventuraTest
+(15). Comprueban umbrales, sobrantes, subidas múltiples, atributos/vida, reparto,
+equipo, limpieza temporal, datos externos, resultados sin victoria, recompensas,
+EOF, estado, paneles y pausas sin esperas reales. La única adaptación de las
+pruebas anteriores actualiza los valores esperados de EXP en el catálogo, sin
+alterar sus comprobaciones de estadísticas. Resultado de `mvn clean test`:
+BUILD SUCCESS; 867 pruebas, 0 fallos, 0 errores y 0 omitidas; 49 fuentes principales
+y 57 archivos de pruebas.

@@ -21,10 +21,10 @@ class RepositorioEnemigosTest {
         var repositorio = new RepositorioEnemigosMemoria();
         var catalogo = repositorio.obtenerTodos();
         assertEquals(List.of(
-                new DefinicionEnemigo("lobo", "Lobo", "", 5, 2, 2, 1, 2, 18),
-                new DefinicionEnemigo("goblin", "Goblin", "", 3, 1, 2, 2, 3, 12),
-                new DefinicionEnemigo("bandido", "Bandido", "", 4, 1, 2, 1, 2, 14),
-                new DefinicionEnemigo("esqueleto", "Esqueleto", "", 3, 2, 1, 1, 1, 14)), catalogo);
+                new DefinicionEnemigo("lobo", "Lobo", "", 5, 2, 2, 1, 2, 18, 10),
+                new DefinicionEnemigo("goblin", "Goblin", "", 3, 1, 2, 2, 3, 12, 5),
+                new DefinicionEnemigo("bandido", "Bandido", "", 4, 1, 2, 1, 2, 14, 7),
+                new DefinicionEnemigo("esqueleto", "Esqueleto", "", 3, 2, 1, 1, 1, 14, 6)), catalogo);
         assertEquals(4, catalogo.stream().map(DefinicionEnemigo::id).distinct().count());
         assertEquals(catalogo, repositorio.obtenerTodos());
         assertThrows(UnsupportedOperationException.class, catalogo::clear);

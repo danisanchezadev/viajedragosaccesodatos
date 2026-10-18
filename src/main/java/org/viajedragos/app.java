@@ -1,11 +1,11 @@
 package org.viajedragos;
 
 import org.viajedragos.arma.Arma;
+import org.viajedragos.arma.Atributo;
 import org.viajedragos.arma.Equipo;
 import org.viajedragos.catalogo.RepositorioObjetos;
-import org.viajedragos.catalogo.RepositorioObjetosMemoria;
+import org.viajedragos.catalogo.ConfiguracionRepositorios;
 import org.viajedragos.catalogo.RepositorioTienda;
-import org.viajedragos.catalogo.RepositorioTiendaMemoria;
 import org.viajedragos.modelo.DefinicionArma;
 import org.viajedragos.modelo.DefinicionPocion;
 import org.viajedragos.arma.TipoEquipo;
@@ -14,7 +14,6 @@ import org.viajedragos.combate.Dado;
 import org.viajedragos.combate.ResultadoCombate;
 import org.viajedragos.combate.TiradorDado;
 import org.viajedragos.catalogo.RepositorioEnemigos;
-import org.viajedragos.catalogo.RepositorioEnemigosMemoria;
 import org.viajedragos.modelo.DefinicionEnemigo;
 import org.viajedragos.modelo.Enemigo;
 import org.viajedragos.modelo.Jugador;
@@ -44,18 +43,18 @@ public class app {
     }
 
     public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, RitmoConsola ritmo) {
-        ejecutar(entrada, salida, dados, new Random(), new RepositorioEnemigosMemoria(), new Random(),
-                new RepositorioObjetosMemoria(), null, ritmo);
+        ejecutar(entrada, salida, dados, new Random(), ConfiguracionRepositorios.enemigos(), new Random(),
+                ConfiguracionRepositorios.objetos(), null, ritmo);
     }
 
     static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin) {
-        ejecutar(entrada, salida, dados, azarBotin, new RepositorioEnemigosMemoria(), new Random());
+        ejecutar(entrada, salida, dados, azarBotin, ConfiguracionRepositorios.enemigos(), new Random());
     }
 
     public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin,
                                 RepositorioEnemigos repositorio, Random azarEncuentros) {
         ejecutar(entrada, salida, dados, azarBotin, repositorio, azarEncuentros,
-                new RepositorioObjetosMemoria());
+                ConfiguracionRepositorios.objetos());
     }
 
     public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin,
@@ -148,14 +147,14 @@ public class app {
     static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
                                  TiradorDado dados, Random azarBotin) {
         return jugarAventura(jugador, entrada, salida, dados, azarBotin,
-                new RepositorioEnemigosMemoria(), new Random());
+                ConfiguracionRepositorios.enemigos(), new Random());
     }
 
     static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
                                  TiradorDado dados, Random azarBotin,
                                  RepositorioEnemigos repositorio, Random azarEncuentros) {
         return jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros,
-                new RepositorioObjetosMemoria());
+                ConfiguracionRepositorios.objetos());
     }
 
     static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
@@ -193,7 +192,7 @@ public class app {
                     return true;
                 }
             }
-        } catch (IllegalArgumentException | NullPointerException datosInvalidos) {
+        } catch (RuntimeException datosInvalidos) {
             salida.println("El catálogo de enemigos no es válido. No se inicia la aventura.");
             return true;
         }
@@ -217,15 +216,22 @@ public class app {
             }
             if (espada == null) throw new IllegalArgumentException("Falta la Espada desgastada");
             if (espadaHierro == null) throw new IllegalArgumentException("Falta la Espada de hierro");
+            if (tienda == null) tienda = ConfiguracionRepositorios.tienda(armas, pociones);
+            var productos = RepositorioTienda.validarProductos(tienda.obtenerTodos(), armas, pociones);
+            for (var producto : productos) {
+                if (!tienda.buscarPorId(producto.id()).filter(producto::equals).isPresent()) {
+                    throw new IllegalArgumentException("El índice comercial no coincide con el catálogo");
+                }
+            }
             jugador.configurarPociones(pociones);
-            if (tienda == null) tienda = new RepositorioTiendaMemoria(armas, pociones);
-        } catch (IllegalArgumentException | NullPointerException datosInvalidos) {
+        } catch (RuntimeException datosInvalidos) {
             salida.println("El catálogo de objetos no es válido o está incompleto. No se inicia la aventura.");
             return true;
         }
         int encuentro = 1;
         boolean espadaOfrecida = false;
         int victorias = 0;
+        if (!repartirPuntos(jugador, entrada, salida)) return false;
         while (true) {
             Enemigo enemigo = seleccionarEnemigo(catalogo, azarEncuentros);
             PanelConsola panelEncuentro = new PanelConsola(salida, "ENCUENTRO " + encuentro);
@@ -258,11 +264,30 @@ public class app {
             if (resultado == ResultadoCombate.ENEMIGO_MUERE) {
                 victorias++;
                 jugador.agregarOro(5);
+                int nivelAnterior = jugador.getNivel();
+                jugador.agregarExperiencia(enemigo.getExperiencia());
                 PanelConsola panelRecompensa = new PanelConsola(salida, "RECOMPENSAS");
                 panelRecompensa.linea("Oro obtenido: +5 monedas");
                 panelRecompensa.linea("Oro total: " + jugador.getOro() + " monedas");
+                panelRecompensa.linea("EXP obtenida: +" + enemigo.getExperiencia());
+                panelRecompensa.linea("Nivel: " + jugador.getNivel() + " | EXP: "
+                        + jugador.getExperiencia() + "/" + jugador.getExperienciaNecesaria());
                 panelRecompensa.cerrar();
                 ritmo.pausar(salida);
+                if (jugador.getNivel() > nivelAnterior) {
+                    PanelConsola subida = new PanelConsola(salida, "SUBIDA DE NIVEL");
+                    for (int nivel = nivelAnterior + 1; nivel <= jugador.getNivel(); nivel++) {
+                        subida.linea("Nivel alcanzado: " + nivel);
+                    }
+                    int subidas = jugador.getNivel() - nivelAnterior;
+                    subida.linea("Mejora automática: +1 a cada atributo por nivel (+" + subidas + ").");
+                    subida.linea("Vida máxima y actual: +" + (subidas * 6) + " PS.");
+                    subida.linea("Vida: " + jugador.getVida() + "/" + jugador.getVidaMaxima() + " PS");
+                    subida.linea("Puntos adicionales disponibles: " + jugador.getPuntosPendientes());
+                    subida.cerrar();
+                    ritmo.pausar(salida);
+                    if (!repartirPuntos(jugador, entrada, salida)) return false;
+                }
                 // Solo una vez tras la resolución definitiva, fuera de los menús.
                 obtenerBotin(jugador, azarBotin, salida, ritmo);
                 if (!espadaOfrecida) {
@@ -306,9 +331,51 @@ public class app {
         return catalogo.get(azarEncuentros.nextInt(catalogo.size())).crearEnemigo();
     }
 
+    static boolean repartirPuntos(Jugador jugador, Scanner entrada, PrintStream salida) {
+        Atributo[] atributos = java.util.Arrays.stream(Atributo.values())
+                .filter(atributo -> atributo != Atributo.VIDA).toArray(Atributo[]::new);
+        boolean habiaPuntos = jugador.getPuntosPendientes() > 0;
+        while (jugador.getPuntosPendientes() > 0) {
+            PanelConsola panel = new PanelConsola(salida, "REPARTIR PUNTOS");
+            panel.linea("Nivel: " + jugador.getNivel());
+            panel.linea("Puntos pendientes: " + jugador.getPuntosPendientes());
+            for (int i = 0; i < atributos.length; i++) {
+                Atributo atributo = atributos[i];
+                panel.opcion(i + 1, atributo + " - Base: " + jugador.getAtributoBase(atributo)
+                        + " | Total: " + jugador.getAtributo(atributo));
+            }
+            panel.linea("Asigna todos los puntos para continuar.");
+            panel.cerrar();
+            String opcion = leerOpcion(entrada, salida);
+            if (opcion == null) return false;
+            try {
+                int indice = Integer.parseInt(opcion);
+                if (indice >= 1 && indice <= atributos.length && jugador.asignarPunto(atributos[indice - 1])) continue;
+            } catch (NumberFormatException invalida) {
+                // No se pierde ningún punto por una entrada inválida.
+            }
+            salida.println("Entrada inválida. Elige un atributo entre 1 y " + atributos.length + ".");
+        }
+        if (habiaPuntos) {
+            PanelConsola resultado = new PanelConsola(salida, "ATRIBUTOS TRAS LA SUBIDA");
+            resultado.linea("Nivel: " + jugador.getNivel() + " | EXP: " + jugador.getExperiencia()
+                    + "/" + jugador.getExperienciaNecesaria());
+            for (Atributo atributo : atributos) {
+                resultado.columnas(atributo.name(), "Base: " + jugador.getAtributoBase(atributo)
+                        + " | Total: " + jugador.getAtributo(atributo));
+            }
+            resultado.linea("Vida: " + jugador.getVida() + "/" + jugador.getVidaMaxima() + " PS");
+            resultado.linea("Puntos pendientes: 0");
+            resultado.cerrar();
+        }
+        return true;
+    }
+
     private static void mostrarExploracion(Jugador jugador, PrintStream salida) {
         PanelConsola panel = new PanelConsola(salida, "VIAJE A DRAGOS - EXPLORACIÓN");
         panel.linea(jugador.getNombre());
+        panel.linea("Nivel: " + jugador.getNivel() + " | EXP: " + jugador.getExperiencia()
+                + "/" + jugador.getExperienciaNecesaria());
         panel.linea("Vida: " + jugador.getVida() + "/" + jugador.getVidaMaxima() + " PS");
         panel.linea(PanelConsola.barraVida(jugador.getVida(), jugador.getVidaMaxima()));
         panel.linea("Oro: " + jugador.getOro() + " monedas");
@@ -452,6 +519,9 @@ public class app {
 
     static boolean consultarInventario(Jugador jugador, Scanner entrada, PrintStream salida, boolean coloresAnsi) {
         PanelConsola panel = new PanelConsola(salida, "INVENTARIO");
+        panel.linea("Nivel: " + jugador.getNivel() + " | EXP: " + jugador.getExperiencia()
+                + "/" + jugador.getExperienciaNecesaria());
+        panel.linea("Puntos pendientes: " + jugador.getPuntosPendientes());
         panel.linea("Oro: " + jugador.getOro() + " monedas");
         panel.columnas("Fuerza: " + jugador.getFuerza(), "Resistencia: " + jugador.getResistencia());
         panel.columnas("Iniciativa: " + jugador.getIniciativa(), "Agilidad: " + jugador.getAgilidad());
@@ -695,7 +765,9 @@ public class app {
     // La pieza se crea una sola vez por oferta. false indica cierre de entrada.
     static boolean ofrecerEspada(Jugador jugador, Scanner entrada, PrintStream salida) {
         return ofrecerEspada(jugador, entrada, salida,
-                new RepositorioObjetosMemoria().obtenerArmas().getFirst());
+                ConfiguracionRepositorios.objetos().obtenerArmas().stream()
+                        .filter(arma -> arma.id().equals(DefinicionArma.ID_ESPADA_DESGASTADA))
+                        .findFirst().orElseThrow());
     }
 
     private static boolean ofrecerArmaGuardada(Jugador jugador, Scanner entrada, PrintStream salida,

@@ -5,10 +5,10 @@ import java.util.List;
 
 public class RepositorioEnemigosMemoria implements RepositorioEnemigos {
     private final List<DefinicionEnemigo> definiciones = List.of(
-            new DefinicionEnemigo("lobo", "Lobo", "", 5, 2, 2, 1, 2, 18),
-            new DefinicionEnemigo("goblin", "Goblin", "", 3, 1, 2, 2, 3, 12),
-            new DefinicionEnemigo("bandido", "Bandido", "", 4, 1, 2, 1, 2, 14),
-            new DefinicionEnemigo("esqueleto", "Esqueleto", "", 3, 2, 1, 1, 1, 14));
+            new DefinicionEnemigo("lobo", "Lobo", "", 5, 2, 2, 1, 2, 18, 10),
+            new DefinicionEnemigo("goblin", "Goblin", "", 3, 1, 2, 2, 3, 12, 5),
+            new DefinicionEnemigo("bandido", "Bandido", "", 4, 1, 2, 1, 2, 14, 7),
+            new DefinicionEnemigo("esqueleto", "Esqueleto", "", 3, 2, 1, 1, 1, 14, 6));
 
     @Override
     public List<DefinicionEnemigo> obtenerTodos() {

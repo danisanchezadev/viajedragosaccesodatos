@@ -94,7 +94,7 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - Tras victoria, botín y oferta de espada si corresponde: menú de exploración con `1. Revisar inventario`, `2. Usar objeto`, `3. Continuar al siguiente encuentro`, `4. Terminar aventura y volver al menú inicial`, `0. Salir del juego`. Continuar conserva al jugador; terminar lo descarta; salir termina la sesión. Sustituye la numeración inicial de la fase 4.
 - Menú inicial: `1. Nueva aventura`, `0. Salir`. Una nueva aventura crea un personaje nuevo.
 - Muerte del jugador o de ambos: mostrar resultado, terminar aventura y volver al menú inicial. El motor resuelve previamente sus muertes y contingencias según las reglas existentes.
-- Sin experiencia ni progresión de niveles. Las recompensas incluyen las espadas, el botín de pociones y cinco monedas por victoria según 3.17. Consumo fuera de combate según 3.8.
+- Experiencia y progresión añadidas según 3.22. Las recompensas conservan las espadas, el botín de pociones y cinco monedas por victoria según 3.17. Consumo fuera de combate según 3.8.
 - Si se interrumpe la entrada durante el combate, termina la sesión sin resultado ficticio ni reutilización del personaje interrumpido.
 - Implementación limitada a app.java: ejecutar conserva el menú inicial y crea el jugador; jugarAventura, de acceso de paquete, contiene la repetición de encuentros y devuelve si corresponde volver al inicio o salir. No cambia el motor ni sus contratos.
 
@@ -262,6 +262,26 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - 42 pruebas nuevas: VentaObjetosTest 28 y VentaConsolaTest 14. Se adaptan únicamente entradas de dos pruebas de consola para entrar/salir de comprar, sin eliminar aserciones ni casos. Se conserva combate, exploración, catálogos/repositorios, botín, ofertas y precios de compra.
 - Verificación real: mvn clean test, BUILD SUCCESS; 793 pruebas, 0 fallos/errores/omitidas; 47 fuentes principales y 53 archivos de pruebas. Sin commit ni push.
 
+### 3.21 Puntos de integración de repositorios externos
+
+- ConfiguracionRepositorios centraliza enemigos(), objetos() y tienda(armas, pociones). Todas las entradas predeterminadas de app usan ese punto; las sobrecargas con repositorios proporcionados se conservan. Memoria sigue siendo el valor predeterminado, sin acceso a datos externo, dependencias, contenedor ni persistencia. La preparación de estos puntos está autorizada; implementar tecnologías externas sigue fuera de alcance.
+- CatalogoTiendaMemoria separa las cuatro ofertas/precios de la construcción del repositorio. RepositorioTiendaMemoria conserva constructores y añade uno con productos/armas/pociones, sin exigir cuatro productos. La fórmula de venta no cambia.
+- RepositorioTienda.validarProductos es una utilidad estática compartida; no añade métodos abstractos. Rechaza nulos, duplicados, referencias inexistentes o definiciones distintas para el mismo ID. app la aplica al iniciar también con repositorios externos y comprueba listado/búsqueda. Una definición equivalente reconstruida es válida, sin exigir identidad Java.
+- Enemigos/objetos se cargan una vez por aventura. RuntimeException de lectura rechaza el inicio con el aviso existente, sin consumir entrada ni dados. La configuración de pociones del jugador se aplica después de validar también la tienda. Una tienda vacía es válida; enemigos vacíos u objetos incompletos impiden iniciar. Repositorios comerciales deben mantener listado/búsqueda coherentes durante la aventura.
+- Nuevos enemigos y armas compatibles no requieren tocar combate/inventario/tienda. Permanecen los límites: dos tipos de poción y una definición por tipo; armas solo ARMA, sin habilidades ni VIDA en las definiciones; dos espadas de recompensa obligatorias por ID; venta de armas por correspondencia única de contenido. No se amplían mecánicas ni recompensas.
+- GUIA_ACCESO_DATOS.md documenta métodos, modelos, punto de selección, ejemplo mínimo, validaciones y limitaciones. No resuelve lectura de archivos, JDBC, JPA ni otras tecnologías.
+- Verificación: mvn clean test, BUILD SUCCESS; 818 pruebas, 0 fallos/errores/omitidas; 49 fuentes principales y 55 archivos de pruebas. Se conservan las 793 anteriores sin cambios y se añaden 25 (12 de repositorios alternativos y 13 de integración/validación de catálogos). Sin cambios de interfaz, pausas o reglas. Sin commit ni push.
+
+### 3.22 Experiencia y niveles
+
+- Jugador comienza en nivel 1, con 0 EXP y 0 puntos pendientes. agregarExperiencia(int) acepta cantidades positivas, descuenta 20/30/40/... EXP para alcanzar niveles 2/3/4/..., conserva sobrantes y permite varias subidas en una recompensa. getExperiencia muestra sobrante hacia el siguiente nivel, no total histórico.
+- Cada nivel añade +1 permanente a FUERZA, RESISTENCIA, AGILIDAD, INICIATIVA y VELOCIDAD mediante los atributos base existentes. La vida se gestiona aparte: máxima +6 y actual +6, limitada al nuevo máximo. No usa curarse ni dispara alCurarse. Equipo y limpieza temporal conservan sus aportaciones sin perder las mejoras permanentes.
+- Cada subida añade 2 puntos pendientes. asignarPunto(Atributo) consume exactamente uno y aumenta base +1; permite repetir atributo, rechaza VIDA/null/sin puntos/atributo saturado sin cambios. Las operaciones de EXP prevalidan magnitudes para evitar cambios parciales ante desbordamiento.
+- DefinicionEnemigo incorpora int experiencia positiva y crearEnemigo la transmite a Enemigo. Los constructores anteriores siguen disponibles con 5 EXP por compatibilidad. Catálogo inicial: Goblin 5, Esqueleto 6, Bandido 7, Lobo 10; ninguna estadística cambia. Repositorios externos pueden definir otras recompensas, sin modificar combate.
+- app concede EXP junto al oro solo con ENEMIGO_MUERE definitivo, después de la limpieza del motor. No concede por derrota, muerte simultánea, huida ni interrupción. Combate automático permanece ajeno a todas las recompensas. Se mantienen oro, botín y ofertas existentes.
+- PanelConsola anuncia cada nivel alcanzado, mejoras, vida y puntos disponibles; una pausa solo tras cerrar el anuncio. Se reparten todos los puntos acumulados antes de continuar, sin pausas ni opción 0 para escapar. Entradas inválidas no gastan; EOF interrumpe conservando pendientes en Jugador. Si se reutiliza un personaje con pendientes, se reparten antes de otro combate. Tras el reparto se muestra el resultado; inventario y exploración muestran nivel/EXP.
+- Pruebas: ProgresionJugadorTest 34 y ProgresionAventuraTest 15. Se conservan los 818 casos previos; solo se adapta la expectativa de EXP del catálogo, conservando todas las estadísticas/aserciones anteriores. Verificación: mvn clean test, BUILD SUCCESS; 867 pruebas, 0 fallos/errores/omitidas; 49 fuentes principales y 57 archivos de pruebas. Sin commit ni push.
+
 ## 4. Habilidades
 
 - `Habilidad` es una clase abstracta que implementa una interfaz de eventos (`EventosHabilidad`).
@@ -297,7 +317,7 @@ Estas áreas forman parte del objetivo del producto, pero **no se han establecid
 - **Encuentros y exploración:** el personaje podrá encontrar enemigos y objetos. Quedan pendientes el procedimiento de selección de encuentros, desplazamiento, zonas, eventos y recompensas concretas.
 - **Inventario actual:** cantidades de las dos pociones según 3.7, encapsuladas en Jugador, consultables y consumibles entre combates según 3.8 y utilizables durante su acción según 3.9. Cualquier inventario general sigue pendiente. No se inventan límites de capacidad ni otros objetos.
 - **Comercio:** compras según 3.17 y ventas según 3.20 implementadas. Descuentos y otras ampliaciones quedan fuera de alcance. No importar reglas de ejercicios independientes sobre Strategy y tipos de cliente.
-- **Progresión:** no hay aquí una especificación confirmada de experiencia, niveles, clases de personaje o distribución de atributos para el MVP. No inventarla.
+- **Progresión:** experiencia, niveles y reparto confirmados e implementados según 3.22. No se añaden clases de personaje, aprendizaje automático de habilidades ni otras reglas de progresión.
 - **Huida:** implementada para el jugador según 3.10, sin persecución ni huida enemiga. **Objetos en combate:** únicamente las dos pociones, según 3.9; otros objetos siguen pendientes.
 - **Continuidad actual:** mismo jugador, oro y pertenencias; vida restante sin curación automática, enemigos nuevos del catálogo 3.11 y menús según 3.5/3.17. Espadas, botín y oro mantienen sus reglas. Muerte termina aventura; sin persistencia.
 
@@ -335,7 +355,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 > **Estado:** 18 de octubre de 2026. Base local 88934c5 (oro/comercio). Interfaz unificada y ritmo narrativo en cambios locales según 3.18–3.19. Codex no ha realizado commit ni push.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia actual:** `mvn clean test`: BUILD SUCCESS; 47 fuentes principales y 53 archivos de pruebas; 793 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 751 casos anteriores y se añaden 42 según 3.20, sin cambios de combate ni esperas reales en las pruebas.
+> **Evidencia actual:** `mvn clean test`: BUILD SUCCESS; 49 fuentes principales y 57 archivos de pruebas; 867 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 818 casos anteriores y se añaden 49 según 3.22, sin cambios en fórmulas, equipo o recompensas previas ni acceso a datos externo.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -349,7 +369,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 793 pruebas ejecutadas sin fallos ni errores; 751 casos anteriores y 42 de venta, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
+- [x] Suite JUnit: 867 pruebas ejecutadas sin fallos ni errores; 818 casos anteriores y 49 de progresión, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
@@ -425,6 +445,8 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Añadir 31 casos de consumo/exploración; conservar vida/pociones/equipo entre encuentros sin curación automática, botín duplicado ni dados adicionales. Verificar alCurarse con actividad/estado/nivel e Instinto de supervivencia y su restauración posterior.
 - [x] Oro y comercio mínimo de cuatro productos, repositorio en memoria sustituible, compras encapsuladas y recompensa fija según 3.17.
 - [x] Venta unitaria de pociones y armas guardadas/equipadas, confirmación, precio de catálogo dividido entre dos, saldo siempre visible y restauración segura según 3.20.
+- [x] Centralizar selección de repositorios, separar ofertas predeterminadas, validar correspondencias y documentar integración externa sin implementarla según 3.21.
+- [x] Experiencia por victoria desde datos del enemigo, subidas múltiples, mejoras permanentes, vida independiente y reparto obligatorio con presentación/pruebas según 3.22.
 - [x] Unificar pantallas con PanelConsola y establecer normas futuras en AGENTS.md; alineación, ANSI, barras y flujos probados según 3.18.
 - [x] Pausas narrativas mediante RitmoConsola, cuatro velocidades, selección persistente durante la sesión y pruebas sin esperas reales según 3.19.
 - [x] Continuidad de fase 4 publicada en 6fc2a8d: misma instancia del jugador, vida restante sin recuperación, Lobos nuevos y sin límite de encuentros; muerte/terminación voluntaria devuelve al inicio y nueva aventura crea otro jugador. La fase 5 añade su primera recompensa fija.
