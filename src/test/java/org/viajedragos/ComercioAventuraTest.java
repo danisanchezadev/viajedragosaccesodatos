@@ -88,7 +88,7 @@ class ComercioAventuraTest {
                 }
             }
         }, 1);
-        String entrada = "1\n2\n5\n1\n1\n3\n0\n0\n2\n1\n1\n2\n1\n1\n1\n0\n3\n1\n2\n0\n";
+        String entrada = "1\n2\n5\n1\n1\n3\n0\n0\n2\n1\n1\n2\n2\n1\n1\n1\n0\n0\n3\n1\n2\n0\n";
         assertFalse(aventura(jugador, entrada, 12));
         assertEquals(2, inicios[0]);
         assertEquals(8, jugador.getOro());
@@ -206,11 +206,11 @@ class ComercioAventuraTest {
         var objetos = new RepositorioObjetosMemoria();
         ProductoTienda oferta = new ProductoTienda(objetos.obtenerArmas().get(1), 7);
         RepositorioTienda alternativo = () -> List.of(oferta);
-        app.ejecutar(new Scanner("1\nAventurero\n1\n2\n5\n1\n1\n0\n0\n1\n0\n0\n"), consola(), dados(6), sinBotin(),
+        app.ejecutar(new Scanner("1\nAventurero\n1\n2\n5\n1\n1\n0\n0\n1\n2\n8\n1\n0\n0\n0\n0\n0\n"), consola(), dados(6), sinBotin(),
                 enemigos(), new Random(0), objetos, alternativo);
         assertTrue(texto().contains("1. Espada de hierro - 7 monedas"));
         assertTrue(texto().contains("Oro disponible: 13 monedas"));
-        assertTrue(texto().contains("EQUIPAMIENTO GUARDADO"));
+        assertTrue(texto().contains("EQUIPAMIENTO"));
         assertTrue(texto().contains("FUERZA +2"));
         assertFalse(texto().contains("2. Poción grande - 10 monedas"));
     }

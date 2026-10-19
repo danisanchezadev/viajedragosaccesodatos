@@ -319,12 +319,12 @@ resultante. Un intercambio conserva la vida hasta el máximo final, sin perder P
 por el máximo intermedio. La curación posterior respeta el máximo efectivo.
 Los +6 PS por nivel se añaden una sola vez a la base y a la vida actual.
 
-Inventario: `[1] Comparar`, `[2] Cambiar equipamiento`, `[3] Desequipar una pieza`,
-`[4] Utilizar pergaminos`, `[5] Pergamino de habilidad`, `[6] Pergamino de maestría`,
-`[0] Volver`. Cambiar exige elegir una pieza compatible y confirmar. Desequipar
+Inventario: `[1] Comparar equipo`, `[2] Equipar objeto`, `[3] Desequipar objeto`,
+`[4] Perg. atributos`, `[5] Perg. habilidad`, `[6] Perg. maestría`,
+`[7] Usar consumible`, `[8] Inspeccionar`, `[0] Volver`. Cambiar exige elegir una pieza compatible y confirmar. Desequipar
 muestra las ocupadas y solicita confirmación; devuelve el mismo ejemplar al final
-del inventario. Cancelar/EOF no confirman ni retiran efectos. Los paneles muestran
-todas las ranuras, incluidas vacías, y VIDA se presenta como Vida máxima.
+del inventario. Cancelar/EOF no confirman ni retiran efectos. La selección para
+equipar conserva las siete ranuras; la lista principal muestra solo piezas poseídas.
 No se añaden pausas en estos menús.
 
 La tienda predeterminada tiene diez productos; conserva los cuatro anteriores y
@@ -445,13 +445,35 @@ de línea y caracteres de formato que alteren la consola. La opción `0` cancela
 EOF termina la sesión sin crear un jugador ni consultar catálogos o dados.
 El nombre elegido se conserva entre encuentros. Cada aventura puede usar otro.
 
-Exploración conserva las opciones anteriores y añade `[6] Estado del personaje`.
-Es independiente del inventario y regresa con `[0]`. Muestra nombre, descripción
-si existe, nivel, EXP restante/umbral siguiente, puntos pendientes, vida actual y
-máxima, oro y seis atributos. Los cinco atributos usan `getAtributoBase` y
-`getAtributo`; VIDA usa `getVidaMaximaBase` y `getVidaMaxima`. El equipo se consulta
-en `getModificadoresEquipo`, que ya suma piezas y mejoras. Los bonos negativos
-conservan su signo y el total respeta el mínimo de cero.
+Exploración ofrece `[1] Menú de personaje`, que integra estado e inventario.
+Conserva Usar objeto, Continuar, Terminar aventura, Tienda y Salir. El menú general
+usa 100 columnas interiores (102 contando bordes); las demás ventanas conservan
+48. Cabecera: nombre, nivel, oro y tiempo de aventura. Vida y EXP comparten fila
+con barras proporcionales; los puntos pendientes aparecen cuando existen. Los seis
+atributos muestran solamente valores efectivos en dos filas, sin desglose ni barras.
+
+Entre atributos e inventario, HABILIDADES resume hasta seis habilidades activas,
+ordenadas por nombre y sin duplicados. `[A]` indica aprendizaje permanente,
+`[E]` procedencia exclusiva del equipo y `[A+E]` aprendizaje reforzado por equipo;
+`Nv.` muestra directamente el nivel efectivo de EstadoHabilidad. Tres columnas
+permiten dos filas cuando los nombres caben; se reducen a dos o una para mostrar
+nombres y niveles completos. Si es necesario se ajusta el texto en varias líneas,
+sin abreviarlo. Vacío: `Sin habilidades`; más de seis: `+N habilidades más`.
+La opción `[6] Habilidades` conserva la consulta completa. El resumen se reconstruye
+con el estado real al regresar, también después de equipar o desequipar.
+
+Debajo aparecen CONSUMIBLES, PERGAMINOS y EQUIPAMIENTO en tres columnas, con las
+cantidades alineadas a la derecha. Se muestran como máximo cinco entradas por
+categoría, `+N objetos más` y `Sin objetos` cuando corresponde. Los nombres largos
+se abrevian con `…` únicamente en este resumen. `[E]` distingue piezas equipadas;
+dos piezas con el mismo nombre siguen siendo instancias independientes, cada una
+con cantidad visual uno. Las acciones nunca identifican objetos por su abreviación.
+
+Acciones: `[1] Estadísticas`, `[2] Inventario`, `[3] Usar objeto`, `[4] Equipar`,
+`[5] Desequipar`, `[6] Habilidades`, `[0] Volver a exploración`. Estadísticas muestra
+base actual, modificadores netos de equipo y total efectivo en columnas. Los cinco
+atributos usan `getAtributoBase`/`getAtributo`; VIDA usa `getVidaMaximaBase` y
+`getVidaMaxima`. Las consultas no recalculan ni modifican los valores del jugador.
 
 La sección de habilidades aprendidas muestra nivel permanente, equipo y total.
 Las exclusivas de equipo aparecen aparte, con nivel y piezas otorgantes cuando
@@ -466,23 +488,28 @@ con esos efectos, no una base permanente reconstruida. La consulta no retira ni
 reaplica efectos. No cambia fórmulas ni estadísticas; tampoco consume recursos,
 turnos o tiradas, ni introduce pausas narrativas.
 
-La presentación de estado utiliza barras `█`/`░`: vida y experiencia tienen diez
+La presentación utiliza barras `█`/`░`: vida y experiencia tienen diez
 segmentos proporcionales a sus máximos reales, redondeados al segmento más próximo.
 Se acotan entre vacío y completo; con máximo no positivo quedan vacías. La
 división se realiza antes del escalado, sin multiplicaciones de enteros grandes.
-Los cinco atributos usan dieciséis segmentos, un punto por segmento; la escala
-se satura visualmente en 16 y conserva siempre el número efectivo completo.
-Debajo de cada atributo y de VIDA MÁXIMA se mantiene base/equipo; un resumen
-compacto reúne solo modificadores netos no nulos, incluidas mejoras y penalizaciones.
-Los puntos pendientes se muestran solo si quedan por distribuir.
+La vista general no incluye barras individuales de atributos ni un resumen
+adicional de modificadores. La entrada anterior `consultarEstado` se conserva
+para compatibilidad, con su presentación compacta, sin duplicarla en exploración.
 
-Con `-Dviajedragos.ansi=true`, la consola colorea vida en verde, experiencia en
-cian y bonos positivos/negativos en verde/rojo. Los ceros siguen normales. Cada
-color se restablece antes del borde. Sin esa propiedad no se emiten códigos ANSI.
-La sobrecarga de consultarEstado con boolean permite probar ambos modos con
-flujos controlados sin depender de la configuración local. PanelConsola, sus
-bordes y las demás pantallas permanecen iguales; se separan auxiliares de
-identidad, barras, atributos, resumen de equipo, habilidades y color.
+Con `-Dviajedragos.ansi=true` y salida a la consola, el menú de personaje utiliza
+fondo azul y texto claro, vida verde, EXP cian y bonos con signo en verde/rojo.
+Cada línea restablece ANSI y el fondo se recupera después de colores parciales.
+Sin activación explícita no se emiten escapes. Para terminales estrechos se puede
+usar `-Dviajedragos.columnas=80`: presentación de 48 columnas interiores y categorías
+verticales. No se detecta automáticamente el ancho; al abrir el menú ancho aparece
+un aviso con esta alternativa. Los valores numéricos nunca se recortan.
+
+`VistaMenuPersonaje` construye las vistas sin leer entradas ni modificar modelos;
+`app` coordina las acciones existentes. `TiempoAventura` mide desde el inicio de
+cada aventura con `System.nanoTime()`, incluye combates y menús, y muestra
+`HH:MM:SS` incluso por encima de 99 horas. Consultar no acumula tiempo de nuevo;
+una aventura nueva crea otro contador. Se actualiza al redibujar el menú, sin
+hilos ni refresco asíncrono. El reloj es inyectable en pruebas y no se persiste.
 
 ## Equilibrio inicial
 
@@ -597,13 +624,27 @@ y reglas no cambian.
 El menú de exploración muestra nombre, vida actual/máxima, barra y oro en un panel Unicode.
 Continuar inicia directamente otro combate; no hay tiradas de mazmorra.
 
-Revisar inventario muestra únicamente las pociones disponibles, sus cantidades y
-su recuperación máxima. Si no hay, indica «No tienes consumibles». También muestra
-el equipo realmente equipado, sus bonificaciones y las habilidades que otorgue,
-sin volver a aplicar efectos. Añade la sección EQUIPAMIENTO GUARDADO, con ranuras,
-nombres, bonificaciones y habilidades de las piezas almacenadas. Consultar no cambia el estado.
+Menú de personaje → `[2] Inventario` abre un panel con CONSUMIBLES, PERGAMINOS, EQUIPAMIENTO
+y ACCIONES, en ese orden. Muestra solo cantidades positivas y piezas reales.
+Pociones: nombre efectivo del catálogo y cantidad. Pergaminos: atributo, contenido
+de habilidad o maestría agrupados por cantidad. Equipamiento: una entrada por
+pieza, sin agrupar nombres repetidos; `[E]` identifica las equipadas. Las entradas
+de hasta 21 columnas se emparejan; las largas usan todo el ancho y se ajustan sin
+recortarse. Vacíos: «Sin consumibles», «Sin pergaminos», «Sin equipamiento».
 
-El inventario ofrece `1. Comparar equipamiento`, `2. Cambiar equipamiento` y `0. Volver a exploración`.
+Se conservan los números 0–6 y sus submenús de comparación, cambio, desequipado y
+los tres pergaminos. Se añade 7 para usar una poción con el flujo existente y 8
+para inspeccionar cualquier pieza equipada o guardada: tipo, bonos, habilidades
+y mejoras aplicadas/disponibles mediante mostrarEquipo. En inspección, 0 vuelve un nivel;
+no equipa, consume ni modifica las piezas. Las acciones van debajo del contenido,
+en dos columnas. No se añaden pausas ni se alteran los colores de comparación.
+Al regresar de cada operación se reconstruye el panel con los datos actuales.
+El inventario ampliado muestra ocho entradas por categoría y página, sin límite
+de capacidad: `[9] Página siguiente` y `[10] Página anterior` aparecen cuando
+corresponde. La selección de inspección también se pagina, conservando nombres
+completos e identidad de cada pieza. Estadísticas y habilidades se consultan
+desde el menú general. Ningún menú introduce pausas narrativas.
+
 Para comparar se elige primero una pieza equipada, numerada en orden de TipoEquipo,
 y después una guardada de la misma ranura. Las categorías incompatibles no aparecen
 en esa selección. `0` en la selección de guardada vuelve a la equipada; `0` en la
@@ -988,3 +1029,31 @@ largos, muchas habilidades, ANSI explícito/propiedad, alineación y consulta si
 mutaciones. Se adaptan solo las aserciones de presentación afectadas.
 Verificación: `mvn clean test`, BUILD SUCCESS; 1208 pruebas, 0 fallos, 0 errores
 y 0 omitidas; 53 fuentes principales y 71 archivos de pruebas.
+
+Rediseño de inventario: InventarioPresentacionTest añade 21 casos y se conservan
+los 1210 anteriores. Se adaptan nueve archivos de pruebas a los nuevos textos,
+la opción inválida 9, la inspección detallada y la consulta separada de estado,
+sin quitar las comprobaciones de negocio. Se cubren categorías, cantidades,
+instancias, siete ranuras, columnas, textos largos, ANSI, refresco de acciones,
+cancelación/EOF y el ajuste de opciones de PanelConsola.
+`mvn clean test`: BUILD SUCCESS; 1231 pruebas, 0 fallos, 0 errores y 0 omitidas;
+53 fuentes principales y 72 archivos de pruebas.
+
+Menú horizontal de personaje: se conservan esos 1231 casos y se añaden 37,
+MenuPersonajeTest (25) y TiempoAventuraTest (12). Cubren inventarios vacíos y
+poblados, cinco filas/omitidos, cantidades alineadas, nombres largos, piezas
+repetidas, pergaminos diferentes, datos efectivos, reloj controlado durante
+combates y menús, navegación, acciones, cancelación/EOF, paginación, ANSI,
+paneles de 48/100 columnas, restauración de configuración de pruebas y ausencia
+de mutaciones al consultar. Las pruebas anteriores adaptan entradas y anchuras,
+conservando sus comprobaciones funcionales.
+Verificación final: `mvn clean test`, BUILD SUCCESS; **1268 pruebas**, 0 fallos,
+0 errores y 0 omitidas; 55 fuentes principales y 74 archivos de pruebas.
+
+Resumen de habilidades en el menú general: HabilidadesMenuPersonajeTest añade
+13 casos y conserva los 1268 anteriores sin modificaciones. Comprueba vacío,
+procedencias y niveles, varias fuentes de equipo y retirada, entradas inactivas,
+seis habilidades en dos filas, exceso y consulta detallada, nombres largos,
+valores grandes, ancho compacto, ANSI y ausencia de mutaciones.
+`mvn clean test`: BUILD SUCCESS; **1281 pruebas**, 0 fallos, 0 errores y
+0 omitidas; 55 fuentes principales y 75 archivos de pruebas.

@@ -47,9 +47,14 @@ class InterfazConsolaTest {
 
     private void comprobarPaneles() {
         int abiertos = 0;
+        int ancho = 50;
         for (String linea : texto().split("\\R")) {
             if (!linea.matches("^[│┌├└].*")) continue;
-            assertEquals(50, PanelConsola.anchoVisible(linea), linea);
+            if (linea.startsWith("┌")) {
+                ancho = PanelConsola.anchoVisible(linea);
+                assertTrue(ancho == 50 || ancho == 102, linea);
+            }
+            assertEquals(ancho, PanelConsola.anchoVisible(linea), linea);
             if (linea.startsWith("┌")) abiertos++;
             if (linea.startsWith("└")) abiertos--;
             assertTrue(abiertos == 0 || abiertos == 1, linea);
@@ -72,7 +77,7 @@ class InterfazConsolaTest {
                 return 99;
             }
         };
-        String entrada = "1\n2\n5\n1\n1\n3\n0\n0\n2\n1\n1\n2\n1\n1\n1\n0\n0\n";
+        String entrada = "1\n2\n5\n1\n1\n3\n0\n0\n2\n1\n1\n2\n2\n1\n1\n1\n0\n0\n0\n";
         assertFalse(app.jugarAventura(jugador, new Scanner(entrada), consola(), () -> {
             assertTrue(++tiradas[0] <= 6);
             return 4;

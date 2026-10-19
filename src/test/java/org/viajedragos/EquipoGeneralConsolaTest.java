@@ -117,7 +117,7 @@ class EquipoGeneralConsolaTest {
         RepositorioEnemigos enemigos = () -> List.of(new DefinicionEnemigo("prueba", "Prueba", "", 1, 0, 1, 0, 0, 1));
         Jugador j = new Jugador("Prueba", "", 20, 2, 3, 2, 2, 20, 30);
         var ritmo = new RitmoConsola(RitmoConsola.Velocidad.NORMAL, ms -> esperas[0]++);
-        String entrada = "1\n2\n5\n1\n1\n0\n0\n1\n2\n7\n1\n1\n0\n5\n2\n1\n1\n0\n0\n0\n";
+        String entrada = "1\n2\n5\n1\n1\n0\n0\n1\n2\n2\n7\n1\n1\n0\n0\n5\n2\n1\n1\n0\n0\n0\n";
         assertFalse(app.jugarAventura(j, new Scanner(entrada), salida(), () -> { assertTrue(++dados[0] <= 6); return 4; },
                 new Random(0) { public int nextInt(int limite) { return 99; } }, enemigos, new Random(0), objetos, tienda, ritmo,
                 new Random(0) { public int nextInt(int limite) { return 99; } },
@@ -135,13 +135,10 @@ class EquipoGeneralConsolaTest {
     void sinEquipoSePuedeVolverSinErrores() {
         assertTrue(app.consultarInventario(jugador(), new Scanner("3\n0\n0\n"), salida()));
         assertTrue(texto().contains("No tienes equipo equipado"));
-        assertTrue(texto().contains("Amuleto: Sin equipo"));
+        assertTrue(texto().contains("Sin equipamiento"));
     }
 
     private void comprobarPaneles() {
-        assertTrue(bytes.toString(StandardCharsets.UTF_8).contains("┌"));
-        bytes.toString(StandardCharsets.UTF_8).lines()
-                .filter(l -> l.startsWith("┌") || l.startsWith("├") || l.startsWith("└") || l.startsWith("│"))
-                .forEach(l -> assertEquals(50, PanelConsola.anchoVisible(l), l));
+        TextoConsola.comprobarPaneles(bytes.toString(StandardCharsets.UTF_8));
     }
 }

@@ -160,8 +160,9 @@ class ProgresionAventuraTest {
     void nivelYExpSeMuestranEnElEstadoSinGastarPuntos() {
         Jugador j = jugador();
         j.agregarExperiencia(25);
-        assertTrue(app.consultarInventario(j, new Scanner("0\n"), salida()));
-        assertTrue(texto().contains("Nivel: 2 | EXP: 5/30"));
+        assertTrue(app.consultarEstado(j, new Scanner("0\n"), salida()));
+        assertTrue(texto().contains("Nivel: 2"));
+        assertTrue(texto().contains("EXPERIENCIA 5/30"));
         assertTrue(texto().contains("Puntos pendientes: 2"));
         assertEquals(2, j.getPuntosPendientes());
         comprobarPaneles();

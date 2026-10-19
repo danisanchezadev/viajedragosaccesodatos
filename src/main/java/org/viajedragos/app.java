@@ -26,6 +26,8 @@ import org.viajedragos.habilidad.HabilidadDisponible;
 import java.io.PrintStream;
 import org.viajedragos.consola.PanelConsola;
 import org.viajedragos.consola.RitmoConsola;
+import org.viajedragos.consola.VistaMenuPersonaje;
+import org.viajedragos.consola.TiempoAventura;
 import java.nio.charset.StandardCharsets;
 import java.util.NoSuchElementException;
 import java.util.Random;
@@ -244,6 +246,15 @@ public class app {
                                  RepositorioEnemigos repositorio, Random azarEncuentros,
                                  RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo,
                                  Random azarPergaminos, Random azarHabilidades) {
+        return jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros,
+                objetos, tienda, ritmo, azarPergaminos, azarHabilidades, new TiempoAventura());
+    }
+
+    static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
+                                 TiradorDado dados, Random azarBotin,
+                                 RepositorioEnemigos repositorio, Random azarEncuentros,
+                                 RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo,
+                                 Random azarPergaminos, Random azarHabilidades, TiempoAventura tiempo) {
         java.util.Objects.requireNonNull(ritmo);
         java.util.Objects.requireNonNull(azarPergaminos);
         java.util.Objects.requireNonNull(azarHabilidades);
@@ -394,16 +405,14 @@ public class app {
                 }
                 if (opcion.equals("3")) break;
                 if (opcion.equals("1")) {
-                    if (!consultarInventario(jugador, entrada, salida,
+                    if (!consultarPersonaje(jugador, entrada, salida, tiempo,
                             salida == System.out && Boolean.getBoolean("viajedragos.ansi"))) return false;
                 } else if (opcion.equals("2")) {
                     if (!usarObjeto(jugador, entrada, salida)) return false;
                 } else if (opcion.equals("5")) {
                     if (!consultarTienda(jugador, entrada, salida, tienda)) return false;
-                } else if (opcion.equals("6")) {
-                    if (!consultarEstado(jugador, entrada, salida)) return false;
                 } else {
-                    salida.println("Entrada inválida. Escribe 1, 2, 3, 4, 5, 6 o 0.");
+                    salida.println("Entrada inválida. Escribe 1, 2, 3, 4, 5 o 0.");
                 }
             }
             encuentro++;
@@ -465,28 +474,47 @@ public class app {
         panel.linea(PanelConsola.barraVida(jugador.getVida(), jugador.getVidaMaxima()));
         panel.linea("Oro: " + jugador.getOro() + " monedas");
         panel.separador();
-        panel.opcion(1, "Revisar inventario");
+        panel.opcion(1, "Menú de personaje");
         panel.opcion(2, "Usar objeto");
         panel.opcion(3, "Continuar al siguiente encuentro");
         panel.opcion(4, "Terminar aventura y volver al menú inicial");
         panel.opcion(5, "Tienda");
-        panel.opcion(6, "Estado del personaje");
         panel.opcion(0, "Salir del juego");
         panel.cerrar();
     }
+    static boolean consultarPersonaje(Jugador jugador, Scanner entrada, PrintStream salida,
+                                     TiempoAventura tiempo, boolean coloresAnsi) {
+        if (VistaMenuPersonaje.anchoMenu() == 100) {
+            salida.println("Menú de 102 columnas. Si no cabe, usa -Dviajedragos.columnas=80 para la vista compacta.");
+        }
+        while (true) {
+            VistaMenuPersonaje.general(jugador, salida, tiempo, coloresAnsi);
+            int opcion = leerIndiceEquipo(entrada, salida, 6);
+            if (opcion == -1) return false;
+            if (opcion == 0) return true;
+            if (opcion == 1 || opcion == 6) {
+                if (opcion == 1) VistaMenuPersonaje.estadisticas(jugador, salida, coloresAnsi);
+                else VistaMenuPersonaje.habilidades(jugador, salida, coloresAnsi);
+                if (leerIndiceEquipo(entrada, salida, 0) == -1) return false;
+            } else if (opcion == 2) {
+                if (!consultarInventario(jugador, entrada, salida, coloresAnsi)) return false;
+            } else if (opcion == 3) {
+                if (!usarObjeto(jugador, entrada, salida)) return false;
+            } else if (opcion == 4) {
+                if (!cambiarEquipamiento(jugador, entrada, salida, coloresAnsi)) return false;
+            } else if (opcion == 5) {
+                if (!desequiparEquipamiento(jugador, entrada, salida)) return false;
+            }
+        }
+    }
+
     static boolean consultarEstado(Jugador jugador, Scanner entrada, PrintStream salida) {
         return consultarEstado(jugador, entrada, salida,
                 salida == System.out && Boolean.getBoolean("viajedragos.ansi"));
     }
 
     static boolean consultarEstado(Jugador jugador, Scanner entrada, PrintStream salida, boolean coloresAnsi) {
-        PanelConsola panel = new PanelConsola(salida, "ESTADO DEL PERSONAJE");
-        mostrarIdentidadEstado(panel, jugador, coloresAnsi);
-        mostrarAtributosEstado(panel, jugador);
-        mostrarHabilidadesEstado(panel, jugador, coloresAnsi);
-        panel.separador();
-        panel.opcion(0, "Volver a exploración");
-        panel.cerrar();
+        VistaMenuPersonaje.estadoCompacto(jugador, salida, coloresAnsi);
         while (true) {
             String opcion = leerOpcion(entrada, salida);
             if (opcion == null) return false;
@@ -495,90 +523,12 @@ public class app {
         }
     }
 
-    private static void mostrarIdentidadEstado(PanelConsola panel, Jugador jugador, boolean coloresAnsi) {
-        panel.linea("Nombre: " + jugador.getNombre());
-        if (jugador.getDescripcion() != null && !jugador.getDescripcion().isBlank()) {
-            panel.linea("Descripción: " + jugador.getDescripcion());
-        }
-        panel.columnas("Nivel: " + jugador.getNivel(), "Oro: " + jugador.getOro() + " monedas");
-        panel.espacio();
-        panel.columnas("VIDA " + jugador.getVida() + "/" + jugador.getVidaMaxima() + " PS",
-                "EXPERIENCIA " + jugador.getExperiencia() + "/" + jugador.getExperienciaNecesaria());
-        panel.columnas(colorEstado(barraProgresoEstado(jugador.getVida(), jugador.getVidaMaxima()), "32", coloresAnsi),
-                colorEstado(barraProgresoEstado(jugador.getExperiencia(), jugador.getExperienciaNecesaria()), "36", coloresAnsi));
-        if (jugador.getPuntosPendientes() > 0) panel.linea("Puntos pendientes: " + jugador.getPuntosPendientes());
-    }
-
-    // La división se hace antes del escalado en double: nunca multiplica enteros grandes.
     static String barraProgresoEstado(long actual, long maximo) {
-        int llenos = maximo <= 0 ? 0 : (int) Math.round((double) Math.max(0, Math.min(actual, maximo)) / maximo * 10);
-        return "[" + "█".repeat(llenos) + "░".repeat(10 - llenos) + "]";
+        return VistaMenuPersonaje.barraProgresoEstado(actual, maximo);
     }
 
     static String barraAtributoEstado(int valor) {
-        int llenos = Math.max(0, Math.min(valor, 16));
-        return "[" + "█".repeat(llenos) + "░".repeat(16 - llenos) + "]";
-    }
-
-    private static void mostrarAtributosEstado(PanelConsola panel, Jugador jugador) {
-        panel.separador();
-        panel.titulo("ATRIBUTOS");
-        Atributo[][] parejas = {{Atributo.FUERZA, Atributo.AGILIDAD},
-                {Atributo.RESISTENCIA, Atributo.VELOCIDAD}, {Atributo.INICIATIVA, Atributo.VIDA}};
-        for (Atributo[] pareja : parejas) {
-            int izquierda = jugador.getAtributo(pareja[0]);
-            int derecha = pareja[1] == Atributo.VIDA ? jugador.getVidaMaxima() : jugador.getAtributo(pareja[1]);
-            // 22 + 2 de separación + 20 = las 44 columnas de texto del panel.
-            // Con cifras muy grandes se abrevia solo la etiqueta de vida, nunca el valor.
-            String nombreDerecha = pareja[1] == Atributo.VIDA
-                    ? ("VIDA MÁXIMA " + derecha).length() <= 20 ? "VIDA MÁXIMA" : "VIDA MÁX."
-                    : pareja[1].name();
-            panel.columnas(new int[]{22, 20}, pareja[0].name() + " " + izquierda, nombreDerecha + " " + derecha);
-            panel.columnas(new int[]{22, 20}, barraAtributoEstado(izquierda), barraAtributoEstado(derecha));
-        }
-    }
-
-    private static String formatearBonoEstado(int bono, boolean coloresAnsi) {
-        String numero = String.format(java.util.Locale.ROOT, "%+d", bono);
-        return bono == 0 ? numero : colorEstado(numero, bono > 0 ? "32" : "31", coloresAnsi);
-    }
-
-    private static String colorEstado(String texto, String codigo, boolean coloresAnsi) {
-        return coloresAnsi ? "\u001b[" + codigo + "m" + texto + "\u001b[0m" : texto;
-    }
-
-    private static void mostrarHabilidadesEstado(PanelConsola panel, Jugador jugador, boolean coloresAnsi) {
-        var habilidades = jugador.getHabilidades().entrySet().stream()
-                .filter(e -> e.getValue().isActiva())
-                .sorted(java.util.Comparator.comparing(e -> e.getKey().getNombre())).toList();
-        panel.separador();
-        panel.titulo("HABILIDADES APRENDIDAS");
-        boolean aprendidas = false;
-        for (var entradaHabilidad : habilidades) {
-            var estado = entradaHabilidad.getValue();
-            if (!estado.isAprendida()) continue;
-            aprendidas = true;
-            panel.linea(entradaHabilidad.getKey().getNombre());
-            panel.linea("Permanente: " + estado.getNivelPermanente() + " | Equipo: "
-                    + formatearBonoEstado(estado.getNivelEquipo(), coloresAnsi) + " | Total: " + estado.getNivel());
-        }
-        if (!aprendidas) panel.linea("No tienes habilidades aprendidas.");
-        panel.separador();
-        panel.titulo("HABILIDADES OTORGADAS POR EQUIPO");
-        boolean otorgadas = false;
-        for (var entradaHabilidad : habilidades) {
-            var estado = entradaHabilidad.getValue();
-            if (estado.isAprendida() || estado.getVecesEquipada() == 0) continue;
-            otorgadas = true;
-            var habilidad = entradaHabilidad.getKey();
-            panel.linea(habilidad.getNombre() + " | Nivel de equipo: " + estado.getNivelEquipo());
-            jugador.getEquipoEquipado().values().forEach(pieza -> {
-                Integer niveles = pieza.getHabilidadesOtorgadas().get(habilidad);
-                if (niveles != null) panel.linea("Fuente: " + pieza.getNombre() + " ("
-                        + formatearBonoEstado(niveles, coloresAnsi) + ")");
-            });
-        }
-        if (!otorgadas) panel.linea("No tienes habilidades exclusivas de equipo.");
+        return VistaMenuPersonaje.barraAtributoEstado(valor);
     }
 
     static boolean consultarTienda(Jugador jugador, Scanner entrada, PrintStream salida, RepositorioTienda tienda) {
@@ -711,63 +661,10 @@ public class app {
     }
 
     static boolean consultarInventario(Jugador jugador, Scanner entrada, PrintStream salida, boolean coloresAnsi) {
-        PanelConsola panel = new PanelConsola(salida, "INVENTARIO");
-        panel.linea("Nivel: " + jugador.getNivel() + " | EXP: " + jugador.getExperiencia()
-                + "/" + jugador.getExperienciaNecesaria());
-        panel.linea("Puntos pendientes: " + jugador.getPuntosPendientes());
-        panel.linea("Oro: " + jugador.getOro() + " monedas");
-        panel.linea("Vida: " + jugador.getVida() + "/" + jugador.getVidaMaxima() + " PS");
-        panel.columnas("Fuerza: " + jugador.getFuerza(), "Resistencia: " + jugador.getResistencia());
-        panel.columnas("Iniciativa: " + jugador.getIniciativa(), "Agilidad: " + jugador.getAgilidad());
-        panel.linea("Velocidad: " + jugador.getVelocidad());
-        panel.separador();
-        panel.titulo("CONSUMIBLES");
-        boolean tienePociones = false;
-        for (TipoPocion tipo : TipoPocion.values()) {
-            int cantidad = jugador.getCantidadPociones(tipo);
-            if (cantidad > 0) {
-                tienePociones = true;
-                panel.linea(jugador.getDefinicionPocion(tipo).nombre() + " x" + cantidad);
-                panel.linea("Recupera " + jugador.getDefinicionPocion(tipo).recuperacionPS() + " PS");
-            }
-        }
-        if (!tienePociones) panel.linea("No tienes consumibles");
-
-        panel.separador();
-        panel.titulo("PERGAMINOS");
-        if (jugador.getPergaminos().isEmpty() && jugador.getPergaminosHabilidad().isEmpty()
-                && jugador.getCantidadPergaminosMaestria() == 0) panel.linea("No tienes pergaminos");
-        jugador.getPergaminos().forEach((atributo, cantidad) ->
-                panel.linea(new Pergamino(atributo).nombre() + " x" + cantidad));
-        jugador.getPergaminosHabilidad().forEach((habilidad, cantidad) ->
-                panel.linea(new PergaminoHabilidad(habilidad).nombre() + " x" + cantidad));
-        panel.linea("Pergamino de maestría x" + jugador.getCantidadPergaminosMaestria());
-
-        panel.separador();
-        panel.titulo("EQUIPO");
-        if (jugador.getEquipoEquipado().isEmpty()) panel.linea("No tienes equipo equipado");
-        for (TipoEquipo ranura : TipoEquipo.values()) {
-            var equipo = jugador.getEquipoEquipado().get(ranura);
-            if (equipo == null) panel.linea(ranura.getNombre() + ": Sin equipo");
-            else mostrarEquipo(panel, equipo);
-        }
-        panel.separador();
-        panel.titulo("EQUIPAMIENTO GUARDADO");
-        if (jugador.getInventarioEquipo().isEmpty()) panel.linea("No tienes equipamiento guardado");
-        for (Equipo equipo : jugador.getInventarioEquipo()) {
-            mostrarEquipo(panel, equipo);
-        }
-        panel.cerrar();
+        int pagina = 0;
         while (true) {
-            PanelConsola acciones = new PanelConsola(salida, "ACCIONES DE INVENTARIO");
-            acciones.opcion(1, "Comparar equipamiento");
-            acciones.opcion(2, "Cambiar equipamiento");
-            acciones.opcion(3, "Desequipar una pieza");
-            acciones.opcion(4, "Utilizar pergaminos");
-            acciones.opcion(5, "Utilizar pergamino de habilidad");
-            acciones.opcion(6, "Utilizar pergamino de maestría");
-            acciones.opcion(0, "Volver a exploración");
-            acciones.cerrar();
+            pagina = Math.min(pagina, VistaMenuPersonaje.paginasInventario(jugador) - 1);
+            VistaMenuPersonaje.inventario(jugador, salida, pagina);
             String opcion = leerOpcion(entrada, salida);
             if (opcion == null) return false;
             if (opcion.equals("0")) return true;
@@ -781,9 +678,56 @@ public class app {
                 if (!utilizarPergaminos(jugador, entrada, salida)) return false;
             } else if (opcion.equals("5") || opcion.equals("6")) {
                 if (!utilizarPergaminosHabilidades(jugador, entrada, salida, opcion.equals("6"))) return false;
+            } else if (opcion.equals("7")) {
+                if (!usarObjeto(jugador, entrada, salida)) return false;
+            } else if (opcion.equals("8")) {
+                if (!inspeccionarEquipamiento(jugador, entrada, salida)) return false;
+            } else if (opcion.equals("9") && pagina + 1 < VistaMenuPersonaje.paginasInventario(jugador)) {
+                pagina++;
+            } else if (opcion.equals("10") && pagina > 0) {
+                pagina--;
             } else {
-                salida.println("Entrada inválida. Escribe 1, 2, 3, 4, 5, 6 o 0 para volver.");
+                salida.println("Entrada inválida. Escribe un número del 1 al 8 o 0 para volver.");
             }
+        }
+    }
+
+    private static List<Equipo> piezasInventario(Jugador jugador) {
+        var piezas = new java.util.ArrayList<Equipo>(jugador.getEquipoEquipado().values());
+        piezas.addAll(jugador.getInventarioEquipo());
+        return piezas;
+    }
+
+    private static String etiquetaEquipoInventario(Jugador jugador, Equipo pieza) {
+        return (jugador.getEquipoEquipado().get(pieza.getTipoEquipo()) == pieza ? "[E] " : "") + pieza.getNombre();
+    }
+
+    private static boolean inspeccionarEquipamiento(Jugador jugador, Scanner entrada, PrintStream salida) {
+        int pagina = 0;
+        while (true) {
+            var piezas = piezasInventario(jugador);
+            PanelConsola lista = new PanelConsola(salida, "INSPECCIONAR EQUIPAMIENTO");
+            if (piezas.isEmpty()) lista.linea("Sin equipamiento");
+            int desde = pagina * VistaMenuPersonaje.TAMANO_PAGINA;
+            int cantidad = Math.min(VistaMenuPersonaje.TAMANO_PAGINA, piezas.size() - desde);
+            for (int i = 0; i < cantidad; i++) lista.opcion(i + 1, etiquetaEquipoInventario(jugador, piezas.get(desde + i)));
+            if (desde + cantidad < piezas.size()) lista.opcion(9, "Página siguiente");
+            if (pagina > 0) lista.opcion(10, "Página anterior");
+            lista.opcion(0, "Volver al inventario");
+            lista.cerrar();
+            int indice = leerIndiceEquipo(entrada, salida, 10);
+            if (indice == -1) return false;
+            if (indice == 0) return true;
+            if (indice == 9 && desde + cantidad < piezas.size()) { pagina++; continue; }
+            if (indice == 10 && pagina > 0) { pagina--; continue; }
+            if (indice > cantidad) { salida.println("Entrada inválida. Elige una pieza de esta página."); continue; }
+            Equipo pieza = piezas.get(desde + indice - 1);
+            PanelConsola detalle = new PanelConsola(salida, "DETALLE DE EQUIPAMIENTO");
+            detalle.linea(jugador.getEquipoEquipado().get(pieza.getTipoEquipo()) == pieza ? "[E] Equipada" : "Guardada");
+            mostrarEquipo(detalle, pieza);
+            detalle.opcion(0, "Volver a la selección");
+            detalle.cerrar();
+            if (leerIndiceEquipo(entrada, salida, 0) == -1) return false;
         }
     }
 
@@ -793,6 +737,9 @@ public class app {
                 panel.linea(String.format("%s %+d", atributo == Atributo.VIDA ? "Vida máxima" : atributo, cantidad)));
         equipo.getHabilidadesOtorgadas().forEach((habilidad, nivel) ->
                 panel.linea(habilidad.getNombre() + ": nivel otorgado " + nivel));
+        panel.linea("Mejoras aplicadas: " + equipo.getMejorasConsumidas());
+        equipo.getBonificacionesAdicionales().forEach((atributo, cantidad) ->
+                panel.linea("Mejora " + atributo + " +" + cantidad));
         panel.linea("Mejoras disponibles: " + equipo.getMejorasDisponibles());
     }
 
@@ -813,12 +760,7 @@ public class app {
             if (seleccion == 0) return true;
             Atributo atributo = atributos.get(seleccion - 1);
             while (true) {
-                var piezas = new java.util.ArrayList<Equipo>();
-                for (TipoEquipo tipo : TipoEquipo.values()) {
-                    Equipo pieza = jugador.getEquipoEquipado().get(tipo);
-                    if (pieza != null) piezas.add(pieza);
-                }
-                piezas.addAll(jugador.getInventarioEquipo());
+                var piezas = piezasInventario(jugador);
                 PanelConsola lista = new PanelConsola(salida, "MEJORAR - SELECCIONA PIEZA");
                 if (piezas.isEmpty()) lista.linea("No tienes equipamiento.");
                 for (int i = 0; i < piezas.size(); i++) {

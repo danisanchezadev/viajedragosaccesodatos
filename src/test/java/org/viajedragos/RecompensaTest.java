@@ -398,14 +398,14 @@ class RecompensaTest {
         Dados dados = new Dados(VICTORIA_CON_VIDA_6, new int[]{1, 1, 1, 1, 6, 1},
                 new int[]{1, 1, 1, 1, 6, 1});
         assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.ejecutar(
-                new Scanner("1\nAventurero\n1\n1\n3\n3\n4\n1\nAventurero\n3\n1\n0\n0\n"), consola(), dados, new Random(0), soloLobo(), new Random(0)));
+                new Scanner("1\nAventurero\n1\n1\n3\n3\n4\n1\nAventurero\n3\n1\n2\n0\n0\n0\n"), consola(), dados, new Random(0), soloLobo(), new Random(0)));
         dados.comprobarConsumo();
         assertEquals(2, veces("ENCUENTRO 1"));
         assertEquals(1, veces("Has encontrado una Espada desgastada"));
         String nueva = texto().substring(texto().lastIndexOf("ENCUENTRO 1"));
         assertTrue(nueva.contains("PS 48/48"));
-        assertTrue(nueva.contains("No tienes consumibles"));
-        assertTrue(nueva.contains("No tienes equipo equipado"));
+        assertTrue(nueva.contains("Sin consumibles"));
+        assertTrue(nueva.contains("Sin equipamiento"));
         assertTrue(texto().contains("Vida final: Aventurero 30/48"));
     }
 

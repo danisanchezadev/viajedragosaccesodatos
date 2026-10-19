@@ -243,8 +243,6 @@ class RitmoAventuraTest {
     }
 
     private void comprobarBordes() {
-        for (String linea : texto().split("\\R")) {
-            if (linea.matches("^[│┌├└].*")) assertEquals(50, org.viajedragos.consola.PanelConsola.anchoVisible(linea), linea);
-        }
+        TextoConsola.comprobarPaneles(texto());
     }
 }

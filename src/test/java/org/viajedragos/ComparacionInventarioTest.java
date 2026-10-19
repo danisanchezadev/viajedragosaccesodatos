@@ -63,12 +63,12 @@ class ComparacionInventarioTest {
         int nivel = estado.getNivel();
         int veces = estado.getVecesEquipada();
         boolean aprendida = estado.isAprendida();
-        Scanner entrada = new Scanner("1\n1\n1\n2\n0\n0\n0\nsiguiente\n");
+        Scanner entrada = new Scanner("8\n2\n0\n0\n1\n1\n1\n2\n0\n0\n0\nsiguiente\n");
         assertTrue(app.consultarInventario(j, entrada, consola(), ansi));
         assertEquals("siguiente", entrada.nextLine());
         assertEquals(2, texto().split("Actual: Equipada \\| Nuevo: Guardada", -1).length - 1);
         assertTrue(texto().contains("2. Guardada"));
-        assertTrue(texto().contains("EQUIPAMIENTO GUARDADO"));
+        assertTrue(texto().contains("EQUIPAMIENTO"));
         assertTrue(texto().contains("Instinto de supervivencia: nivel otorgado 4"));
         assertEquals(ansi, texto().contains("\u001B[32m+2\u001B[0m"));
         assertEquals(equipo, j.getEquipoEquipado());
@@ -95,7 +95,7 @@ class ComparacionInventarioTest {
         j.agregarEquipo(pieza("Botas guardadas", TipoEquipo.BOTAS, 5));
         j.agregarEquipo(pieza("Casco guardado", TipoEquipo.CASCO, 4));
         assertTrue(app.consultarInventario(j, new Scanner("1\n2\n2\n1\n0\n0\n0\n"), consola()));
-        String seleccion = texto().substring(texto().indexOf("COMPARAR - PIEZA EQUIPADA"));
+        String seleccion = texto().substring(texto().indexOf("COMPARAR - PIEZA EQUIPADA")).split("INVENTARIO", 2)[0];
         assertTrue(seleccion.contains("1. Arma: Equipada"));
         assertTrue(seleccion.contains("2. Casco: Casco equipado"));
         assertFalse(seleccion.contains("Botas guardadas"));
@@ -132,9 +132,9 @@ class ComparacionInventarioTest {
     void inventarioCompletamenteVacio() {
         Jugador j = jugador();
         assertTrue(app.consultarInventario(j, new Scanner("1\n0\n"), consola()));
-        assertTrue(texto().contains("No tienes consumibles"));
-        assertTrue(texto().contains("No tienes equipo equipado"));
-        assertTrue(texto().contains("No tienes equipamiento guardado"));
+        assertTrue(texto().contains("Sin consumibles"));
+        assertTrue(texto().contains("Sin equipamiento"));
+        assertTrue(texto().contains("Sin equipamiento"));
     }
 
     @ParameterizedTest
@@ -201,7 +201,7 @@ class ComparacionInventarioTest {
             int[] tiradas = {1,1,1,1,6,1,6};
             int[] usadas = {0};
             RepositorioEnemigos repo = () -> List.of(new DefinicionEnemigo("lobo", "Lobo", "",5,2,2,1,2,18));
-            assertFalse(app.jugarAventura(j, new Scanner("1\n2\n1\n1\n1\n1\n0\n0\n0\n0\n"), captura,
+            assertFalse(app.jugarAventura(j, new Scanner("1\n2\n1\n2\n1\n1\n1\n0\n0\n0\n0\n0\n"), captura,
                     () -> tiradas[usadas[0]++], new Random(0), repo, new Random(0)));
             assertEquals(tiradas.length, usadas[0]);
             assertTrue(texto().contains("DIFERENCIA"));

@@ -351,6 +351,36 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - Auxiliares: mostrarIdentidadEstado, barraProgresoEstado, barraAtributoEstado, mostrarAtributosEstado, mostrarModificadoresEstado, formatearBonoEstado, colorEstado y mostrarHabilidadesEstado. Sin clases ni dependencias nuevas.
 - mvn clean test: BUILD SUCCESS; 1208 pruebas, 0 fallos/errores/omitidas; 53 fuentes principales y 71 archivos de pruebas. Se conservan 1180 casos y se añaden 28 en EstadoPersonajeTest (40 en total), adaptando solo expectativas visuales. Sin commit ni push.
 
+### 3.29 Inventario por categorías y actualización de contenido
+
+- Base local 08f95aa. Un panel con CONSUMIBLES, PERGAMINOS, EQUIPAMIENTO y ACCIONES. Solo objetos reales y cantidades positivas; mensajes Sin consumibles/pergaminos/equipamiento. Pociones con nombre efectivo del catálogo; pergaminos agrupados por atributo o habilidad concreta y contador de maestría. No aparecen cantidades cero ni ranuras vacías en la lista principal.
+- Equipo equipado y guardado en una única lista; marca [E] por identidad en la ranura. No agrupa nombres repetidos ni modifica piezas. Equipadas por orden de TipoEquipo, guardadas en orden de incorporación. Inspección por índice distingue instancias y reutiliza mostrarEquipo para tipo/bonos/habilidades/mejoras. 0 retrocede un nivel y EOF sale sin cambios.
+- Conserva 0–6 y los submenús anteriores: comparar, cambiar, desequipar, atributo, habilidad, maestría. Añade 7 usar consumible (reutiliza usarObjeto y Jugador.usarPocion/alCurarse) y 8 inspeccionar. Acciones compactas en dos columnas mediante una sobrecarga de PanelConsola.opcion; vuelve a líneas completas si no caben.
+- Contenido con auxiliar de listas de texto, sin jerarquía artificial de objetos. Parejas de hasta 21 columnas; nombres largos en línea completa con ajuste de PanelConsola. El panel se reconstruye al regresar de cada acción, también tras cancelación, y refleja equipo/cantidades actuales. Sin pausas y sin modificar modelos, motor, consumo o repositorios.
+- Se conservan las 1210 pruebas anteriores y se añaden 21 en InventarioPresentacionTest. Nueve archivos adaptan expectativas visuales, inspección para comprobar detalles y opción inválida 7 a 9. La comprobación de nivel/EXP pasa a consultarEstado, donde siguen visibles. No se eliminan casos ni comprobaciones de negocio.
+- mvn clean test: BUILD SUCCESS; 1231 pruebas, 0 fallos/errores/omitidas; 53 fuentes principales y 72 archivos de pruebas. README actualizado. Sin commit ni push.
+- Continuidad de los ajustes de estado solicitados tras 3.28: atributos compactos en dos columnas y tres parejas, sin base/equipo ni resumen; vida máxima con escala 16 y número real completo. Vida y EXP comparten fila y barras. Esos cambios ya estaban en la base al comenzar esta fase y se conservan.
+
+### 3.30 Menú general horizontal del personaje
+
+- Conserva el estado local anterior, sin restaurar archivos desde GitHub. Exploración integra estado e inventario en [1] Menú de personaje; mantiene 2 Usar objeto, 3 Continuar, 4 Terminar aventura, 5 Tienda y 0 Salir. No hay una segunda entrada de estado. Las firmas anteriores de consultarEstado y jugarAventura siguen disponibles.
+- VistaMenuPersonaje concentra la presentación sin mutar modelos ni leer entradas. PanelConsola permite anchura por instancia: 48 interior por defecto y 100 para el menú nuevo. Bordes Unicode, márgenes, ajuste de texto y colores usan las mismas funciones. Opciones distribuidas en columnas; cantidades alineadas a la derecha mediante alinearExtremos.
+- Cabecera con nombre, nivel, oro y tiempo; vida/EXP con barras proporcionales de diez segmentos y puntos pendientes. Seis atributos efectivos en dos filas, sin desglose ni barras individuales. Tres columnas de inventario: máximo cinco entradas por categoría, Sin objetos y +N objetos más. Abreviación con elipsis exclusivamente visual; cantidades completas, pergaminos agrupados por contenido y piezas independientes con [E], sin agrupar nombres repetidos.
+- Acciones 1 Estadísticas, 2 Inventario, 3 Usar objeto, 4 Equipar, 5 Desequipar, 6 Habilidades y 0 Volver. Estadísticas presenta base actual, equipo y efectivo; mantiene el aviso de temporales. Habilidades separa permanentes/contribuciones y exclusivas de equipo sin duplicados, consultando EstadoHabilidad. La vista compacta anterior se conserva para llamadas existentes, sin duplicarla en exploración.
+- Inventario ampliado e inspección paginados: ocho entradas por categoría/página o selección, 9 siguiente y 10 anterior cuando corresponde. Sin límite de capacidad ni abreviación de nombres completos. Inspección reutiliza mostrarEquipo, añade mejoras aplicadas y conserva disponibles, tipo, estado equipado/guardado, bonos y habilidades. Las acciones y sus cancelaciones reutilizan los flujos anteriores y refrescan datos al regresar; EOF termina sin bucles.
+- TiempoAventura usa System.nanoTime por defecto y admite LongSupplier controlado. Se crea después de elegir nombre, al entrar en jugarAventura, y se comparte entre encuentros/menús. Duración HH:MM:SS, horas superiores a 99, sin acumulación doble, esperas ni persistencia. Una nueva aventura crea otro contador; se actualiza al redibujar, sin refresco asíncrono.
+- ANSI explícito con viajedragos.ansi=true y salida System.out: fondo azul/texto claro del nuevo menú, barras y signos conservados, reset por línea. Sin ANSI sigue alineado. Requiere 102 columnas totales; aviso al abrir y alternativa -Dviajedragos.columnas=80 para panel de 48 interiores con categorías verticales. No se detecta automáticamente el ancho del terminal.
+- Sin cambios de modelos, combate, fórmulas, niveles, botín, catálogos, economía, equipo, pergaminos o pausas. README actualizado. No se ha realizado verificación visual dentro de IntelliJ.
+- Verificación real: mvn clean test, BUILD SUCCESS; 1268 pruebas, 0 fallos, 0 errores y 0 omitidas; 55 fuentes principales y 74 archivos de pruebas. Conserva los 1231 casos y añade 37: MenuPersonajeTest 25 y TiempoAventuraTest 12. Las adaptaciones anteriores cambian navegación y validación de anchura por panel, sin eliminar casos ni aserciones de negocio. Sin commit ni push.
+
+### 3.31 Resumen de habilidades en el menú general
+
+- Nueva sección HABILIDADES entre atributos e inventario, sin cambiar sus tres columnas ni navegación. VistaMenuPersonaje consulta las entradas activas de Combatiente, ordena por nombre y muestra como máximo seis, una vez por habilidad. Indicadores [A] aprendida, [E] exclusiva de equipo y [A+E] aprendida con aportación de equipo; nivel efectivo desde EstadoHabilidad.getNivel(), sin reconstruir contribuciones.
+- Hasta tres columnas y dos filas si los textos caben. Los nombres largos reducen las columnas a dos o una, con ajuste de línea de PanelConsola cuando hace falta; nunca se abrevian nombres ni niveles. La vista compacta empieza con dos columnas. Sin habilidades y +N habilidades más cubren vacío/exceso; la vista detallada conserva todas las habilidades y la opción 6 anterior.
+- El resumen se vuelve a consultar en cada redibujado: equipar y retirar fuentes actualiza origen/nivel y elimina habilidades exclusivamente de equipo cuando dejan de estar disponibles. No altera instancias, niveles, indicadores temporales, atributos o inventario. Sin cambios de contratos, modelos, mecánicas ni PanelConsola.
+- HabilidadesMenuPersonajeTest añade 13 casos de vacío, tres procedencias, niveles, varias fuentes, retirada, entradas inactivas, tres columnas/dos filas, exceso consultable, nombres largos, niveles grandes, ajuste compacto, ANSI y consultas repetidas sin mutaciones. Las 1268 pruebas anteriores permanecen sin cambios en esta fase.
+- Verificación: mvn clean test, BUILD SUCCESS; 1281 pruebas, 0 fallos/errores/omitidas; 55 fuentes principales y 75 archivos de pruebas. Sin commit ni push.
+
 ## 4. Habilidades
 
 - `Habilidad` es una clase abstracta que implementa una interfaz de eventos (`EventosHabilidad`).
@@ -422,9 +452,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 19 de octubre de 2026. Base local 4e85a48; rediseño visual de estado en cambios locales según 3.28. Codex no ha realizado commit ni push.
+> **Estado:** 19 de octubre de 2026. Base local 08f95aa; rediseño del inventario, menú de personaje y resumen de habilidades en cambios locales según 3.29–3.31. Codex no ha realizado commit ni push.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia actual (19 de octubre de 2026):** `mvn clean test`: BUILD SUCCESS; 53 fuentes principales y 71 archivos de pruebas; 1208 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 1180 casos anteriores y se añaden 28 según 3.28. Sin cambios de fórmulas, enemigos o recompensas anteriores ni acceso a datos externo.
+> **Evidencia actual (19 de octubre de 2026):** `mvn clean test`: BUILD SUCCESS; 55 fuentes principales y 75 archivos de pruebas; 1281 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 1268 casos anteriores y se añaden 13 según 3.31. Sin cambios de fórmulas, enemigos o recompensas anteriores ni acceso a datos externo.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -438,7 +468,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 1208 pruebas ejecutadas sin fallos ni errores; 1180 casos anteriores y 28 del rediseño visual, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
+- [x] Suite JUnit: 1281 pruebas ejecutadas sin fallos ni errores; 1268 casos anteriores y 13 del resumen de habilidades, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
@@ -522,6 +552,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Pergaminos de habilidad 5 % y maestría 2 % independientes, catálogo de 13 habilidades, aprendizaje permanente separado del equipo, consumo seguro y selección/confirmación de consola según 3.26.
 - [x] Elección de nombre al crear una aventura y estado independiente en exploración, con desglose de atributos/habilidades y consulta sin efectos según 3.27; la limitación de base con efectos temporales se indica expresamente.
 - [x] Rediseño de estado con barras proporcionales, escala visual de atributos, resumen neto de equipo y ANSI explícito sin cambiar estadísticas según 3.28.
+- [x] Inventario en cuatro secciones, columnas adaptables, equipo por instancia con [E], inspección, uso de consumibles y refresco tras acciones según 3.29.
+- [x] Menú general de personaje con panel ancho/alternativa compacta, resumen en tres columnas, estadísticas/habilidades ampliadas, inventario/inspección paginados y reloj monotónico de aventura según 3.30.
+- [x] Resumen de habilidades activas con procedencia, nivel efectivo y columnas adaptadas al texto, conservando la consulta detallada según 3.31.
 - [x] Unificar pantallas con PanelConsola y establecer normas futuras en AGENTS.md; alineación, ANSI, barras y flujos probados según 3.18.
 - [x] Pausas narrativas mediante RitmoConsola, cuatro velocidades, selección persistente durante la sesión y pruebas sin esperas reales según 3.19.
 - [x] Continuidad de fase 4 publicada en 6fc2a8d: misma instancia del jugador, vida restante sin recuperación, Lobos nuevos y sin límite de encuentros; muerte/terminación voluntaria devuelve al inicio y nueva aventura crea otro jugador. La fase 5 añade su primera recompensa fija.

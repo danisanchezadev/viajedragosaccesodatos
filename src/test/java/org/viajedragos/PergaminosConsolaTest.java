@@ -125,7 +125,7 @@ class PergaminosConsolaTest {
         var ritmo = new RitmoConsola(RitmoConsola.Velocidad.NORMAL, ms -> esperas.add(bytes.toString(StandardCharsets.UTF_8)));
         var pergaminos = new Random(0) { public int nextInt(int limite) { assertEquals(azar[0] == 0 ? 100 : 6, limite); azar[0]++; return 0; } };
         var objetos = new RepositorioObjetosMemoria();
-        assertFalse(app.jugarAventura(j, new Scanner("1\n2\n1\n4\n1\n1\n1\n0\n0\n"), salida(),
+        assertFalse(app.jugarAventura(j, new Scanner("1\n2\n1\n2\n4\n1\n1\n1\n0\n0\n0\n"), salida(),
                 () -> { assertTrue(++dados[0] <= 6); return 4; }, new Random(0) { public int nextInt(int limite) { return 99; } },
                 () -> List.of(new DefinicionEnemigo("prueba", "Prueba", "", 1, 0, 1, 0, 0, 1)), new Random(0),
                 objetos, null, ritmo, pergaminos, new Random(0) { public int nextInt(int limite) { return 99; } }));
@@ -152,8 +152,6 @@ class PergaminosConsolaTest {
     }
 
     private void comprobarPaneles() {
-        assertTrue(bytes.toString(StandardCharsets.UTF_8).contains("┌"));
-        bytes.toString(StandardCharsets.UTF_8).lines().filter(l -> l.startsWith("┌") || l.startsWith("├") || l.startsWith("└") || l.startsWith("│"))
-                .forEach(l -> assertEquals(50, PanelConsola.anchoVisible(l), l));
+        TextoConsola.comprobarPaneles(bytes.toString(StandardCharsets.UTF_8));
     }
 }

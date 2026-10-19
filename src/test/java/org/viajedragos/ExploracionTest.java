@@ -49,8 +49,8 @@ class ExploracionTest {
         Jugador j = jugador(13);
         assertTrue(app.consultarInventario(j, new Scanner("0\n"), consola()));
         assertTrue(texto().contains("INVENTARIO"));
-        assertTrue(texto().contains("No tienes consumibles"));
-        assertTrue(texto().contains("No tienes equipo equipado"));
+        assertTrue(texto().contains("Sin consumibles"));
+        assertTrue(texto().contains("Sin equipamiento"));
         assertFalse(texto().contains("Poción"));
         assertEquals(13, j.getVida());
         assertTrue(j.getInventarioPociones().isEmpty());
@@ -70,14 +70,16 @@ class ExploracionTest {
         var inventario = Map.copyOf(j.getInventarioPociones());
         var estados = Map.copyOf(j.getHabilidades());
         var modificadores = Map.copyOf(j.getModificadoresEquipo());
+        assertTrue(app.consultarInventario(j, new Scanner("8\n1\n0\n0\n0\n"), consola()));
         assertTrue(app.consultarInventario(j, new Scanner("0\n"), consola()));
-        assertTrue(app.consultarInventario(j, new Scanner("0\n"), consola()));
-        assertTrue(texto().matches("(?s).*Poción pequeña +x2.*Recupera 8 PS.*Poción grande +x1.*Recupera 16 PS.*"));
+        assertTrue(texto().matches("(?s).*Poción pequeña +x2.*Poción grande +x1.*"));
+        assertEquals(8, j.getDefinicionPocion(TipoPocion.PEQUENA).recuperacionPS());
+        assertEquals(16, j.getDefinicionPocion(TipoPocion.GRANDE).recuperacionPS());
         assertTrue(texto().contains("Arma: Espada desgastada"));
         assertTrue(texto().contains("FUERZA +1"));
         assertTrue(texto().contains("AGILIDAD -1"));
         assertTrue(texto().contains("Instinto de supervivencia: nivel otorgado 2"));
-        assertTrue(texto().contains("Armadura: Sin equipo"));
+        assertFalse(texto().contains("Armadura: Sin equipo"));
         assertEquals(inventario, j.getInventarioPociones());
         assertEquals(modificadores, j.getModificadoresEquipo());
         assertEquals(estados, j.getHabilidades());
@@ -154,7 +156,7 @@ class ExploracionTest {
     void inventarioRechazaAccionesSinModificarEstado() {
         Jugador j = jugador(13);
         j.agregarPocion(TipoPocion.GRANDE);
-        assertTrue(app.consultarInventario(j, new Scanner("7\nx\n0\n"), consola()));
+        assertTrue(app.consultarInventario(j, new Scanner("9\nx\n0\n"), consola()));
         assertEquals(2, texto().split("Entrada inválida", -1).length - 1);
         assertEquals(13, j.getVida());
         assertEquals(1, j.getCantidadPociones(TipoPocion.GRANDE));
@@ -247,7 +249,7 @@ class ExploracionTest {
             }
         };
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.jugarAventura(j,
-                new Scanner("1\n1\n3\n2\n1\n1\n2\n1\n0\n2\n2\n0\n"), consola(), () -> {
+                new Scanner("1\n1\n3\n2\n1\n1\n2\n1\n2\n0\n0\n2\n2\n0\n"), consola(), () -> {
                     assertTrue(usadas[0] < tiradas.length, "El consumo no tira dados de ataque");
                     if (usadas[0] == 14) {
                         assertEquals(14, j.getVida(), "Se curó al llegar su acción del segundo combate");

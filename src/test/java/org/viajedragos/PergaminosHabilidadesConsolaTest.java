@@ -98,9 +98,9 @@ class PergaminosHabilidadesConsolaTest {
         assertTrue(inventario(j, "5\n1\n0\n6\n1\n0\n0\n"));
         assertTrue(texto().contains("No tienes pergaminos disponibles."));
         String original = bytes.toString(StandardCharsets.UTF_8);
-        assertTrue(original.contains("[4] Utilizar pergaminos"));
-        assertTrue(original.contains("[5] Utilizar pergamino de habilidad"));
-        assertTrue(original.contains("[6] Utilizar pergamino de maestría"));
+        assertTrue(original.contains("[4] Perg. atributos"));
+        assertTrue(original.contains("[5] Perg. habilidad"));
+        assertTrue(original.contains("[6] Perg. maestría"));
         assertTrue(j.getHabilidades().isEmpty());
     }
 
@@ -111,9 +111,9 @@ class PergaminosHabilidadesConsolaTest {
         assertTrue(inventario(j, "0\n"));
         assertEquals(esperado, j.getPergaminosHabilidad());
         assertEquals(1, j.getCantidadPergaminos(Atributo.VIDA)); assertEquals(1, j.getCantidadPergaminosMaestria());
-        assertTrue(texto().contains("Pergamino de habilidad: Caparazón x1"));
-        assertTrue(texto().contains("Pergamino de maestría x1"));
-        assertTrue(texto().contains("Pergamino de vida máxima x1"));
+        assertTrue(texto().contains("Habilidad: Caparazón x1"));
+        assertTrue(texto().contains("Maestría x1"));
+        assertTrue(texto().contains("Vida máxima x1"));
     }
 
     @Test void nivelMaximoMuestraFalloSinPerderElPergaminoNiElEstado() {

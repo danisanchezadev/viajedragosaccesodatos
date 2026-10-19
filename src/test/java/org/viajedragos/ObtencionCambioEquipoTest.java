@@ -121,7 +121,7 @@ class ObtencionCambioEquipoTest {
                 }
             }
         },1);
-        assertFalse(aventura(j,"1\n1\n3\n1\n1\n1\n1\n1\n1\n0\n0\n2\n1\n1\n1\n0\n3\n1\n0\n",
+        assertFalse(aventura(j,"1\n1\n3\n1\n1\n1\n2\n1\n1\n1\n0\n0\n2\n1\n1\n1\n0\n0\n3\n1\n0\n",
                 1,1,1,1,6,1,6, 1,1,1,1,6,1,6, 1,1,1,1,6,1,6));
         assertEquals(3,inicios[0]);
         assertTrue(texto().contains("Actual: Espada desgastada | Nuevo: Espada de hierro"));
@@ -171,7 +171,7 @@ class ObtencionCambioEquipoTest {
         Jugador j = jugador();
         if (!vacio) j.agregarEquipo(pieza("Botas",TipoEquipo.BOTAS,1));
         assertTrue(app.consultarInventario(j,new Scanner(vacio ? "2\n0\n" : "2\n1\n0\n0\n"),consola()));
-        assertTrue(texto().contains(vacio ? "No tienes equipamiento guardado" : "No tienes piezas guardadas compatibles"));
+        assertTrue(texto().contains(vacio ? "Sin equipamiento" : "No tienes piezas guardadas compatibles"));
         assertTrue(j.getEquipoEquipado().isEmpty());
     }
 
@@ -200,13 +200,13 @@ class ObtencionCambioEquipoTest {
             public List<DefinicionPocion> obtenerPociones() { return memoria.obtenerPociones(); }
         };
         int[] tiradas = {1,1,1,1,6,1,6, 1,1,1,1,6,1,6, 1,1,1,1,6,1,6};
-        app.ejecutar(new Scanner("1\nAventurero\n1\n2\n3\n1\n1\n4\n1\nAventurero\n1\n2\n1\n0\n0\n"),consola(),
+        app.ejecutar(new Scanner("1\nAventurero\n1\n2\n3\n1\n1\n4\n1\nAventurero\n1\n2\n1\n2\n0\n0\n0\n"),consola(),
                 () -> tiradas[inicios[0]++],new Random(0),lobos,new Random(0),repo);
         assertEquals(tiradas.length,inicios[0]);
         assertEquals(2,consultasObjetos[0]);
         String segunda = texto().substring(texto().lastIndexOf("ENCUENTRO 1"));
-        assertTrue(segunda.contains("No tienes equipamiento guardado"));
-        assertTrue(segunda.contains("No tienes equipo equipado"));
+        assertTrue(segunda.contains("Sin equipamiento"));
+        assertTrue(segunda.contains("Sin equipamiento"));
         assertTrue(segunda.contains("48/48"));
     }
 }

@@ -207,7 +207,7 @@ class CatalogoObjetosIntegracionTest {
         }, 2);
         assertTrue(app.consultarInventario(j, new Scanner("0\n"), consola()));
         assertTrue(texto().contains("Pequeña del catálogo"));
-        assertTrue(texto().contains("Recupera 10 PS"));
+        assertEquals(10, j.getDefinicionPocion(TipoPocion.PEQUENA).recuperacionPS());
         assertTrue(app.usarObjeto(j, new Scanner("1\n"), consola()));
         assertEquals(parcial ? 30 : 20, j.getVida());
         assertEquals(0, j.getCantidadPociones(TipoPocion.PEQUENA));
@@ -267,11 +267,11 @@ class CatalogoObjetosIntegracionTest {
         Random botin = new Random(0) {
             @Override public int nextInt(int limite) { return 0; }
         };
-        app.ejecutar(new Scanner("1\nAventurero\n1\n1\n4\n1\nAventurero\n1\n2\n1\n0\n0\n"), consola(),
+        app.ejecutar(new Scanner("1\nAventurero\n1\n1\n4\n1\nAventurero\n1\n2\n1\n2\n0\n0\n0\n"), consola(),
                 dados(1,1,1,1,6,1,6, 1,1,1,1,6,1,6), botin, enemigos, new Random(0), repo);
         assertArrayEquals(new int[]{2,2}, consultas);
         assertEquals(4, texto().split("PS 48/48", -1).length - 1);
-        assertTrue(texto().contains("No tienes equipo equipado"));
+        assertTrue(texto().contains("Sin equipamiento"));
         assertTrue(texto().contains("Pequeña del catálogo x1"));
         assertFalse(texto().contains("x2"));
     }

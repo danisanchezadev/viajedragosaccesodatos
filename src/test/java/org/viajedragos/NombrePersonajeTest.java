@@ -29,8 +29,7 @@ class NombrePersonajeTest {
         comprobarPaneles();
     }
     private void comprobarPaneles() {
-        bytes.toString(StandardCharsets.UTF_8).lines().filter(l -> l.startsWith("│") || l.startsWith("┌") || l.startsWith("├") || l.startsWith("└"))
-                .forEach(l -> assertEquals(50, PanelConsola.anchoVisible(l), l));
+        TextoConsola.comprobarPaneles(bytes.toString(StandardCharsets.UTF_8));
     }
 
     @ParameterizedTest @ValueSource(strings = {"Ana", "  María del Río  ", "É", "Álvaro-27", "\u00a0Lucía\u00a0"})
@@ -68,11 +67,11 @@ class NombrePersonajeTest {
     }
 
     @Test void nombreElegidoSeConservaEnCombateExploracionYConsultaRepetida() {
-        ejecutar("1\n  Lucía del Río  \n1\n2\n6\n0\n6\n0\n3\n1\n2\n0\n", 2);
+        ejecutar("1\n  Lucía del Río  \n1\n2\n1\n1\n0\n1\n0\n0\n3\n1\n2\n0\n", 2);
         assertTrue(texto().contains("Lucía del Río golpea a Prueba"));
         assertTrue(texto().contains("Vida final: Lucía del Río"));
         assertEquals(2, texto().split("Nombre: Lucía del Río", -1).length - 1);
-        assertTrue(texto().contains("6. Estado del personaje"));
+        assertTrue(texto().contains("1. Menú de personaje"));
         assertFalse(texto().contains("Aventurero"));
     }
 
