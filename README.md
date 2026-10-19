@@ -466,6 +466,24 @@ con esos efectos, no una base permanente reconstruida. La consulta no retira ni
 reaplica efectos. No cambia fórmulas ni estadísticas; tampoco consume recursos,
 turnos o tiradas, ni introduce pausas narrativas.
 
+La presentación de estado utiliza barras `█`/`░`: vida y experiencia tienen diez
+segmentos proporcionales a sus máximos reales, redondeados al segmento más próximo.
+Se acotan entre vacío y completo; con máximo no positivo quedan vacías. La
+división se realiza antes del escalado, sin multiplicaciones de enteros grandes.
+Los cinco atributos usan dieciséis segmentos, un punto por segmento; la escala
+se satura visualmente en 16 y conserva siempre el número efectivo completo.
+Debajo de cada atributo y de VIDA MÁXIMA se mantiene base/equipo; un resumen
+compacto reúne solo modificadores netos no nulos, incluidas mejoras y penalizaciones.
+Los puntos pendientes se muestran solo si quedan por distribuir.
+
+Con `-Dviajedragos.ansi=true`, la consola colorea vida en verde, experiencia en
+cian y bonos positivos/negativos en verde/rojo. Los ceros siguen normales. Cada
+color se restablece antes del borde. Sin esa propiedad no se emiten códigos ANSI.
+La sobrecarga de consultarEstado con boolean permite probar ambos modos con
+flujos controlados sin depender de la configuración local. PanelConsola, sus
+bordes y las demás pantallas permanecen iguales; se separan auxiliares de
+identidad, barras, atributos, resumen de equipo, habilidades y color.
+
 ## Equilibrio inicial
 
 Solo cambia la vida del Aventurero de consola: antes 24/24, ahora 48/48.
@@ -962,3 +980,11 @@ mutaciones ni pausas. Doce archivos de pruebas existentes incorporan únicamente
 la nueva entrada del nombre; mantienen las aserciones de comportamiento.
 Resultado final de `mvn clean test`: BUILD SUCCESS; 1180 pruebas, 0 fallos,
 0 errores y 0 omitidas; 53 fuentes principales y 71 archivos de pruebas.
+
+El rediseño visual de estado conserva los 1180 casos anteriores y añade 28
+en EstadoPersonajeTest (40 en total): barras/extremos/escala, máximos efectivos,
+EXP tras subir, resumen neto y mejoras, valores grandes, nombres y habilidades
+largos, muchas habilidades, ANSI explícito/propiedad, alineación y consulta sin
+mutaciones. Se adaptan solo las aserciones de presentación afectadas.
+Verificación: `mvn clean test`, BUILD SUCCESS; 1208 pruebas, 0 fallos, 0 errores
+y 0 omitidas; 53 fuentes principales y 71 archivos de pruebas.

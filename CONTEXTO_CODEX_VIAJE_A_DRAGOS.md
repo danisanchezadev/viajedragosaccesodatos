@@ -341,6 +341,16 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - Sin cambios de firmas existentes, modelos, combate, dados, recompensas, repositorios o pausas. Las pruebas previas de ejecutar incorporan el nombre explícitamente sin eliminar sus aserciones. README actualizado. Sin commit ni push.
 - Verificación: mvn clean test, BUILD SUCCESS; 1180 pruebas, 0 fallos/errores/omitidas; 53 fuentes principales y 71 archivos de pruebas. Se conservan las 1146 anteriores y se añaden 34: NombrePersonajeTest 22 y EstadoPersonajeTest 12. Doce archivos existentes adaptan solo las entradas de nombre. Sin esperas reales.
 
+### 3.28 Rediseño visual del estado
+
+- Cambios limitados a app.consultarEstado y auxiliares de presentación, EstadoPersonajeTest, README y este documento. Modelos, fórmulas, eventos, inventario, pergaminos, experiencia y recompensas intactos. Mismos bordes/anchura de PanelConsola, sin pausas, mismos 0/EOF/validaciones para regresar.
+- Identidad con nombre/descripción, nivel/oro, vida y EXP con barras de diez segmentos proporcionales a sus valores reales. Redondeo al más próximo, acotado 0–10, máximos no positivos vacíos y cálculo sin multiplicar enteros grandes. Puntos pendientes solo si > 0.
+- Atributos: cinco barras de dieciséis segmentos (uno por punto, saturación solo visual), nombre y número efectivo en columnas 12/18/10 de PanelConsola. Debajo base/equipo; VIDA MÁXIMA con total y base/equipo sin confundir vida actual. Mínimo cero y aviso de temporales conservados.
+- Resumen de modificadores netos no nulos, con signo, incluye VIDA y mejoras. Sin modificadores muestra aviso. Habilidades siguen separadas entre permanentes y solo equipo, con niveles desde EstadoHabilidad y fuentes desde ranuras, sin duplicados ni disparos.
+- ANSI solo con activación explícita viajedragos.ansi=true y salida System.out, como comparación. Vida verde, EXP cian, bonos positivos verdes y negativos rojos, ceros normales; reset inmediato y anchura calculada por PanelConsola. Sobrecarga booleana controlable en pruebas; firma anterior conservada.
+- Auxiliares: mostrarIdentidadEstado, barraProgresoEstado, barraAtributoEstado, mostrarAtributosEstado, mostrarModificadoresEstado, formatearBonoEstado, colorEstado y mostrarHabilidadesEstado. Sin clases ni dependencias nuevas.
+- mvn clean test: BUILD SUCCESS; 1208 pruebas, 0 fallos/errores/omitidas; 53 fuentes principales y 71 archivos de pruebas. Se conservan 1180 casos y se añaden 28 en EstadoPersonajeTest (40 en total), adaptando solo expectativas visuales. Sin commit ni push.
+
 ## 4. Habilidades
 
 - `Habilidad` es una clase abstracta que implementa una interfaz de eventos (`EventosHabilidad`).
@@ -412,9 +422,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 19 de octubre de 2026. Base local 1846613; pergaminos de habilidades/maestría y nombre/estado en cambios locales según 3.26–3.27. Codex no ha realizado commit ni push.
+> **Estado:** 19 de octubre de 2026. Base local 4e85a48; rediseño visual de estado en cambios locales según 3.28. Codex no ha realizado commit ni push.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia actual (19 de octubre de 2026):** `mvn clean test`: BUILD SUCCESS; 53 fuentes principales y 71 archivos de pruebas; 1180 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 1146 casos anteriores y se añaden 34 según 3.27. Sin cambios de fórmulas, enemigos o recompensas anteriores ni acceso a datos externo.
+> **Evidencia actual (19 de octubre de 2026):** `mvn clean test`: BUILD SUCCESS; 53 fuentes principales y 71 archivos de pruebas; 1208 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 1180 casos anteriores y se añaden 28 según 3.28. Sin cambios de fórmulas, enemigos o recompensas anteriores ni acceso a datos externo.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -428,7 +438,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 1180 pruebas ejecutadas sin fallos ni errores; 1146 casos anteriores y 34 de nombre/estado, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
+- [x] Suite JUnit: 1208 pruebas ejecutadas sin fallos ni errores; 1180 casos anteriores y 28 del rediseño visual, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
@@ -511,6 +521,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Generación 0–3 por ejemplar, botín de pergamino 10 %, mejora +1 segura, inventario y venta por definición original según 3.25.
 - [x] Pergaminos de habilidad 5 % y maestría 2 % independientes, catálogo de 13 habilidades, aprendizaje permanente separado del equipo, consumo seguro y selección/confirmación de consola según 3.26.
 - [x] Elección de nombre al crear una aventura y estado independiente en exploración, con desglose de atributos/habilidades y consulta sin efectos según 3.27; la limitación de base con efectos temporales se indica expresamente.
+- [x] Rediseño de estado con barras proporcionales, escala visual de atributos, resumen neto de equipo y ANSI explícito sin cambiar estadísticas según 3.28.
 - [x] Unificar pantallas con PanelConsola y establecer normas futuras en AGENTS.md; alineación, ANSI, barras y flujos probados según 3.18.
 - [x] Pausas narrativas mediante RitmoConsola, cuatro velocidades, selección persistente durante la sesión y pruebas sin esperas reales según 3.19.
 - [x] Continuidad de fase 4 publicada en 6fc2a8d: misma instancia del jugador, vida restante sin recuperación, Lobos nuevos y sin límite de encuentros; muerte/terminación voluntaria devuelve al inicio y nueva aventura crea otro jugador. La fase 5 añade su primera recompensa fija.
