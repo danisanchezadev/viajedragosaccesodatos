@@ -13,6 +13,7 @@ import org.viajedragos.arma.Equipo;
 import org.viajedragos.arma.TipoEquipo;
 import org.viajedragos.arma.Atributo;
 import org.viajedragos.catalogo.RepositorioTienda;
+import org.viajedragos.habilidad.HabilidadDisponible;
 
 public class Jugador extends Combatiente{
 
@@ -20,6 +21,8 @@ public class Jugador extends Combatiente{
     private Map<TipoPocion, DefinicionPocion> definicionesPociones;
     private final List<Equipo> inventarioEquipo = new ArrayList<>();
     private final Map<Atributo, Integer> pergaminos = new EnumMap<>(Atributo.class);
+    private final Map<HabilidadDisponible, Integer> pergaminosHabilidad = new EnumMap<>(HabilidadDisponible.class);
+    private int pergaminosMaestria;
     private int oro = 15;
     private int nivel = 1;
     private long experiencia;
@@ -151,6 +154,40 @@ public class Jugador extends Combatiente{
         return pergaminos.getOrDefault(Objects.requireNonNull(atributo), 0);
     }
     public Map<Atributo, Integer> getPergaminos() { return Collections.unmodifiableMap(pergaminos); }
+
+    public void agregarPergaminoHabilidad(PergaminoHabilidad pergamino) {
+        pergaminosHabilidad.merge(Objects.requireNonNull(pergamino).habilidad(), 1, Math::addExact);
+    }
+
+    public int getCantidadPergaminosHabilidad(HabilidadDisponible habilidad) {
+        return pergaminosHabilidad.getOrDefault(Objects.requireNonNull(habilidad), 0);
+    }
+
+    public Map<HabilidadDisponible, Integer> getPergaminosHabilidad() {
+        return Collections.unmodifiableMap(pergaminosHabilidad);
+    }
+
+    public void agregarPergaminoMaestria() {
+        pergaminosMaestria = Math.incrementExact(pergaminosMaestria);
+    }
+
+    public int getCantidadPergaminosMaestria() { return pergaminosMaestria; }
+
+    public boolean usarPergaminoHabilidad(HabilidadDisponible habilidad) {
+        if (habilidad == null) return false;
+        int cantidad = getCantidadPergaminosHabilidad(habilidad);
+        if (cantidad == 0 || !aprenderHabilidadSeguro(habilidad.crearHabilidad())) return false;
+        if (cantidad == 1) pergaminosHabilidad.remove(habilidad);
+        else pergaminosHabilidad.put(habilidad, cantidad - 1);
+        return true;
+    }
+
+    public boolean usarPergaminoMaestria(HabilidadDisponible habilidad) {
+        if (habilidad == null || pergaminosMaestria == 0
+                || !aprenderHabilidadSeguro(habilidad.crearHabilidad())) return false;
+        pergaminosMaestria--;
+        return true;
+    }
 
     public boolean usarPergamino(Atributo atributo, Equipo pieza) {
         if (atributo == null || pieza == null) return false;

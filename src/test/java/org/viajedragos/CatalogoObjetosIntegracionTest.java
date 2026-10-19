@@ -120,7 +120,7 @@ class CatalogoObjetosIntegracionTest {
 
     @Test
     void catalogoInvalidoRegresaAlMenuInicial() {
-        app.ejecutar(new Scanner("1\n0\n"), consola(), () -> {
+        app.ejecutar(new Scanner("1\nAventurero\n0\n"), consola(), () -> {
             fail("Sin combate"); return 1;
         }, sinAzar(), enemigos, sinAzar(), repositorio(List.of(), pociones()));
         assertEquals(2, texto().split("1. Nueva aventura", -1).length - 1);
@@ -267,7 +267,7 @@ class CatalogoObjetosIntegracionTest {
         Random botin = new Random(0) {
             @Override public int nextInt(int limite) { return 0; }
         };
-        app.ejecutar(new Scanner("1\n1\n1\n4\n1\n1\n2\n1\n0\n0\n"), consola(),
+        app.ejecutar(new Scanner("1\nAventurero\n1\n1\n4\n1\nAventurero\n1\n2\n1\n0\n0\n"), consola(),
                 dados(1,1,1,1,6,1,6, 1,1,1,1,6,1,6), botin, enemigos, new Random(0), repo);
         assertArrayEquals(new int[]{2,2}, consultas);
         assertEquals(4, texto().split("PS 48/48", -1).length - 1);

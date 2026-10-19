@@ -128,7 +128,7 @@ class PergaminosConsolaTest {
         assertFalse(app.jugarAventura(j, new Scanner("1\n2\n1\n4\n1\n1\n1\n0\n0\n"), salida(),
                 () -> { assertTrue(++dados[0] <= 6); return 4; }, new Random(0) { public int nextInt(int limite) { return 99; } },
                 () -> List.of(new DefinicionEnemigo("prueba", "Prueba", "", 1, 0, 1, 0, 0, 1)), new Random(0),
-                objetos, null, ritmo, pergaminos));
+                objetos, null, ritmo, pergaminos, new Random(0) { public int nextInt(int limite) { return 99; } }));
         assertEquals(6, dados[0]); assertEquals(2, azar[0]); assertEquals(7, esperas.size());
         assertTrue(esperas.stream().noneMatch(s -> s.contains("UTILIZAR PERGAMINOS")));
         assertEquals(2, pieza.getMejorasDisponibles()); assertEquals(1, pieza.getBonificaciones().get(Atributo.FUERZA));

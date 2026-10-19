@@ -214,7 +214,7 @@ class BotinPocionesTest {
         AzarBotin azar = new AzarBotin(0, 99, 99, 0);
         Dados dados = new Dados(VICTORIA, VICTORIA);
         assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.ejecutar(
-                new Scanner("1\n1\n2\n4\n1\n1\n2\n0\n"), consola(), dados, azar, soloLobo(), new Random(0)));
+                new Scanner("1\nAventurero\n1\n2\n4\n1\nAventurero\n1\n2\n0\n"), consola(), dados, azar, soloLobo(), new Random(0)));
         dados.comprobarConsumo();
         azar.comprobarConsumo();
         String primera = texto().substring(0, texto().lastIndexOf("ENCUENTRO 1"));

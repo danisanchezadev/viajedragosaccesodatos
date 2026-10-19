@@ -210,7 +210,7 @@ class RecompensaTest {
         // Segundo personaje: ataque normal 4/2 causa 7, no los 8 que daría la espada.
         Dados dados = new Dados(VICTORIA, new int[]{1, 1, 1, 1, 4, 2, 1, 2, 1, 6, 4, 1});
         assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.ejecutar(new Scanner("1\n1\n1\n4\n1\n1\n1\n2\n0\n"), consola(), dados, new Random(0), soloLobo(), new Random(0)));
+                app.ejecutar(new Scanner("1\nAventurero\n1\n1\n4\n1\nAventurero\n1\n1\n2\n0\n"), consola(), dados, new Random(0), soloLobo(), new Random(0)));
         dados.comprobarConsumo();
         assertEquals(2, veces("ENCUENTRO 1"));
         assertEquals(2, veces("Has encontrado una Espada desgastada"));
@@ -398,7 +398,7 @@ class RecompensaTest {
         Dados dados = new Dados(VICTORIA_CON_VIDA_6, new int[]{1, 1, 1, 1, 6, 1},
                 new int[]{1, 1, 1, 1, 6, 1});
         assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.ejecutar(
-                new Scanner("1\n1\n1\n3\n3\n4\n1\n3\n1\n0\n0\n"), consola(), dados, new Random(0), soloLobo(), new Random(0)));
+                new Scanner("1\nAventurero\n1\n1\n3\n3\n4\n1\nAventurero\n3\n1\n0\n0\n"), consola(), dados, new Random(0), soloLobo(), new Random(0)));
         dados.comprobarConsumo();
         assertEquals(2, veces("ENCUENTRO 1"));
         assertEquals(1, veces("Has encontrado una Espada desgastada"));

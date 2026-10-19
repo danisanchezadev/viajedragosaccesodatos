@@ -137,7 +137,7 @@ class ComercioAventuraTest {
 
     @Test
     void volverAlMenuInicialYNuevaAventuraReiniciaSaldoYPertenencias() {
-        app.ejecutar(new Scanner("1\n1\n2\n5\n1\n1\n0\n0\n4\n1\n1\n2\n5\n0\n0\n"), consola(),
+        app.ejecutar(new Scanner("1\nAventurero\n1\n2\n5\n1\n1\n0\n0\n4\n1\nAventurero\n1\n2\n5\n0\n0\n"), consola(),
                 dados(12), sinBotin(), enemigos(), new Random(0));
         assertEquals(2, texto().split("Oro obtenido: \\+5 monedas Oro total: 20 monedas", -1).length - 1);
         assertEquals(1, texto().split("Has comprado", -1).length - 1);
@@ -206,7 +206,7 @@ class ComercioAventuraTest {
         var objetos = new RepositorioObjetosMemoria();
         ProductoTienda oferta = new ProductoTienda(objetos.obtenerArmas().get(1), 7);
         RepositorioTienda alternativo = () -> List.of(oferta);
-        app.ejecutar(new Scanner("1\n1\n2\n5\n1\n1\n0\n0\n1\n0\n0\n"), consola(), dados(6), sinBotin(),
+        app.ejecutar(new Scanner("1\nAventurero\n1\n2\n5\n1\n1\n0\n0\n1\n0\n0\n"), consola(), dados(6), sinBotin(),
                 enemigos(), new Random(0), objetos, alternativo);
         assertTrue(texto().contains("1. Espada de hierro - 7 monedas"));
         assertTrue(texto().contains("Oro disponible: 13 monedas"));

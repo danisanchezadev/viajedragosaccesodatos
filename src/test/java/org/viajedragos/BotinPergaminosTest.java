@@ -113,7 +113,7 @@ class BotinPergaminosTest {
             }
         };
         Random sinPociones = new Random(0) { public int nextInt(int limite) { return 99; } };
-        app.ejecutar(new Scanner("1\n1\n2\n4\n1\n1\n2\n0\n"), salida(), () -> 4,
+        app.ejecutar(new Scanner("1\nAventurero\n1\n2\n4\n1\nAventurero\n1\n2\n0\n"), salida(), () -> 4,
                 sinPociones, enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, instantaneo(), pergaminos);
         assertEquals(3, llamadas[0]);
         assertEquals(1, bytes.toString(StandardCharsets.UTF_8).split("Has obtenido un Pergamino de vida máxima", -1).length - 1);

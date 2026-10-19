@@ -262,13 +262,7 @@ public abstract class Combatiente {
             habilidades.clear();
             habilidades.putAll(habilidadesAntes);
         }
-        estadosAntes.forEach((estado, anterior) -> {
-            estado.setAprendida(anterior.isAprendida());
-            estado.setVecesEquipada(anterior.getVecesEquipada());
-            estado.setNivel(anterior.getNivel());
-            estado.setEfectoTemporalActivo(anterior.isEfectoTemporalActivo());
-            estado.setAcumulacionesTemporales(anterior.getAcumulacionesTemporales());
-        });
+        estadosAntes.forEach(EstadoHabilidad::restaurar);
         restauracionesTemporales.forEach(Runnable::run);
         return false;
     }
@@ -324,18 +318,24 @@ public abstract class Combatiente {
 
         EstadoHabilidad estado = habilidades.get(habilidad);
 
-        if (habilidades.containsKey(habilidad) && estado.isAprendida()) {
-            estado.setNivel(estado.getNivel() + niveles);
-
-        } else if (habilidades.containsKey(habilidad) && !estado.isAprendida()) {
-
-            estado.setNivel(estado.getNivel() + niveles);
-            estado.setAprendida(true);
-
+        if (estado != null) {
+            estado.aprender(niveles);
         } else {
-
             habilidades.put(habilidad, new EstadoHabilidad(true, 0, niveles));
         }
+    }
+
+    // Reutiliza la misma recuperación de atributos, mapas e instancias que el intercambio.
+    protected final boolean aprenderHabilidadSeguro(Habilidad habilidad) {
+        return ejecutarCambioSeguro(null, () -> {
+            EstadoHabilidad anterior = habilidades.get(habilidad);
+            int total = anterior == null || !anterior.isActiva() ? 1 : Math.incrementExact(anterior.getNivel());
+            int permanente = anterior == null ? 1 : Math.incrementExact(anterior.getNivelPermanente());
+            aprenderHabilidad(habilidad, 1);
+            EstadoHabilidad actual = habilidades.get(habilidad);
+            return actual != null && actual.isAprendida() && actual.getNivel() == total
+                    && actual.getNivelPermanente() == permanente;
+        });
     }
 
     // Equipar arma
@@ -357,8 +357,7 @@ public abstract class Combatiente {
         } else {
 
             // Aumentamos los niveles de la habilidad correspondientes
-            estado.setNivel(estado.getNivel() + niveles);
-            estado.setVecesEquipada(estado.getVecesEquipada() + 1);
+            estado.agregarEquipo(niveles);
         }
     }
 
@@ -389,8 +388,7 @@ public abstract class Combatiente {
         if (estado.getNivel() - niveles <= 0) {
             throw new IllegalStateException("Una habilidad que permanece activa debe conservar nivel positivo");
         }
-        estado.setNivel(estado.getNivel() - niveles);
-        estado.setVecesEquipada(equiposRestantes);
+        estado.retirarEquipo(niveles);
     }
 
     public void agregarHabilidad(Habilidad habilidad) {

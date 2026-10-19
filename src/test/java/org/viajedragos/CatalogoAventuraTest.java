@@ -157,7 +157,7 @@ class CatalogoAventuraTest {
         int[] tiradas = {1,1,1,1,6,1,6, 1,1,1,1,6,1,6};
         int[] usadas = {0};
         assertTimeoutPreemptively(Duration.ofSeconds(3), () -> app.ejecutar(
-                new Scanner("1\n1\n2\n4\n1\n1\n2\n0\n"), consola(), () -> {
+                new Scanner("1\nAventurero\n1\n2\n4\n1\nAventurero\n1\n2\n0\n"), consola(), () -> {
                     assertTrue(usadas[0] < tiradas.length);
                     return tiradas[usadas[0]++];
                 },botin,repo,seleccion(4,1,3)));

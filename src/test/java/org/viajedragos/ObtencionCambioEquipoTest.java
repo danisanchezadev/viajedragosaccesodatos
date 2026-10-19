@@ -200,7 +200,7 @@ class ObtencionCambioEquipoTest {
             public List<DefinicionPocion> obtenerPociones() { return memoria.obtenerPociones(); }
         };
         int[] tiradas = {1,1,1,1,6,1,6, 1,1,1,1,6,1,6, 1,1,1,1,6,1,6};
-        app.ejecutar(new Scanner("1\n1\n2\n3\n1\n1\n4\n1\n1\n2\n1\n0\n0\n"),consola(),
+        app.ejecutar(new Scanner("1\nAventurero\n1\n2\n3\n1\n1\n4\n1\nAventurero\n1\n2\n1\n0\n0\n"),consola(),
                 () -> tiradas[inicios[0]++],new Random(0),lobos,new Random(0),repo);
         assertEquals(tiradas.length,inicios[0]);
         assertEquals(2,consultasObjetos[0]);

@@ -154,7 +154,7 @@ class ExploracionTest {
     void inventarioRechazaAccionesSinModificarEstado() {
         Jugador j = jugador(13);
         j.agregarPocion(TipoPocion.GRANDE);
-        assertTrue(app.consultarInventario(j, new Scanner("5\nx\n0\n"), consola()));
+        assertTrue(app.consultarInventario(j, new Scanner("7\nx\n0\n"), consola()));
         assertEquals(2, texto().split("Entrada inválida", -1).length - 1);
         assertEquals(13, j.getVida());
         assertEquals(1, j.getCantidadPociones(TipoPocion.GRANDE));

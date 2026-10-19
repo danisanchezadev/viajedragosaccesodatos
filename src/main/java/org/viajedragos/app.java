@@ -20,6 +20,8 @@ import org.viajedragos.modelo.Enemigo;
 import org.viajedragos.modelo.Jugador;
 import org.viajedragos.modelo.TipoPocion;
 import org.viajedragos.modelo.Pergamino;
+import org.viajedragos.modelo.PergaminoHabilidad;
+import org.viajedragos.habilidad.HabilidadDisponible;
 
 import java.io.PrintStream;
 import org.viajedragos.consola.PanelConsola;
@@ -83,8 +85,17 @@ public class app {
                                 RepositorioEnemigos repositorio, Random azarEncuentros,
                                 RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo,
                                 Random azarPergaminos) {
+        ejecutar(entrada, salida, dados, azarBotin, repositorio, azarEncuentros, objetos, tienda,
+                ritmo, azarPergaminos, new Random());
+    }
+
+    public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin,
+                                RepositorioEnemigos repositorio, Random azarEncuentros,
+                                RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo,
+                                Random azarPergaminos, Random azarHabilidades) {
         java.util.Objects.requireNonNull(ritmo);
         java.util.Objects.requireNonNull(azarPergaminos);
+        java.util.Objects.requireNonNull(azarHabilidades);
 
         while (true) {
             PanelConsola panel = new PanelConsola(salida, "VIAJE A DRAGOS");
@@ -121,12 +132,40 @@ public class app {
             }
 
             // Un jugador por aventura; continuar nunca reconstruye este personaje.
-            Jugador jugador = new Jugador("Aventurero", "", 6, 2, 3, 2, 2, 48, 48);
+            String nombre = solicitarNombre(entrada, salida);
+            if (nombre == null) return;
+            if (nombre.equals("0")) continue;
+            Jugador jugador = new Jugador(nombre, "", 6, 2, 3, 2, 2, 48, 48);
 
             if (!jugarAventura(jugador, entrada, salida, dados, azarBotin,
-                    repositorio, azarEncuentros, objetos, tienda, ritmo, azarPergaminos)) {
+                    repositorio, azarEncuentros, objetos, tienda, ritmo, azarPergaminos, azarHabilidades)) {
                 return;
             }
+        }
+    }
+
+    static String solicitarNombre(Scanner entrada, PrintStream salida) {
+        PanelConsola panel = new PanelConsola(salida, "NOMBRE DEL PERSONAJE");
+        panel.linea("Escribe un nombre de 1 a 30 caracteres.");
+        panel.opcion(0, "Cancelar y volver al menú inicial");
+        panel.cerrar();
+        while (true) {
+            salida.print("Nombre > ");
+            salida.flush();
+            if (!entrada.hasNextLine()) {
+                salida.println("Entrada finalizada. Hasta pronto.");
+                return null;
+            }
+            String original = entrada.nextLine();
+            String nombre = original.replaceAll("(?U)^\\s+|\\s+$", "");
+            boolean control = original.codePoints().anyMatch(cp -> Character.isISOControl(cp)
+                    || Character.getType(cp) == Character.FORMAT
+                    || Character.getType(cp) == Character.LINE_SEPARATOR
+                    || Character.getType(cp) == Character.PARAGRAPH_SEPARATOR
+                    || Character.getType(cp) == Character.SURROGATE);
+            int longitud = nombre.codePointCount(0, nombre.length());
+            if (!control && longitud >= 1 && longitud <= 30 && !nombre.isBlank()) return nombre;
+            salida.println("Nombre inválido. Usa de 1 a 30 caracteres, sin caracteres de control.");
         }
     }
 
@@ -196,8 +235,18 @@ public class app {
                                  RepositorioEnemigos repositorio, Random azarEncuentros,
                                  RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo,
                                  Random azarPergaminos) {
+        return jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros,
+                objetos, tienda, ritmo, azarPergaminos, new Random());
+    }
+
+    static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
+                                 TiradorDado dados, Random azarBotin,
+                                 RepositorioEnemigos repositorio, Random azarEncuentros,
+                                 RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo,
+                                 Random azarPergaminos, Random azarHabilidades) {
         java.util.Objects.requireNonNull(ritmo);
         java.util.Objects.requireNonNull(azarPergaminos);
+        java.util.Objects.requireNonNull(azarHabilidades);
         List<DefinicionEnemigo> catalogo;
         try {
             catalogo = List.copyOf(repositorio.obtenerTodos());
@@ -305,6 +354,7 @@ public class app {
                 ritmo.pausar(salida);
                 // Una comprobación por victoria, antes de cualquier selección que pueda terminar por EOF.
                 obtenerPergamino(jugador, azarPergaminos, salida, ritmo);
+                obtenerPergaminosHabilidades(jugador, azarHabilidades, salida, ritmo);
                 if (jugador.getNivel() > nivelAnterior) {
                     PanelConsola subida = new PanelConsola(salida, "SUBIDA DE NIVEL");
                     for (int nivel = nivelAnterior + 1; nivel <= jugador.getNivel(); nivel++) {
@@ -350,8 +400,10 @@ public class app {
                     if (!usarObjeto(jugador, entrada, salida)) return false;
                 } else if (opcion.equals("5")) {
                     if (!consultarTienda(jugador, entrada, salida, tienda)) return false;
+                } else if (opcion.equals("6")) {
+                    if (!consultarEstado(jugador, entrada, salida)) return false;
                 } else {
-                    salida.println("Entrada inválida. Escribe 1, 2, 3, 4, 5 o 0.");
+                    salida.println("Entrada inválida. Escribe 1, 2, 3, 4, 5, 6 o 0.");
                 }
             }
             encuentro++;
@@ -418,9 +470,80 @@ public class app {
         panel.opcion(3, "Continuar al siguiente encuentro");
         panel.opcion(4, "Terminar aventura y volver al menú inicial");
         panel.opcion(5, "Tienda");
+        panel.opcion(6, "Estado del personaje");
         panel.opcion(0, "Salir del juego");
         panel.cerrar();
     }
+    static boolean consultarEstado(Jugador jugador, Scanner entrada, PrintStream salida) {
+        PanelConsola panel = new PanelConsola(salida, "ESTADO DEL PERSONAJE");
+        panel.linea("Nombre: " + jugador.getNombre());
+        if (jugador.getDescripcion() != null && !jugador.getDescripcion().isBlank()) {
+            panel.linea("Descripción: " + jugador.getDescripcion());
+        }
+        panel.linea("Nivel: " + jugador.getNivel() + " | EXP: " + jugador.getExperiencia()
+                + "/" + jugador.getExperienciaNecesaria());
+        panel.linea("Puntos pendientes: " + jugador.getPuntosPendientes());
+        panel.linea("Vida actual/máxima: " + jugador.getVida() + "/" + jugador.getVidaMaxima() + " PS");
+        panel.linea(PanelConsola.barraVida(jugador.getVida(), jugador.getVidaMaxima()));
+        panel.linea("Oro: " + jugador.getOro() + " monedas");
+        panel.separador();
+        panel.titulo("ATRIBUTOS: BASE + EQUIPO = TOTAL");
+        if (jugador.getHabilidades().values().stream().anyMatch(e -> e.isEfectoTemporalActivo()
+                || e.getAcumulacionesTemporales() > 0)) {
+            panel.linea("Efectos temporales activos: la base actual incluye sus modificaciones.");
+        }
+        // Orden de presentación, sin cambiar el orden ni los valores del enum.
+        for (Atributo atributo : new Atributo[]{Atributo.FUERZA, Atributo.RESISTENCIA,
+                Atributo.INICIATIVA, Atributo.AGILIDAD, Atributo.VELOCIDAD, Atributo.VIDA}) {
+            int base = atributo == Atributo.VIDA ? jugador.getVidaMaximaBase() : jugador.getAtributoBase(atributo);
+            int equipo = jugador.getModificadoresEquipo().getOrDefault(atributo, 0);
+            int total = atributo == Atributo.VIDA ? jugador.getVidaMaxima() : jugador.getAtributo(atributo);
+            panel.linea(atributo == Atributo.VIDA ? "VIDA MÁXIMA" : atributo.name());
+            panel.linea("Base: " + base + " | Equipo: " + String.format(java.util.Locale.ROOT, "%+d", equipo)
+                    + " | Total: " + total);
+            if ((long) base + equipo < 0) panel.linea("Total limitado al mínimo de cero.");
+        }
+        var habilidades = jugador.getHabilidades().entrySet().stream()
+                .filter(e -> e.getValue().isActiva())
+                .sorted(java.util.Comparator.comparing(e -> e.getKey().getNombre())).toList();
+        panel.separador();
+        panel.titulo("HABILIDADES APRENDIDAS");
+        boolean aprendidas = false;
+        for (var entradaHabilidad : habilidades) {
+            var estado = entradaHabilidad.getValue();
+            if (!estado.isAprendida()) continue;
+            aprendidas = true;
+            panel.linea(entradaHabilidad.getKey().getNombre());
+            panel.linea("Permanente: " + estado.getNivelPermanente() + " | Equipo: +" + estado.getNivelEquipo()
+                    + " | Total: " + estado.getNivel());
+        }
+        if (!aprendidas) panel.linea("No tienes habilidades aprendidas.");
+        panel.separador();
+        panel.titulo("HABILIDADES OTORGADAS POR EQUIPO");
+        boolean otorgadas = false;
+        for (var entradaHabilidad : habilidades) {
+            var estado = entradaHabilidad.getValue();
+            if (estado.isAprendida() || estado.getVecesEquipada() == 0) continue;
+            otorgadas = true;
+            var habilidad = entradaHabilidad.getKey();
+            panel.linea(habilidad.getNombre() + " | Nivel de equipo: " + estado.getNivelEquipo());
+            jugador.getEquipoEquipado().values().forEach(pieza -> {
+                Integer niveles = pieza.getHabilidadesOtorgadas().get(habilidad);
+                if (niveles != null) panel.linea("Fuente: " + pieza.getNombre() + " (+" + niveles + ")");
+            });
+        }
+        if (!otorgadas) panel.linea("No tienes habilidades exclusivas de equipo.");
+        panel.separador();
+        panel.opcion(0, "Volver a exploración");
+        panel.cerrar();
+        while (true) {
+            String opcion = leerOpcion(entrada, salida);
+            if (opcion == null) return false;
+            if (opcion.equals("0")) return true;
+            salida.println("Entrada inválida. Escribe 0 para volver.");
+        }
+    }
+
     static boolean consultarTienda(Jugador jugador, Scanner entrada, PrintStream salida, RepositorioTienda tienda) {
         List<org.viajedragos.modelo.ProductoTienda> productos;
         try {
@@ -575,9 +698,13 @@ public class app {
 
         panel.separador();
         panel.titulo("PERGAMINOS");
-        if (jugador.getPergaminos().isEmpty()) panel.linea("No tienes pergaminos");
+        if (jugador.getPergaminos().isEmpty() && jugador.getPergaminosHabilidad().isEmpty()
+                && jugador.getCantidadPergaminosMaestria() == 0) panel.linea("No tienes pergaminos");
         jugador.getPergaminos().forEach((atributo, cantidad) ->
                 panel.linea(new Pergamino(atributo).nombre() + " x" + cantidad));
+        jugador.getPergaminosHabilidad().forEach((habilidad, cantidad) ->
+                panel.linea(new PergaminoHabilidad(habilidad).nombre() + " x" + cantidad));
+        panel.linea("Pergamino de maestría x" + jugador.getCantidadPergaminosMaestria());
 
         panel.separador();
         panel.titulo("EQUIPO");
@@ -600,6 +727,8 @@ public class app {
             acciones.opcion(2, "Cambiar equipamiento");
             acciones.opcion(3, "Desequipar una pieza");
             acciones.opcion(4, "Utilizar pergaminos");
+            acciones.opcion(5, "Utilizar pergamino de habilidad");
+            acciones.opcion(6, "Utilizar pergamino de maestría");
             acciones.opcion(0, "Volver a exploración");
             acciones.cerrar();
             String opcion = leerOpcion(entrada, salida);
@@ -613,8 +742,10 @@ public class app {
                 if (!desequiparEquipamiento(jugador, entrada, salida)) return false;
             } else if (opcion.equals("4")) {
                 if (!utilizarPergaminos(jugador, entrada, salida)) return false;
+            } else if (opcion.equals("5") || opcion.equals("6")) {
+                if (!utilizarPergaminosHabilidades(jugador, entrada, salida, opcion.equals("6"))) return false;
             } else {
-                salida.println("Entrada inválida. Escribe 1, 2, 3, 4 o 0 para volver.");
+                salida.println("Entrada inválida. Escribe 1, 2, 3, 4, 5, 6 o 0 para volver.");
             }
         }
     }
@@ -693,6 +824,73 @@ public class app {
                 }
                 salida.println("No se ha podido aplicar la mejora. Conservas el pergamino y el estado anterior.");
             }
+        }
+    }
+
+    private static boolean utilizarPergaminosHabilidades(Jugador jugador, Scanner entrada,
+            PrintStream salida, boolean maestria) {
+        while (true) {
+            var habilidades = java.util.Arrays.stream(HabilidadDisponible.values())
+                    .filter(h -> maestria ? jugador.getCantidadPergaminosMaestria() > 0
+                            : jugador.getCantidadPergaminosHabilidad(h) > 0).toList();
+            PanelConsola panel = new PanelConsola(salida, maestria ? "PERGAMINO DE MAESTRÍA" : "PERGAMINOS DE HABILIDAD");
+            if (habilidades.isEmpty()) panel.linea("No tienes pergaminos disponibles.");
+            if (maestria) panel.linea("Cantidad: " + jugador.getCantidadPergaminosMaestria());
+            for (int i = 0; i < habilidades.size(); i++) {
+                var h = habilidades.get(i);
+                panel.opcion(i + 1, h.getNombre() + (maestria ? "" : " x" + jugador.getCantidadPergaminosHabilidad(h)));
+            }
+            panel.opcion(0, "Volver al inventario");
+            panel.cerrar();
+            int indice = leerIndiceEquipo(entrada, salida, habilidades.size());
+            if (indice == -1) return false;
+            if (indice == 0) return true;
+            var habilidad = habilidades.get(indice - 1);
+            var estado = jugador.getHabilidades().get(habilidad.crearHabilidad());
+            int permanente = estado == null ? 0 : estado.getNivelPermanente();
+            int equipo = estado == null ? 0 : estado.getNivelEquipo();
+            PanelConsola confirmar = new PanelConsola(salida, "CONFIRMAR APRENDIZAJE");
+            confirmar.linea(habilidad.getNombre());
+            confirmar.linea("Aprendida permanentemente: " + (estado != null && estado.isAprendida() ? "Sí" : "No"));
+            confirmar.linea("Nivel permanente: " + permanente + " -> " + ((long) permanente + 1));
+            if (equipo > 0) {
+                confirmar.linea("Contribución de equipo: " + equipo);
+                confirmar.linea("Nivel efectivo: " + estado.getNivel() + " -> " + ((long) estado.getNivel() + 1));
+            }
+            confirmar.opcion(1, "Consumir pergamino");
+            confirmar.opcion(0, "Cancelar");
+            confirmar.cerrar();
+            int opcion = leerIndiceEquipo(entrada, salida, 1);
+            if (opcion == -1) return false;
+            if (opcion == 0) continue;
+            boolean usado = maestria ? jugador.usarPergaminoMaestria(habilidad) : jugador.usarPergaminoHabilidad(habilidad);
+            if (!usado) {
+                salida.println("No se pudo aprender. Conservas el pergamino y el estado anterior.");
+                continue;
+            }
+            var actual = jugador.getHabilidades().get(habilidad.crearHabilidad());
+            PanelConsola resultado = new PanelConsola(salida, "HABILIDAD APRENDIDA O MEJORADA");
+            resultado.linea(habilidad.getNombre());
+            resultado.linea("Nivel permanente: " + actual.getNivelPermanente());
+            resultado.linea("Nivel efectivo: " + actual.getNivel());
+            resultado.linea("Pergamino consumido: 1");
+            resultado.cerrar();
+            return true;
+        }
+    }
+
+    static void obtenerPergaminosHabilidades(Jugador jugador, Random azar, PrintStream salida, RitmoConsola ritmo) {
+        if (azar.nextInt(100) < 5) {
+            var habilidades = HabilidadDisponible.values();
+            var pergamino = new PergaminoHabilidad(habilidades[azar.nextInt(habilidades.length)]);
+            jugador.agregarPergaminoHabilidad(pergamino);
+            salida.println("Has obtenido un " + pergamino.nombre() + ".");
+            ritmo.pausar(salida);
+        }
+        if (azar.nextInt(100) < 2) {
+            jugador.agregarPergaminoMaestria();
+            salida.println("Has obtenido un Pergamino de maestría.");
+            ritmo.pausar(salida);
         }
     }
 

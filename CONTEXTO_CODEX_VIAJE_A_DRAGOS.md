@@ -319,13 +319,35 @@ Una resurrección que deje a ambos vivos permite continuar. Si alguien vuelve a 
 - Pruebas nuevas: MejorasPergaminosTest 49, BotinPergaminosTest 17 y PergaminosConsolaTest 18. Los 962 casos previos se mantienen; cuatro archivos de consola se adaptan a generador de pergaminos controlado, inválido 4 a 5 y normalización exclusiva del nuevo contador aleatorio en la comparación de texto instantáneo/normal. No se eliminan comprobaciones anteriores de reglas/resultados.
 - Verificación: mvn clean test, BUILD SUCCESS; 1046 pruebas, 0 fallos/errores/omitidas; 51 fuentes principales y 66 archivos de pruebas. README y GUIA_ACCESO_DATOS actualizados. Sin contratos nuevos de repositorios, persistencia, habilidades, categorías o rarezas. Sin cambios de enemigos, combate, experiencia o precios. Sin commit ni push.
 
+### 3.26 Pergaminos de habilidades y maestría
+
+- PergaminoHabilidad fija una HabilidadDisponible al obtenerse; Jugador acumula cantidades por contenido y un contador independiente de maestría. Sin inventario inicial, compra/venta, caducidad ni repositorios nuevos.
+- Catálogo estable de 13 habilidades jugables en HabilidadDisponible, sin duplicados de clase y sin depender del portador. Excluye FuriaMaximaBerserker porque es un borrador sin eventos; conserva PrimerImpulso(3) y SegundoAliento(2), sin modificar fórmulas ni magnitudes internas.
+- Por victoria: 10 % atributo (intacto), 5 % habilidad con selección uniforme y 2 % maestría, independientes y máximo una unidad por tipo. Ocho combinaciones posibles; no hay comprobaciones por derrota, muerte simultánea, huida o entrada finalizada antes de victoria. Se entregan antes del reparto de puntos de nivel, que puede terminar por EOF.
+- Las nuevas tiradas usan Random azarHabilidades, separado de atributos/pociones/encuentros/dados. Sobrecargas completas de app lo reciben después de azarPergaminos; las anteriores se conservan. Un mismo generador durante encuentros y aventuras. Tiradas: nextInt(100) < 5, nextInt(13) solo en éxito y otro nextInt(100) < 2.
+- EstadoHabilidad añade nivelPermanente; getNivel sigue siendo el total y getNivelEquipo su aportación de equipo. Aprendizaje y contribuciones suman con comprobaciones de desbordamiento. Constructor anterior conservado (todo permanente si aprendida), nuevo constructor explícito para reparto mixto y copia/restauración completa, incluidos indicadores temporales. Incorporar habilidades normalmente mediante Combatiente, no manipulando su mapa.
+- Casos: desconocida -> permanente 1; aprendida 2 -> 3; solo equipo 2 -> permanente 1/efectivo 3; aprendida 2 + equipo 2 -> permanente 3/efectivo 5. Retirar equipo conserva el nivel permanente. No duplica entradas ni reinicia efectos temporales activos.
+- Consumo encapsulado en Jugador, tras aprenderHabilidadSeguro de Combatiente. Reutiliza la recuperación del intercambio; fallos/desbordamientos preservan cantidades, niveles, instancias y datos temporales. No modifica atributos, vida, EXP, equipo ni eventos de combate. Las habilidades con magnitudes internas fijas mantienen su comportamiento.
+- Inventario conserva opciones 0–4 y añade 5 habilidad y 6 maestría. Consulta de cantidades, elección de contenido fijo o habilidad libre, confirmación con niveles permanente/equipo/efectivo y resultado. Cancelar, inválidos y EOF no consumen; 0 retrocede un nivel. PanelConsola, sin pausas en menús.
+- Verificación final: mvn clean test, BUILD SUCCESS; 1146 pruebas, 0 fallos/errores/omitidas; 53 fuentes principales y 69 archivos de pruebas. Se conservan los 1046 casos anteriores y se añaden 100: PergaminosHabilidadesTest 59, BotinHabilidadesTest 21 y PergaminosHabilidadesConsolaTest 20. Cinco archivos anteriores adaptan solo la inyección del nuevo azar o la opción inválida 5 a 7; no se debilitan aserciones. Sin cambios de combate, repositorios, precios, oro/EXP o fórmulas de habilidades. Sin commit ni push.
+
+### 3.27 Nombre y consulta de estado
+
+- app.solicitarNombre solicita 1–30 puntos de código Unicode, recorta espacios exteriores y rechaza vacíos, controles y caracteres de formato/separación que alteren la consola. 0 cancela al menú inicial; EOF sale sin crear jugador ni consultar catálogos/dados. Se utiliza el nombre en el constructor existente de Jugador y se conserva entre encuentros.
+- Exploración añade 6 Estado del personaje conservando 0–5 e inventario independiente. app.consultarEstado muestra identidad/descripción si existe, nivel/EXP/umbral, puntos pendientes, vida actual/máxima, oro, los seis atributos y dos secciones de habilidades. 0 vuelve; inválidos repiten el prompt y EOF finaliza sin modificar estado.
+- Fuentes de atributos: getAtributoBase y getAtributo para los cinco atributos; getVidaMaximaBase y getVidaMaxima para VIDA. getModificadoresEquipo proporciona el bono neto, incluidas mejoras y penalizaciones. Total mínimo cero explícito cuando base + equipo es negativo. No se reconstruye la base restando bonos.
+- Habilidades aprendidas: nivelPermanente, nivelEquipo y total desde EstadoHabilidad; las exclusivas de equipo aparecen aparte con piezas otorgantes obtenidas de las ranuras. Orden estable por nombre, una entrada por habilidad, sin disparar eventos ni modificar mapas, instancias, inventario o niveles.
+- Limitación conservada: los efectos temporales actuales modifican atributosBase. La pantalla avisa si hay indicadores/contadores activos y presenta la base actual; no inventa un desglose permanente que el modelo no registra por separado ni limpia efectos para consultar.
+- Sin cambios de firmas existentes, modelos, combate, dados, recompensas, repositorios o pausas. Las pruebas previas de ejecutar incorporan el nombre explícitamente sin eliminar sus aserciones. README actualizado. Sin commit ni push.
+- Verificación: mvn clean test, BUILD SUCCESS; 1180 pruebas, 0 fallos/errores/omitidas; 53 fuentes principales y 71 archivos de pruebas. Se conservan las 1146 anteriores y se añaden 34: NombrePersonajeTest 22 y EstadoPersonajeTest 12. Doce archivos existentes adaptan solo las entradas de nombre. Sin esperas reales.
+
 ## 4. Habilidades
 
 - `Habilidad` es una clase abstracta que implementa una interfaz de eventos (`EventosHabilidad`).
-- Las habilidades se identifican en el mapa por su tipo concreto: se ha trabajado en `equals()`/`hashCode()` para que habilidades de la misma clase se traten como la misma clave. Confirmar implementación exacta.
+- Las habilidades se identifican en el mapa por su tipo concreto: `equals()`/`hashCode()` son finales y comparan la clase, de modo que varias piezas y aprendizaje comparten una sola entrada por portador.
 - Cada `Combatiente` posee un `Map<Habilidad, EstadoHabilidad>`.
-- `EstadoHabilidad` incluye al menos `aprendida`, `vecesEquipada` y `nivel`.
-- Una habilidad puede ser aprendida o concedida por el equipo. El nivel se ha concebido como un valor combinado, no como dos niveles independientes.
+- `EstadoHabilidad` incluye `aprendida`, `vecesEquipada`, `nivel` efectivo, `nivelPermanente` e indicadores temporales independientes por portador.
+- Una habilidad puede ser aprendida o concedida por el equipo. El nivel efectivo suma el permanente y las contribuciones de equipo; desde 3.26 se distingue expresamente el nivel permanente para mostrarlo y mejorarlo mediante pergaminos.
 - Regla confirmada por el autor: una habilidad aprendida o equipada debe tener nivel estrictamente positivo. EstadoHabilidad valida nivel > 0 y contadores no negativos; `isActiva()` devuelve aprendida o vecesEquipada > 0. Los eventos de ataque y curación ignoran entradas inactivas. Aprender/otorgar/retirar niveles exige aportaciones positivas; la retirada de la última pieza elimina la entrada antes de asignar cero. El constructor vacío conserva su firma y crea un estado inactivo de nivel 1.
 - Hay métodos para aprender habilidades y para sumar o retirar habilidades otorgadas por equipo (`aprenderHabilidad`, `agregarHabilidadEquipo`, `quitarHabilidadEquipo`). La retirada debe respetar que una habilidad aprendida pueda seguir existiendo aunque se retire el equipo que también la otorgaba.
 - Los eventos de habilidad reciben el **estado de esa habilidad concreta**, además de los participantes pertinentes. Las firmas de todos los eventos y todas sus llamadas deben ser consistentes.
@@ -390,9 +412,9 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 
 ## 8. Estado de implementación: checklist auditada
 
-> **Estado:** 18 de octubre de 2026. Base local 88934c5 (oro/comercio). Interfaz unificada y ritmo narrativo en cambios locales según 3.18–3.19. Codex no ha realizado commit ni push.
+> **Estado:** 19 de octubre de 2026. Base local 1846613; pergaminos de habilidades/maestría y nombre/estado en cambios locales según 3.26–3.27. Codex no ha realizado commit ni push.
 > **Leyenda:** `[x]` acredita únicamente la acción o existencia descrita en esa fila; no implica que el juego completo funcione. `[ ]` indica trabajo pendiente. Las revisiones realizadas se distinguen de sus correcciones pendientes.
-> **Evidencia actual:** `mvn clean test`: BUILD SUCCESS; 51 fuentes principales y 66 archivos de pruebas; 1046 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 962 casos anteriores y se añaden 84 según 3.25, sin cambios de fórmulas, enemigos o recompensas anteriores ni acceso a datos externo.
+> **Evidencia actual (19 de octubre de 2026):** `mvn clean test`: BUILD SUCCESS; 53 fuentes principales y 71 archivos de pruebas; 1180 pruebas, 0 fallos, 0 errores, 0 omitidas. Se conservan los 1146 casos anteriores y se añaden 34 según 3.27. Sin cambios de fórmulas, enemigos o recompensas anteriores ni acceso a datos externo.
 
 ### 8.1 Bases presentes o desarrolladas parcialmente
 
@@ -406,7 +428,7 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Métodos para aprender y conceder/retirar habilidades de equipo; niveles y contadores probados con varias piezas y aprendizaje permanente. La retirada inválida produce un error antes de descontar efectos.
 - [x] Contratos y clases de equipo, bonificaciones y habilidades otorgadas.
 - [x] Comparador de equipo ejecutado con atributos distintos y una bonificación negativa.
-- [x] Suite JUnit: 1046 pruebas ejecutadas sin fallos ni errores; 962 casos anteriores y 84 de pergaminos/mejoras, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
+- [x] Suite JUnit: 1180 pruebas ejecutadas sin fallos ni errores; 1146 casos anteriores y 34 de nombre/estado, sin pruebas eliminadas ni deshabilitadas ni esperas reales.
 
 ### 8.2 Auditoría completada y correcciones/integración pendientes
 
@@ -487,6 +509,8 @@ También se han trabajado `aumentarAtributo(Atributo,int)` y `disminuirAtributo(
 - [x] Nivel en datos de enemigos, tres variantes, encuentros elegibles por nivel y validación/visualización/compatibilidad de repositorios según 3.23.
 - [x] Generalizar equipo, ID de catálogo y ejemplares, siete ranuras, vida máxima, desequipado, tienda y repositorios compatibles según 3.24.
 - [x] Generación 0–3 por ejemplar, botín de pergamino 10 %, mejora +1 segura, inventario y venta por definición original según 3.25.
+- [x] Pergaminos de habilidad 5 % y maestría 2 % independientes, catálogo de 13 habilidades, aprendizaje permanente separado del equipo, consumo seguro y selección/confirmación de consola según 3.26.
+- [x] Elección de nombre al crear una aventura y estado independiente en exploración, con desglose de atributos/habilidades y consulta sin efectos según 3.27; la limitación de base con efectos temporales se indica expresamente.
 - [x] Unificar pantallas con PanelConsola y establecer normas futuras en AGENTS.md; alineación, ANSI, barras y flujos probados según 3.18.
 - [x] Pausas narrativas mediante RitmoConsola, cuatro velocidades, selección persistente durante la sesión y pruebas sin esperas reales según 3.19.
 - [x] Continuidad de fase 4 publicada en 6fc2a8d: misma instancia del jugador, vida restante sin recuperación, Lobos nuevos y sin límite de encuentros; muerte/terminación voluntaria devuelve al inicio y nueva aventura crea otro jugador. La fase 5 añade su primera recompensa fija.

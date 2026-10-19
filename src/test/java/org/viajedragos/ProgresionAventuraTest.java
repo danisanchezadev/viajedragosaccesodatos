@@ -178,7 +178,8 @@ class ProgresionAventuraTest {
         var objetos = new RepositorioObjetosMemoria();
         assertFalse(app.jugarAventura(j, new Scanner("1\nx\n0\n1\n2\n2\n0\n"), salida(), () -> 4,
                 new Random(0) { public int nextInt(int limite) { return 99; } }, enemigos(20), new Random(0),
-                objetos, null, ritmo, new Random(0) { public int nextInt(int limite) { return 99; } }));
+                objetos, null, ritmo, new Random(0) { public int nextInt(int limite) { return 99; } },
+                new Random(0) { public int nextInt(int limite) { return 99; } }));
         assertEquals(7, esperas.size()); // Encuentro, turno, ataque, victoria, oro/EXP, subida y espada.
         assertTrue(esperas.get(5).contains("SUBIDA DE NIVEL"));
         assertTrue(esperas.get(5).stripTrailing().endsWith("┘"), "Panel de subida cerrado antes de esperar");
@@ -189,7 +190,7 @@ class ProgresionAventuraTest {
     @Test
     void nuevaAventuraEmpiezaSinProgresionAnterior() {
         RepositorioEnemigos repo = enemigos(20);
-        app.ejecutar(new Scanner("1\n1\n1\n1\n2\n4\n1\n1\n1\n1\n2\n0\n"), salida(), () -> 4,
+        app.ejecutar(new Scanner("1\nAventurero\n1\n1\n1\n2\n4\n1\nAventurero\n1\n1\n1\n2\n0\n"), salida(), () -> 4,
                 new Random(0), repo, new Random(0));
         assertEquals(2, texto().split("Nivel alcanzado: 2", -1).length - 1);
         assertFalse(texto().contains("Nivel alcanzado: 3"));

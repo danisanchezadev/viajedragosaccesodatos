@@ -73,7 +73,7 @@ class AventuraTest {
 
     @Test
     void continuarConservaExactamenteVidaActualYMaxima() {
-        ejecutar("1\n1\n2\n3\n1\n2\n0\n", new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
+        ejecutar("1\nAventurero\n1\n2\n3\n1\n2\n0\n", new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
         assertEquals(2, veces("Victoria."));
         assertEquals(2, veces("Vida final: Aventurero 30/48 | Lobo 0/18"));
         String segundo = texto().substring(texto().indexOf("ENCUENTRO 2"));
@@ -116,7 +116,7 @@ class AventuraTest {
 
     @Test
     void terminarAventuraVuelveAlInicioSinCrearOtroEncuentro() {
-        ejecutar("1\n1\n2\n4\n0\n", new Dados(VICTORIA_SIN_DANIO));
+        ejecutar("1\nAventurero\n1\n2\n4\n0\n", new Dados(VICTORIA_SIN_DANIO));
         assertEquals(1, veces("Comienza el combate"));
         assertEquals(2, veces("1. Nueva aventura"));
         assertTrue(texto().contains("La aventura ha terminado."));
@@ -125,7 +125,7 @@ class AventuraTest {
 
     @Test
     void nuevaAventuraDespuesDeAbandonarEmpiezaConVidaCompletaYEncuentroUno() {
-        ejecutar("1\n1\n2\n4\n1\n1\n2\n0\n", new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
+        ejecutar("1\nAventurero\n1\n2\n4\n1\nAventurero\n1\n2\n0\n", new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
         assertEquals(2, veces("ENCUENTRO 1"));
         assertFalse(texto().contains("ENCUENTRO 2"));
         assertEquals(4, veces("Aventurero Lobo PS 48/48 PS 18/18"));
@@ -135,7 +135,7 @@ class AventuraTest {
 
     @Test
     void muerteTerminaAventuraSinMenuDeContinuacion() {
-        ejecutar("1\n1\n1\n0\n", new Dados(DERROTA));
+        ejecutar("1\nAventurero\n1\n1\n0\n", new Dados(DERROTA));
         assertTrue(texto().contains("Derrota."));
         assertEquals(2, veces("1. Nueva aventura"));
         assertFalse(texto().contains("3. Continuar al siguiente encuentro"));
@@ -144,7 +144,7 @@ class AventuraTest {
 
     @Test
     void nuevaAventuraTrasMorirNoReutilizaElPersonajeMuerto() {
-        ejecutar("1\n1\n1\n1\n1\n2\n0\n", new Dados(DERROTA, VICTORIA_SIN_DANIO));
+        ejecutar("1\nAventurero\n1\n1\n1\nAventurero\n1\n2\n0\n", new Dados(DERROTA, VICTORIA_SIN_DANIO));
         assertEquals(1, veces("Derrota."));
         assertEquals(1, veces("Victoria."));
         assertEquals(2, veces("ENCUENTRO 1"));
@@ -173,7 +173,7 @@ class AventuraTest {
 
     @Test
     void salirDelMenuEntreEncuentrosNoVuelveAlInicial() {
-        ejecutar("1\n1\n2\n0\n", new Dados(VICTORIA_SIN_DANIO));
+        ejecutar("1\nAventurero\n1\n2\n0\n", new Dados(VICTORIA_SIN_DANIO));
         assertEquals(1, veces("1. Nueva aventura"));
         assertEquals(1, veces("Comienza el combate"));
         assertTrue(texto().endsWith("Hasta pronto." + System.lineSeparator()));
@@ -181,7 +181,7 @@ class AventuraTest {
 
     @Test
     void invalidosEnAmbosMenusNoCreanEncuentrosNiModificanVida() {
-        ejecutar("9\nx\n1\n1\n2\nx\n9\n\n3\n1\n2\n0\n",
+        ejecutar("9\nx\n1\nAventurero\n1\n2\nx\n9\n\n3\n1\n2\n0\n",
                 new Dados(VICTORIA_CON_VIDA_6, VICTORIA_SIN_DANIO));
         assertEquals(5, veces("Entrada inválida"));
         assertEquals(2, veces("Comienza el combate"));
@@ -190,7 +190,7 @@ class AventuraTest {
 
     @Test
     void cierreDeEntradaEntreEncuentrosNoIniciaOtro() {
-        ejecutar("1\n1\n2\n", new Dados(VICTORIA_SIN_DANIO));
+        ejecutar("1\nAventurero\n1\n2\n", new Dados(VICTORIA_SIN_DANIO));
         assertEquals(1, veces("Comienza el combate"));
         assertTrue(texto().contains("Entrada finalizada. Hasta pronto."));
         assertEquals(1, veces("1. Nueva aventura"));
@@ -198,7 +198,7 @@ class AventuraTest {
 
     @Test
     void cierreDuranteElSegundoCombateFinalizaSesionSinReutilizarPersonaje() {
-        ejecutar("1\n1\n2\n3\n", new Dados(VICTORIA_CON_VIDA_6, new int[]{1, 1, 1, 1}));
+        ejecutar("1\nAventurero\n1\n2\n3\n", new Dados(VICTORIA_CON_VIDA_6, new int[]{1, 1, 1, 1}));
         assertEquals(2, veces("Comienza el combate"));
         assertEquals(1, veces("Victoria."));
         assertEquals(0, veces("Derrota."));

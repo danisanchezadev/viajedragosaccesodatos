@@ -8,8 +8,9 @@ Requiere JDK 23 y Maven. No utiliza persistencia ni servicios externos.
 1. Abre el proyecto e importa `pom.xml` como proyecto Maven.
 2. Selecciona JDK 23 como SDK del proyecto.
 3. Abre `src/main/java/org/viajedragos/app.java` y ejecuta su método `main`.
-4. En el menú inicial escribe `1` y pulsa Intro para comenzar una nueva aventura.
-5. Cuando llegue la acción de Aventurero, escribe `1` para atacar, `2` para
+4. En el menú inicial escribe `1` e introduce el nombre del personaje (1–30 caracteres).
+   Se recortan los espacios exteriores; `0` cancela y vuelve al menú inicial.
+5. Cuando llegue la acción de tu personaje, escribe `1` para atacar, `2` para
    utilizar una poción que hayas obtenido en encuentros anteriores o `3` para huir.
 6. Tras la primera victoria, encontrarás la **Espada desgastada**: `1` la equipa
    y `2` la rechaza definitivamente. Aporta **Fuerza +1** y ninguna habilidad.
@@ -319,7 +320,8 @@ por el máximo intermedio. La curación posterior respeta el máximo efectivo.
 Los +6 PS por nivel se añaden una sola vez a la base y a la vida actual.
 
 Inventario: `[1] Comparar`, `[2] Cambiar equipamiento`, `[3] Desequipar una pieza`,
-`[4] Utilizar pergaminos`, `[0] Volver`. Cambiar exige elegir una pieza compatible y confirmar. Desequipar
+`[4] Utilizar pergaminos`, `[5] Pergamino de habilidad`, `[6] Pergamino de maestría`,
+`[0] Volver`. Cambiar exige elegir una pieza compatible y confirmar. Desequipar
 muestra las ocupadas y solicita confirmación; devuelve el mismo ejemplar al final
 del inventario. Cancelar/EOF no confirman ni retiran efectos. Los paneles muestran
 todas las ranuras, incluidas vacías, y VIDA se presenta como Vida máxima.
@@ -378,8 +380,91 @@ y sus estados no cambian por mejorar otro atributo.
 
 Para pruebas deterministas existen `crearEquipo(int/Random)`, `crearArma(int/Random)`,
 el constructor de Equipo/Arma con puntos explícitos y `Jugador.comprar(..., Random)`.
-La sobrecarga completa de app acepta al final el Random de pergaminos. Los
+La sobrecarga de app conserva el Random de pergaminos de atributos. Los
 constructores anteriores siguen disponibles y generan puntos normalmente.
+
+## Pergaminos de habilidades y maestría
+
+Cada victoria definitiva realiza tres comprobaciones independientes: atributo
+10 %, habilidad 5 % y maestría 2 %. Puede entregar los tres tipos juntos, una
+unidad como máximo de cada uno. No hay tiradas por derrota, muerte simultánea,
+huida o combate incompleto. El oro, EXP, pociones y ofertas de armas no cambian.
+
+`PergaminoHabilidad` fija una `HabilidadDisponible` al obtenerse. El contenido no
+se vuelve a sortear al consultar el inventario. Los iguales se acumulan por
+cantidad; la maestría es un contador separado sin habilidad preseleccionada.
+Ambos inventarios pertenecen a Jugador y una aventura nueva empieza sin ellos.
+No se compran ni venden y no intervienen los repositorios de objetos o tienda.
+
+`HabilidadDisponible` enumera las 13 implementaciones jugables, sin duplicados,
+en orden estable, tanto para el sorteo uniforme como para elegir una maestría.
+Excluye el borrador no jugable FuriaMaximaBerserker. Primer impulso se construye
+con su magnitud original 3 y Segundo aliento con 2. No se alteran los efectos:
+Caparazón consulta el nivel efectivo; las habilidades que tienen magnitudes
+internas fijas siguen utilizándolas aunque aumente su nivel registrado.
+
+En inventario se conservan las opciones 0–4. `[5] Utilizar pergamino de habilidad`
+permite seleccionar uno de los contenidos disponibles; `[6] Utilizar pergamino
+de maestría` permite elegir entre las 13 habilidades. La confirmación muestra
+nombre, aprendizaje previo, nivel permanente antes/después y contribución de
+equipo/nivel efectivo cuando existe. Cancelar, entradas inválidas o EOF no
+consumen. Los menús no incluyen pausas; las recompensas realmente obtenidas sí.
+
+`Jugador.usarPergaminoHabilidad` y `usarPergaminoMaestria` aprenden un nivel
+permanente y consumen exactamente una unidad tras comprobar el resultado.
+`EstadoHabilidad` conserva el total efectivo y el nivel permanente; la diferencia
+es la aportación del equipo. Por ejemplo, equipo 2 + pergamino = permanente 1,
+efectivo 3; al desequipar queda 1. Permanente 2 + equipo 2 + pergamino = permanente
+3, efectivo 5; al desequipar queda 3. Varias piezas siguen siendo una única
+habilidad con varias contribuciones. No se ejecutan eventos al aprender ni se
+modifican atributos, vida o EXP. Los efectos temporales activos conservan su
+estado y se limpian en sus momentos habituales.
+
+Los desbordamientos se comprueban antes de cambiar niveles/cantidades. El consumo
+reutiliza la recuperación segura de Combatiente; ante un fallo restaura mapa,
+instancias, niveles, estados temporales y atributos sin consumir. La copia de
+EstadoHabilidad incluye el nivel permanente. Se mantienen constructores y firmas
+anteriores; para construir un estado mixto directamente existe
+`EstadoHabilidad(aprendida, vecesEquipada, nivelEfectivo, nivelPermanente)`.
+El constructor antiguo de tres argumentos no puede inferir el reparto y considera
+permanente todo el nivel si aprendida es true. Para incorporar habilidades al
+juego se deben usar aprenderHabilidad/agregarHabilidadEquipo, no editar el mapa.
+
+Las nuevas tiradas usan un Random independiente del pergamino de atributos,
+pociones, encuentros y dados. La sobrecarga completa de ejecutar/jugarAventura
+añade `Random azarHabilidades` después de `Random azarPergaminos`; se conserva
+durante encuentros y aventuras. Cada victoria consulta nextInt(100) < 5, solo
+si tiene éxito nextInt(13) para el contenido, y otra nextInt(100) < 2 para maestría.
+Las sobrecargas anteriores siguen disponibles. Las secuencias del 10 % no cambian.
+
+## Nombre y estado del personaje
+
+Una nueva aventura solicita un nombre de 1–30 caracteres Unicode, recortando
+espacios exteriores. Rechaza nombres vacíos, caracteres de control, separadores
+de línea y caracteres de formato que alteren la consola. La opción `0` cancela;
+EOF termina la sesión sin crear un jugador ni consultar catálogos o dados.
+El nombre elegido se conserva entre encuentros. Cada aventura puede usar otro.
+
+Exploración conserva las opciones anteriores y añade `[6] Estado del personaje`.
+Es independiente del inventario y regresa con `[0]`. Muestra nombre, descripción
+si existe, nivel, EXP restante/umbral siguiente, puntos pendientes, vida actual y
+máxima, oro y seis atributos. Los cinco atributos usan `getAtributoBase` y
+`getAtributo`; VIDA usa `getVidaMaximaBase` y `getVidaMaxima`. El equipo se consulta
+en `getModificadoresEquipo`, que ya suma piezas y mejoras. Los bonos negativos
+conservan su signo y el total respeta el mínimo de cero.
+
+La sección de habilidades aprendidas muestra nivel permanente, equipo y total.
+Las exclusivas de equipo aparecen aparte, con nivel y piezas otorgantes cuando
+están presentes en las ranuras. Las aprendidas con contribuciones de equipo no
+se repiten. Se consultan los niveles de EstadoHabilidad sin recalcularlos ni
+disparar eventos. Equipar, sustituir, mejorar y desequipar actualizan la siguiente
+consulta sin mantener copias de datos en la presentación.
+
+Limitación del modelo existente: las habilidades temporales modifican el mapa
+base. Si hay efectos activos, la pantalla advierte que muestra la base actual
+con esos efectos, no una base permanente reconstruida. La consulta no retira ni
+reaplica efectos. No cambia fórmulas ni estadísticas; tampoco consume recursos,
+turnos o tiradas, ni introduce pausas narrativas.
 
 ## Equilibrio inicial
 
@@ -630,11 +715,11 @@ Los valores de Aventurero se definen en `app.ejecutar` y los enemigos en
 enemigo/Combate por encuentro y deja la limpieza de efectos a alFinalCombate.
 `app.ofrecerEspada` crea una pieza por oferta y utiliza únicamente jugador.equipar;
 no modifica fuerza directamente ni llama a aplicarEfectos manualmente.
-El primer combate es de aprendizaje: ambos comienzan sin habilidades. Su
-adquisición mediante progresión, recompensas o equipamiento se definirá más adelante.
+El primer combate es de aprendizaje: ambos comienzan sin habilidades. Después
+pueden aprenderse permanentemente mediante los pergaminos de recompensa.
 Esta demo ofrece Atacar, usar las dos pociones y Huir en combate. Otros
 consumibles, cofres, tiradas de mazmorra y desplazamiento quedan pendientes.
-El comercio actual permite únicamente las cuatro compras descritas arriba.
+El comercio permite comprar y vender los productos de su catálogo; no admite pergaminos.
 
 ## Comprobar el proyecto
 
@@ -654,8 +739,9 @@ entrada ni salida de consola. La sobrecarga `combatir(Scanner, PrintStream)`
 comparte el mismo motor. Ambos modos aplican la regla confirmada de dos acciones
 por turno; las pruebas anteriores de un ataque por turno se han adaptado a ella.
 
-Las habilidades reales se comprueban con combatientes creados exclusivamente en
-las pruebas de integración, sin asignarlas a la demo ni añadir narración.
+Las habilidades reales se comprueban con combatientes de prueba y también pueden
+aprenderse mediante pergaminos en la aventura. No se asignan habilidades iniciales
+al Aventurero ni al primer enemigo, ni se añade narración de activaciones.
 `HabilidadesRealesIntegracionTest` verifica eventos, atributos, curaciones,
 restauración, niveles y equipo. `RolesModificadoresDanioTest` comprueba los roles
 confirmados: Caparazón, Defensa perfecta y Guardia férrea solo en defensa;
@@ -857,3 +943,22 @@ normaliza solo el nuevo contador aleatorio de mejoras; se comparan todos los tex
 previos y resultados. No se eliminan casos ni aserciones de juego.
 Resultado de `mvn clean test`: BUILD SUCCESS; 1046 pruebas, 0 fallos, 0 errores y
 0 omitidas; 51 fuentes principales y 66 archivos de pruebas.
+
+Pergaminos de habilidades y maestría añade 100 casos: PergaminosHabilidadesTest
+(59), BotinHabilidadesTest (21) y PergaminosHabilidadesConsolaTest (20). Cubren
+las probabilidades exactas, selección uniforme y fija, ocho combinaciones, ausencia
+de botín sin victoria, continuidad, los cuatro casos de aprendizaje, equipo,
+efectos temporales, combate, desbordamientos y recuperación, consumo, cancelación,
+EOF y alineación. Se conservan los 1046 anteriores; cinco archivos se adaptan
+únicamente para controlar el nuevo generador o sustituir el inválido 5 por 7.
+Resultado final de `mvn clean test`: BUILD SUCCESS; 1146 pruebas, 0 fallos, 0 errores
+y 0 omitidas; 53 fuentes principales y 69 archivos de pruebas. Sin esperas reales.
+
+Nombre y estado añade 34 casos: NombrePersonajeTest (22) y EstadoPersonajeTest
+(12). Se verifican nombre/validación/cancelación/EOF, continuidad, navegación,
+alineación, atributos base/equipo, penalizaciones, mejoras, nivel, vida máxima,
+habilidades aprendidas y otorgadas, retirada de contribuciones y consulta sin
+mutaciones ni pausas. Doce archivos de pruebas existentes incorporan únicamente
+la nueva entrada del nombre; mantienen las aserciones de comportamiento.
+Resultado final de `mvn clean test`: BUILD SUCCESS; 1180 pruebas, 0 fallos,
+0 errores y 0 omitidas; 53 fuentes principales y 71 archivos de pruebas.

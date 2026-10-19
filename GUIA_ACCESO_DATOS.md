@@ -254,6 +254,24 @@ completo de app permite inyectar al final el generador de pergaminos, independie
 del botín de pociones y de los dados. No se necesitan archivos, configuraciones
 globales de pruebas ni bases de datos.
 
+Los pergaminos de habilidad y maestría también son recompensas internas: 5 % y
+2 % independientes del 10 % de atributos. No añadirlos a repositorios ni tienda.
+HabilidadDisponible es la enumeración estable de las 13 habilidades implementadas;
+no es un repositorio y no se carga desde los datos externos. PergaminoHabilidad
+guarda el contenido fijado en el sorteo; Jugador acumula cantidades por contenido
+y un contador de maestría. No hay cambios en los contratos de repositorios.
+
+La sobrecarga más completa de app añade Random azarHabilidades después del
+generador de atributos. Es independiente de los demás y se conserva en la sesión;
+las pruebas pueden controlar tanto la probabilidad como el índice uniforme.
+EstadoHabilidad distingue nivelPermanente del nivel efectivo sumado con equipo.
+La creación normal se realiza mediante aprenderHabilidad/agregarHabilidadEquipo;
+para construir estados mixtos explícitos existe el constructor de cuatro
+argumentos (aprendida, vecesEquipada, nivelEfectivo, nivelPermanente). El antiguo
+asume todo permanente si aprendida es true, pues no recibe el reparto. No crear
+ni compartir manualmente estados entre combatientes. El aprendizaje no cambia
+las magnitudes internas fijas de las implementaciones de habilidades existentes.
+
 VIDA no es vida actual: se aplica a los modificadores de vida máxima. El máximo
 efectivo es base permanente más equipo, limitado a cero; equipar no cura. Quitar
 equipo recorta la vida actual solo si supera el nuevo máximo. La curación usa ese
