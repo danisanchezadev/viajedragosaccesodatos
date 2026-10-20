@@ -70,8 +70,10 @@ class BotinHabilidadesTest {
         var atributos = atributo ? new Tiradas(9, 5) : new Tiradas(10);
         var habilidades = habilidad ? new Tiradas(4, 8, maestria ? 1 : 2) : new Tiradas(5, maestria ? 1 : 2);
         var pociones = new Tiradas(0, 0); int[] dados = {0};
-        assertFalse(app.jugarAventura(j, new Scanner("1\n2\n0\n"), salida(), () -> { dados[0]++; return 4; },
-                pociones, enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, ritmo(), atributos, habilidades));
+        assertFalse(app.jugarAventura(j, new Scanner("3\n1\n2\n0\n"), salida(), () -> { dados[0]++; return 4; },
+                pociones, enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, ritmo(), atributos, habilidades,
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         atributos.agotadas(); habilidades.agotadas(); pociones.agotadas(); assertEquals(6, dados[0]);
         assertEquals(atributo ? 1 : 0, j.getCantidadPergaminos(Atributo.VIDA));
         assertEquals(habilidad ? 1 : 0, j.getCantidadPergaminosHabilidad(HabilidadDisponible.INSTINTO_SUPERVIVENCIA));
@@ -90,16 +92,20 @@ class BotinHabilidadesTest {
             }
         }, 1);
         Random prohibido = new Random(0) { public int nextInt(int limite) { fail("No debe haber recompensa"); return 0; } };
-        app.jugarAventura(j, new Scanner(caso.equals("huida") ? "3\n0\n" : ""), salida(), () -> 4,
-                prohibido, enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, ritmo(), prohibido, prohibido);
+        app.jugarAventura(j, new Scanner("3\n" + (caso.equals("huida") ? "3\n0\n" : "")), salida(), () -> 4,
+                prohibido, enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, ritmo(), prohibido, prohibido,
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento());
         assertTrue(j.getPergaminosHabilidad().isEmpty()); assertEquals(0, j.getCantidadPergaminosMaestria());
         assertEquals(15, j.getOro()); assertEquals(0, j.getExperiencia());
     }
 
     @Test void seAcumulanEntreEncuentrosConUnSoloGeneradorYMaximoUnaUnidadPorTipo() {
         Jugador j = jugador(); var nuevos = new Tiradas(0, 0, 0, 0, 0, 0);
-        assertFalse(app.jugarAventura(j, new Scanner("1\n2\n3\n1\n2\n0\n"), salida(), () -> 4,
-                ninguno(), enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, ritmo(), ninguno(), nuevos));
+        assertFalse(app.jugarAventura(j, new Scanner("3\n1\n2\n3\n1\n2\n0\n"), salida(), () -> 4,
+                ninguno(), enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, ritmo(), ninguno(), nuevos,
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         nuevos.agotadas(); assertEquals(2, j.getCantidadPergaminosHabilidad(HabilidadDisponible.CAPARAZON));
         assertEquals(2, j.getCantidadPergaminosMaestria());
         assertEquals(25, j.getOro()); assertEquals(10, j.getExperiencia());
@@ -107,8 +113,9 @@ class BotinHabilidadesTest {
 
     @Test void mismoGeneradorEnAventurasNuevasEInventariosIndependientes() {
         var nuevos = new Tiradas(99, 99, 0, 0, 0);
-        app.ejecutar(new Scanner("1\nAventurero\n1\n2\n4\n1\nAventurero\n1\n2\n0\n"), salida(), () -> 4,
-                ninguno(), enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, ritmo(), ninguno(), nuevos);
+        TextoConsola.ejecutarSesiones(new Scanner("1\nAventurero\n3\n1\n2\n0\n1\nAventurero\n3\n1\n2\n0\n"), entradaSesion -> app.ejecutar(entradaSesion, salida(), () -> 4,
+                ninguno(), enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, ritmo(), ninguno(), nuevos,
+                TextoConsola.sinBotinEquipamiento()));
         nuevos.agotadas(); String texto = bytes.toString();
         assertEquals(1, texto.split("Has obtenido un Pergamino de habilidad:", -1).length - 1);
         assertEquals(1, texto.split("Has obtenido un Pergamino de maestría", -1).length - 1);
@@ -116,9 +123,11 @@ class BotinHabilidadesTest {
 
     @Test void victoriaConSubidaRecompensaAntesDeTerminarEntradaYNoAprendeAutomaticamente() {
         Jugador j = jugador(); var nuevos = new Tiradas(0, 1, 0);
-        app.jugarAventura(j, new Scanner("1\n"), salida(), () -> 4, ninguno(),
+        app.jugarAventura(j, new Scanner("3\n1\n"), salida(), () -> 4, ninguno(),
                 () -> List.of(new DefinicionEnemigo("prueba", "Prueba", "", 1, 0, 1, 0, 0, 1, 20)),
-                new Random(0), new RepositorioObjetosMemoria(), null, ritmo(), ninguno(), nuevos);
+                new Random(0), new RepositorioObjetosMemoria(), null, ritmo(), ninguno(), nuevos,
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento());
         nuevos.agotadas(); assertEquals(2, j.getNivel()); assertEquals(2, j.getPuntosPendientes());
         assertEquals(1, j.getCantidadPergaminosHabilidad(HabilidadDisponible.CASTIGO_AL_TORPE));
         assertEquals(1, j.getCantidadPergaminosMaestria()); assertTrue(j.getHabilidades().isEmpty());

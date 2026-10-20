@@ -54,10 +54,17 @@ class CatalogoAventuraTest {
     private boolean jugar(Jugador j, RepositorioEnemigos repo, Random azar, String entrada, int... tiradas) {
         int[] usadas = {0};
         boolean volver = assertTimeoutPreemptively(Duration.ofSeconds(3), () -> app.jugarAventura(j,
-                new Scanner(entrada), consola(), () -> {
+                new Scanner("3\n" + entrada), consola(), () -> {
                     assertTrue(usadas[0] < tiradas.length, "Selección no consume dados de combate");
                     return tiradas[usadas[0]++];
-                }, botin, repo, azar));
+                }, botin, repo, azar,
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(tiradas.length, usadas[0]);
         return volver;
     }
@@ -65,7 +72,7 @@ class CatalogoAventuraTest {
     @ParameterizedTest
     @ValueSource(ints = {0,1,2,3})
     void cualquieraPuedeSerElPrimerEnemigoYCombatirConElMotorActual(int indice) {
-        var repo = new RepositorioEnemigosMemoria();
+        var repo = new CatalogoCombatePrueba();
         var definicion = repo.obtenerTodos().get(indice);
         Jugador j = jugador();
         assertFalse(jugar(j, repo, seleccion(4, indice), "1\n2\n0\n", 1,1,1,1,6,1,6));
@@ -93,7 +100,7 @@ class CatalogoAventuraTest {
                 enemigos.add(o);
             }
         },1);
-        var original = new ArrayList<>(new RepositorioEnemigosMemoria().obtenerTodos());
+        var original = new ArrayList<>(new CatalogoCombatePrueba().obtenerTodos());
         int[] consultas = {0};
         RepositorioEnemigos repo = () -> { consultas[0]++; return original; };
         Random azar = new Random(0) {
@@ -124,7 +131,7 @@ class CatalogoAventuraTest {
     @ParameterizedTest
     @ValueSource(strings = {"vacio","lista nula","entrada nula","duplicado","definicion invalida"})
     void catalogoInvalidoNoIniciaCombateNiConsumeAleatoriedad(String caso) {
-        var lobo = new RepositorioEnemigosMemoria().obtenerTodos().getFirst();
+        var lobo = new CatalogoCombatePrueba().obtenerTodos().getFirst();
         RepositorioEnemigos repo = () -> switch (caso) {
             case "vacio" -> List.of();
             case "lista nula" -> null;
@@ -153,14 +160,19 @@ class CatalogoAventuraTest {
     @Test
     void generadorDeEncuentrosSeConservaEntreAventurasYSeConsultaUnaVezCadaCatalogo() {
         int[] consultas = {0};
-        RepositorioEnemigos repo = () -> { consultas[0]++; return new RepositorioEnemigosMemoria().obtenerTodos(); };
+        RepositorioEnemigos repo = () -> { consultas[0]++; return new CatalogoCombatePrueba().obtenerTodos(); };
         int[] tiradas = {1,1,1,1,6,1,6, 1,1,1,1,6,1,6};
         int[] usadas = {0};
-        assertTimeoutPreemptively(Duration.ofSeconds(3), () -> app.ejecutar(
-                new Scanner("1\nAventurero\n1\n2\n4\n1\nAventurero\n1\n2\n0\n"), consola(), () -> {
+        assertTimeoutPreemptively(Duration.ofSeconds(3), () -> TextoConsola.ejecutarSesiones(new Scanner("1\nAventurero\n3\n1\n2\n0\n1\nAventurero\n3\n1\n2\n0\n"), entradaSesion -> app.ejecutar(entradaSesion, consola(), () -> {
                     assertTrue(usadas[0] < tiradas.length);
                     return tiradas[usadas[0]++];
-                },botin,repo,seleccion(4,1,3)));
+                },botin,repo,seleccion(4,1,3),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento())));
         assertEquals(tiradas.length, usadas[0]);
         assertEquals(2, selecciones);
         assertEquals(2, consultas[0]);
@@ -173,14 +185,20 @@ class CatalogoAventuraTest {
     @Test
     void salirSinAventuraNoConsultaRepositorioNiGeneradores() {
         app.ejecutar(new Scanner("0\n"), consola(), () -> { fail("Sin dados"); return 1; },
-                botin, () -> { fail("Sin consulta"); return List.of(); }, seleccion(4));
+                botin, () -> { fail("Sin consulta"); return List.of(); }, seleccion(4),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento());
         assertEquals(0, selecciones);
         assertEquals(0, tiradasBotin);
     }
 
     @Test
     void automaticoFuncionaConTodosLosEnemigosDelRepositorio() {
-        for (var d : new RepositorioEnemigosMemoria().obtenerTodos()) {
+        for (var d : new CatalogoCombatePrueba().obtenerTodos()) {
             var j = jugador();
             while (j.getNivel() < d.nivel()) j.agregarExperiencia((int) j.getExperienciaNecesaria());
             while (j.getPuntosPendientes() > 0) j.asignarPunto(org.viajedragos.arma.Atributo.FUERZA);

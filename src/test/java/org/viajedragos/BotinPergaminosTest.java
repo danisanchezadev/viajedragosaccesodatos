@@ -77,8 +77,11 @@ class BotinPergaminosTest {
         Random azarPergaminos = new Random(0) {
             public int nextInt(int limite) { assertEquals(pergaminos[0] == 0 ? 100 : 6, limite); return pergaminos[0]++ == 0 ? 0 : 1; }
         };
-        assertFalse(app.jugarAventura(j, new Scanner("1\n2\n0\n"), salida(), () -> { assertTrue(++dados[0] <= 6); return 4; },
-                azarPociones, enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, instantaneo(), azarPergaminos));
+        assertFalse(app.jugarAventura(j, new Scanner("3\n1\n2\n0\n"), salida(), () -> { assertTrue(++dados[0] <= 6); return 4; },
+                azarPociones, enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, instantaneo(), azarPergaminos,
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(6, dados[0]); assertEquals(2, pociones[0]); assertEquals(2, pergaminos[0]);
         assertEquals(resultado & 1, j.getCantidadPociones(TipoPocion.PEQUENA));
         assertEquals((resultado & 2) == 0 ? 0 : 1, j.getCantidadPociones(TipoPocion.GRANDE));
@@ -97,8 +100,11 @@ class BotinPergaminosTest {
             }
         }, 1);
         Random prohibido = new Random(0) { public int nextInt(int limite) { fail("No hay botín"); return 0; } };
-        app.jugarAventura(j, new Scanner(caso.equals("huida") ? "3\n0\n" : ""), salida(), () -> 4,
-                prohibido, enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, instantaneo(), prohibido);
+        app.jugarAventura(j, new Scanner("3\n" + (caso.equals("huida") ? "3\n0\n" : "")), salida(), () -> 4,
+                prohibido, enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, instantaneo(), prohibido,
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento());
         assertTrue(j.getPergaminos().isEmpty()); assertEquals(15, j.getOro()); assertEquals(0, j.getExperiencia());
         assertFalse(bytes.toString(StandardCharsets.UTF_8).contains("Has obtenido un Pergamino"));
     }
@@ -113,8 +119,10 @@ class BotinPergaminosTest {
             }
         };
         Random sinPociones = new Random(0) { public int nextInt(int limite) { return 99; } };
-        app.ejecutar(new Scanner("1\nAventurero\n1\n2\n4\n1\nAventurero\n1\n2\n0\n"), salida(), () -> 4,
-                sinPociones, enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, instantaneo(), pergaminos);
+        TextoConsola.ejecutarSesiones(new Scanner("1\nAventurero\n3\n1\n2\n0\n1\nAventurero\n3\n1\n2\n0\n"), entradaSesion -> app.ejecutar(entradaSesion, salida(), () -> 4,
+                sinPociones, enemigos(), new Random(0), new RepositorioObjetosMemoria(), null, instantaneo(), pergaminos,
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(3, llamadas[0]);
         assertEquals(1, bytes.toString(StandardCharsets.UTF_8).split("Has obtenido un Pergamino de vida máxima", -1).length - 1);
     }
@@ -146,9 +154,12 @@ class BotinPergaminosTest {
         Jugador j = jugador(); int[] usos = {0};
         Random azar = new Random(0) { public int nextInt(int limite) { usos[0]++; return 0; } };
         Random sinPociones = new Random(0) { public int nextInt(int limite) { return 99; } };
-        assertFalse(app.jugarAventura(j, new Scanner("1\n"), salida(), () -> 4, sinPociones,
+        assertFalse(app.jugarAventura(j, new Scanner("3\n1\n"), salida(), () -> 4, sinPociones,
                 () -> List.of(new DefinicionEnemigo("prueba", "Prueba", "", 1, 0, 1, 0, 0, 1, 20)),
-                new Random(0), new RepositorioObjetosMemoria(), null, instantaneo(), azar));
+                new Random(0), new RepositorioObjetosMemoria(), null, instantaneo(), azar,
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(2, usos[0]); assertEquals(1, j.getCantidadPergaminos(Atributo.FUERZA));
         assertEquals(2, j.getNivel()); assertEquals(2, j.getPuntosPendientes());
     }

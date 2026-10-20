@@ -196,10 +196,11 @@ class MenuPersonajeTest {
         Jugador j = jugador(); j.setFuerza(20); int[] dados = {0}, esperas = {0};
         var ritmo = new RitmoConsola(RitmoConsola.Velocidad.NORMAL, ms -> { reloj[0] += 1_000_000_000L; esperas[0]++; });
         Random sinBotin = new Random(0) { public int nextInt(int n) { return n - 1; } };
-        ancho(102, () -> assertFalse(app.jugarAventura(j, new Scanner("1\n2\n1\n1\n0\n6\n0\n0\n0\n"), salida(),
+        ancho(102, () -> assertFalse(app.jugarAventura(j, new Scanner("3\n1\n2\n1\n1\n0\n6\n0\n0\n0\n"), salida(),
                 () -> { dados[0]++; reloj[0] += 1_000_000_000L; return 4; }, sinBotin,
                 () -> List.of(new DefinicionEnemigo("prueba", "Prueba", "", 1, 0, 1, 0, 0, 1)), new Random(0),
-                new RepositorioObjetosMemoria(), null, ritmo, sinBotin, sinBotin, tiempo)));
+                new RepositorioObjetosMemoria(), null, ritmo, sinBotin, sinBotin, tiempo,
+                TextoConsola.sinBotinEquipamiento())));
         assertEquals(6, dados[0]); assertEquals(6, esperas[0]);
         assertTrue(texto().contains("TIEMPO 00:00:12")); assertFalse(texto().contains("00:08:"));
         assertTrue(texto().contains("1. Menú de personaje")); assertFalse(texto().contains("6. Estado del personaje"));

@@ -77,11 +77,18 @@ class InterfazConsolaTest {
                 return 99;
             }
         };
-        String entrada = "1\n2\n5\n1\n1\n3\n0\n0\n2\n1\n1\n2\n2\n1\n1\n1\n0\n0\n0\n";
-        assertFalse(app.jugarAventura(jugador, new Scanner(entrada), consola(), () -> {
+        String entrada = "1\n2\n4\n1\n1\n2\n0\n0\n1\n3\n1\n0\n1\n2\n2\n1\n1\n1\n0\n0\n0\n";
+        assertFalse(app.jugarAventura(jugador, new Scanner("3\n" + entrada), consola(), () -> {
             assertTrue(++tiradas[0] <= 6);
             return 4;
-        }, azar, enemigos, new Random(0)));
+        }, azar, enemigos, new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(6, tiradas[0]);
         assertEquals(2, botin[0]);
         assertEquals(3, jugador.getOro());
@@ -92,7 +99,7 @@ class InterfazConsolaTest {
         for (String titulo : List.of("ENCUENTRO", "TU TURNO", "RECOMPENSAS", "EXPLORACIÓN", "TIENDA", "USAR OBJETO", "INVENTARIO", "CONFIRMAR EQUIPAMIENTO")) {
             assertTrue(texto().contains(titulo), titulo);
         }
-        assertTrue(texto().contains("[5] Tienda"));
+        assertTrue(texto().contains("[4] Tienda"));
         assertTrue(texto().contains("[0] Salir del juego"));
         assertFalse(texto().contains("\u001B"));
     }

@@ -199,9 +199,16 @@ class ExploracionTest {
                 return 0;
             }
         };
-        String entrada = "1\n1\n1\nx\n0\n2\n1\n3\n1\n2\n1\n0\n0\n";
+        String entrada = "1\n1\n1\nx\n0\n1\n3\n1\n0\n3\n1\n2\n1\n0\n0\n";
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(j, new Scanner(entrada), consola(), dados, azar, soloLobo(), new Random(0))));
+                app.jugarAventura(j, new Scanner("3\n" + entrada), consola(), dados, azar, soloLobo(), new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento())));
         assertEquals(valores.length, usadas[0]);
         assertEquals(4, botin[0]);
         assertEquals(14, j.getVida(), "El segundo encuentro no recupera vida automáticamente");
@@ -209,13 +216,13 @@ class ExploracionTest {
         assertEquals(2, j.getCantidadPociones(TipoPocion.GRANDE));
         assertEquals(7, j.getFuerza());
         assertTrue(texto().contains("VIAJE A DRAGOS - EXPLORACIÓN"));
-        assertTrue(texto().contains("3. Continuar al siguiente encuentro"));
-        assertTrue(texto().contains("4. Terminar aventura"));
+        assertTrue(texto().contains("3. Explorar"));
+        assertTrue(texto().contains("4. Tienda"));
         assertTrue(texto().contains("Vida recuperada: +8 PS"));
         assertEquals(1, texto().split("Has encontrado una Espada desgastada", -1).length - 1);
         assertEquals(2, texto().split("Botín: Poción pequeña", -1).length - 1);
         assertTrue(texto().indexOf("Botín:") < texto().indexOf("Has encontrado"));
-        assertTrue(texto().indexOf("Espada desgastada equipada") < texto().indexOf("EXPLORACIÓN"));
+        assertTrue(texto().indexOf("Espada desgastada equipada") < texto().lastIndexOf("EXPLORACIÓN"));
     }
 
     @ParameterizedTest
@@ -224,10 +231,17 @@ class ExploracionTest {
         int[] valores = {1, 1, 1, 1, 6, 1, 6};
         int[] usadas = {0};
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(jugador(24), new Scanner("1\n2\n" + opcion), consola(), () -> {
+                app.jugarAventura(jugador(24), new Scanner("3\n1\n2\n" + opcion), consola(), () -> {
                     assertTrue(usadas[0] < valores.length);
                     return valores[usadas[0]++];
-                }, new Random(0), soloLobo(), new Random(0))));
+                }, new Random(0), soloLobo(), new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento())));
         assertEquals(valores.length, usadas[0]);
         assertEquals(1, texto().split("Comienza el combate", -1).length - 1);
         assertTrue(texto().endsWith("Entrada finalizada. Hasta pronto." + System.lineSeparator()));
@@ -249,7 +263,7 @@ class ExploracionTest {
             }
         };
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.jugarAventura(j,
-                new Scanner("1\n1\n3\n2\n1\n1\n2\n1\n2\n0\n0\n2\n2\n0\n"), consola(), () -> {
+                new Scanner("3\n1\n1\n3\n2\n1\n1\n2\n1\n2\n0\n0\n1\n3\n2\n0\n0\n"), consola(), () -> {
                     assertTrue(usadas[0] < tiradas.length, "El consumo no tira dados de ataque");
                     if (usadas[0] == 14) {
                         assertEquals(14, j.getVida(), "Se curó al llegar su acción del segundo combate");
@@ -257,7 +271,14 @@ class ExploracionTest {
                         assertEquals(7, j.getFuerza());
                     }
                     return tiradas[usadas[0]++];
-                }, azar, soloLobo(), new Random(0))));
+                }, azar, soloLobo(), new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento())));
         assertEquals(tiradas.length, usadas[0]);
         assertEquals(4, botin[0]);
         assertEquals(24, j.getVida());
@@ -287,17 +308,24 @@ class ExploracionTest {
             }
         };
         assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.jugarAventura(j,
-                new Scanner(entrada), consola(), () -> {
+                new Scanner("3\n" + entrada), consola(), () -> {
                     assertTrue(usadas[0] < tiradas.length);
                     return tiradas[usadas[0]++];
-                }, azar, soloLobo(), new Random(0))));
+                }, azar, soloLobo(), new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento())));
         assertEquals(4, usadas[0]);
         assertEquals(20, j.getVida());
         assertEquals(1, j.getCantidadPociones(TipoPocion.PEQUENA));
         assertTrue(texto().contains("el combate queda sin terminar"));
         assertFalse(texto().contains("Victoria."));
         assertFalse(texto().contains("Derrota."));
-        assertFalse(texto().contains("EXPLORACIÓN"));
+        assertEquals(1, texto().split("EXPLORACIÓN", -1).length - 1);
         assertFalse(texto().contains("Has encontrado"));
     }
 }

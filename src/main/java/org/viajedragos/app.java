@@ -1,5 +1,7 @@
 package org.viajedragos;
 
+import org.viajedragos.modelo.Planta;
+
 import org.viajedragos.arma.Arma;
 import org.viajedragos.arma.Atributo;
 import org.viajedragos.arma.Equipo;
@@ -21,6 +23,8 @@ import org.viajedragos.modelo.Jugador;
 import org.viajedragos.modelo.TipoPocion;
 import org.viajedragos.modelo.Pergamino;
 import org.viajedragos.modelo.PergaminoHabilidad;
+import org.viajedragos.modelo.ProgresoAventura;
+import org.viajedragos.modelo.BotinEquipamiento;
 import org.viajedragos.habilidad.HabilidadDisponible;
 
 import java.io.PrintStream;
@@ -95,9 +99,18 @@ public class app {
                                 RepositorioEnemigos repositorio, Random azarEncuentros,
                                 RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo,
                                 Random azarPergaminos, Random azarHabilidades) {
+        ejecutar(entrada, salida, dados, azarBotin, repositorio, azarEncuentros, objetos, tienda,
+                ritmo, azarPergaminos, azarHabilidades, new Random());
+    }
+
+    public static void ejecutar(Scanner entrada, PrintStream salida, TiradorDado dados, Random azarBotin,
+                                RepositorioEnemigos repositorio, Random azarEncuentros,
+                                RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo,
+                                Random azarPergaminos, Random azarHabilidades, Random azarEquipo) {
         java.util.Objects.requireNonNull(ritmo);
         java.util.Objects.requireNonNull(azarPergaminos);
         java.util.Objects.requireNonNull(azarHabilidades);
+        java.util.Objects.requireNonNull(azarEquipo);
 
         while (true) {
             PanelConsola panel = new PanelConsola(salida, "VIAJE A DRAGOS");
@@ -140,7 +153,8 @@ public class app {
             Jugador jugador = new Jugador(nombre, "", 6, 2, 3, 2, 2, 48, 48);
 
             if (!jugarAventura(jugador, entrada, salida, dados, azarBotin,
-                    repositorio, azarEncuentros, objetos, tienda, ritmo, azarPergaminos, azarHabilidades)) {
+                    repositorio, azarEncuentros, objetos, tienda, ritmo, azarPergaminos, azarHabilidades,
+                    new TiempoAventura(), azarEquipo)) {
                 return;
             }
         }
@@ -255,9 +269,19 @@ public class app {
                                  RepositorioEnemigos repositorio, Random azarEncuentros,
                                  RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo,
                                  Random azarPergaminos, Random azarHabilidades, TiempoAventura tiempo) {
+        return jugarAventura(jugador, entrada, salida, dados, azarBotin, repositorio, azarEncuentros,
+                objetos, tienda, ritmo, azarPergaminos, azarHabilidades, tiempo, new Random());
+    }
+
+    static boolean jugarAventura(Jugador jugador, Scanner entrada, PrintStream salida,
+                                 TiradorDado dados, Random azarBotin,
+                                 RepositorioEnemigos repositorio, Random azarEncuentros,
+                                 RepositorioObjetos objetos, RepositorioTienda tienda, RitmoConsola ritmo,
+                                 Random azarPergaminos, Random azarHabilidades, TiempoAventura tiempo, Random azarEquipo) {
         java.util.Objects.requireNonNull(ritmo);
         java.util.Objects.requireNonNull(azarPergaminos);
         java.util.Objects.requireNonNull(azarHabilidades);
+        java.util.Objects.requireNonNull(azarEquipo);
         List<DefinicionEnemigo> catalogo;
         try {
             catalogo = List.copyOf(repositorio.obtenerTodos());
@@ -272,12 +296,15 @@ public class app {
                     return true;
                 }
             }
+            if (catalogo.stream().filter(DefinicionEnemigo::guardian).count() > 1)
+                throw new IllegalArgumentException("Más de un guardián especial");
         } catch (RuntimeException datosInvalidos) {
             salida.println("El catálogo de enemigos no es válido. No se inicia la aventura.");
             return true;
         }
         DefinicionArma espada = null;
         DefinicionArma espadaHierro = null;
+        BotinEquipamiento botinEquipamiento;
         try {
             List<DefinicionArma> armas = List.copyOf(objetos.obtenerArmas());
             List<DefinicionPocion> pociones = List.copyOf(objetos.obtenerPociones());
@@ -307,21 +334,59 @@ public class app {
                     throw new IllegalArgumentException("El índice comercial no coincide con el catálogo");
                 }
             }
+            botinEquipamiento = new BotinEquipamiento(RepositorioObjetos.validarBotin(
+                    objetos.obtenerBotinEquipamiento(), armas, equipos));
             jugador.configurarPociones(pociones);
         } catch (RuntimeException datosInvalidos) {
             salida.println("El catálogo de objetos no es válido o está incompleto. No se inicia la aventura.");
             return true;
         }
+        var plantasSinBotin = java.util.Arrays.stream(org.viajedragos.modelo.Planta.values())
+                .filter(p -> !botinEquipamiento.tieneDefiniciones(p.numero())).map(p -> String.valueOf(p.numero())).toList();
+        if (!plantasSinBotin.isEmpty()) salida.println("Botín de equipamiento no disponible en plantas: " + String.join(", ", plantasSinBotin) + ".");
         int encuentro = 1;
         boolean espadaOfrecida = false;
         int victorias = 0;
+        ProgresoAventura progreso = new ProgresoAventura();
         if (!repartirPuntos(jugador, entrada, salida)) return false;
         while (true) {
-            Enemigo enemigo = seleccionarEnemigo(catalogo, azarEncuentros, jugador.getNivel());
-            if (enemigo == null) {
-                salida.println("No hay enemigos elegibles para tu nivel. La aventura ha terminado.");
-                return true;
+            mostrarExploracion(jugador, salida, progreso, catalogo);
+            String opcion = leerOpcion(entrada, salida);
+            if (opcion == null) return false;
+            if (opcion.equals("0")) {
+                salida.println("Hasta pronto."); return false;
             }
+            if (opcion.equals("1")) {
+                if (!consultarPersonaje(jugador, entrada, salida, tiempo,
+                        salida == System.out && Boolean.getBoolean("viajedragos.ansi"))) return false;
+                continue;
+            }
+            if (opcion.equals("2")) {
+                if (!cambiarPlanta(progreso, entrada, salida)) return false;
+                continue;
+            }
+            if (opcion.equals("4")) {
+                if (!consultarTienda(jugador, entrada, salida, tienda, progreso.plantaActual().numero())) return false;
+                continue;
+            }
+            if (opcion.equals("5")) {
+                salida.println("Funcionalidad no implementada: el sistema de persistencia de partidas todavía no está disponible.");
+                continue;
+            }
+            DefinicionEnemigo definicion;
+            if (opcion.equals("3")) {
+                definicion = seleccionarEnemigo(catalogo, azarEncuentros, progreso.plantaActual().numero());
+            } else if (opcion.equals("6") && progreso.plantaActual().numero() == 2 && !progreso.guardianDerrotado()) {
+                definicion = catalogo.stream().filter(DefinicionEnemigo::guardian).findFirst().orElse(null);
+            } else {
+                salida.println("Entrada inválida. Elige una de las opciones disponibles.");
+                continue;
+            }
+            if (definicion == null) {
+                salida.println("No hay enemigos disponibles para ese encuentro en esta planta.");
+                continue;
+            }
+            Enemigo enemigo = definicion.crearEnemigo();
             PanelConsola panelEncuentro = new PanelConsola(salida, "ENCUENTRO " + encuentro);
             panelEncuentro.linea("Comienza el combate: " + jugador.getNombre() + " contra " + enemigo.getNombre() + ".");
             panelEncuentro.columnas(jugador.getNombre(), enemigo.getNombre());
@@ -350,17 +415,31 @@ public class app {
                 return true;
             }
 
-            if (resultado == ResultadoCombate.ENEMIGO_MUERE) {
+            int siguientePlanta = progreso.plantaActual().numero() + 1;
+            boolean siguienteYaDisponible = siguientePlanta <= 5 && progreso.desbloqueada(siguientePlanta);
+            if (resultado == ResultadoCombate.ENEMIGO_MUERE && progreso.registrarVictoria(encuentro, definicion)) {
                 victorias++;
-                jugador.agregarOro(5);
+                int oroObtenido = Planta.porNumero(definicion.planta()).oroVictoria();
+                jugador.agregarOro(oroObtenido);
                 int nivelAnterior = jugador.getNivel();
                 jugador.agregarExperiencia(enemigo.getExperiencia());
                 PanelConsola panelRecompensa = new PanelConsola(salida, "RECOMPENSAS");
-                panelRecompensa.linea("Oro obtenido: +5 monedas");
+                panelRecompensa.linea("Oro obtenido: +" + oroObtenido + " monedas");
                 panelRecompensa.linea("Oro total: " + jugador.getOro() + " monedas");
                 panelRecompensa.linea("EXP obtenida: +" + enemigo.getExperiencia());
                 panelRecompensa.linea("Nivel: " + jugador.getNivel() + " | EXP: "
                         + jugador.getExperiencia() + "/" + jugador.getExperienciaNecesaria());
+                if (siguientePlanta <= 5 && !siguienteYaDisponible && progreso.desbloqueada(siguientePlanta)) {
+                    panelRecompensa.linea("Planta " + siguientePlanta + " disponible: " + Planta.porNumero(siguientePlanta).nombre());
+                }
+                var equipoObtenido = botinEquipamiento.sortear(definicion.planta(), definicion.nivel(), azarEquipo);
+                if (equipoObtenido.isPresent()) {
+                    Equipo pieza = equipoObtenido.get();
+                    jugador.agregarEquipo(pieza);
+                    panelRecompensa.separador(); panelRecompensa.titulo("BOTÍN DE EQUIPAMIENTO");
+                    panelRecompensa.linea("Se guarda en tu inventario:");
+                    mostrarEquipo(panelRecompensa, pieza);
+                }
                 panelRecompensa.cerrar();
                 ritmo.pausar(salida);
                 // Una comprobación por victoria, antes de cualquier selección que pueda terminar por EOF.
@@ -391,38 +470,14 @@ public class app {
                 salida.println("Regresas a exploración sin recompensas. Conservas tu personaje y sus pertenencias.");
             }
 
-            while (true) {
-                mostrarExploracion(jugador, salida);
-                String opcion = leerOpcion(entrada, salida);
-                if (opcion == null) return false;
-                if (opcion.equals("0")) {
-                    salida.println("Hasta pronto.");
-                    return false;
-                }
-                if (opcion.equals("4")) {
-                    salida.println("La aventura ha terminado.");
-                    return true;
-                }
-                if (opcion.equals("3")) break;
-                if (opcion.equals("1")) {
-                    if (!consultarPersonaje(jugador, entrada, salida, tiempo,
-                            salida == System.out && Boolean.getBoolean("viajedragos.ansi"))) return false;
-                } else if (opcion.equals("2")) {
-                    if (!usarObjeto(jugador, entrada, salida)) return false;
-                } else if (opcion.equals("5")) {
-                    if (!consultarTienda(jugador, entrada, salida, tienda)) return false;
-                } else {
-                    salida.println("Entrada inválida. Escribe 1, 2, 3, 4, 5 o 0.");
-                }
-            }
             encuentro++;
         }
     }
 
-    private static Enemigo seleccionarEnemigo(List<DefinicionEnemigo> catalogo, Random azarEncuentros, int nivelJugador) {
-        var elegibles = catalogo.stream().filter(enemigo -> enemigo.nivel() <= nivelJugador).toList();
+    private static DefinicionEnemigo seleccionarEnemigo(List<DefinicionEnemigo> catalogo, Random azarEncuentros, int planta) {
+        var elegibles = catalogo.stream().filter(enemigo -> enemigo.planta() == planta && !enemigo.guardian()).toList();
         if (elegibles.isEmpty()) return null;
-        return elegibles.get(azarEncuentros.nextInt(elegibles.size())).crearEnemigo();
+        return elegibles.get(azarEncuentros.nextInt(elegibles.size()));
     }
 
     static boolean repartirPuntos(Jugador jugador, Scanner entrada, PrintStream salida) {
@@ -465,7 +520,8 @@ public class app {
         return true;
     }
 
-    private static void mostrarExploracion(Jugador jugador, PrintStream salida) {
+    private static void mostrarExploracion(Jugador jugador, PrintStream salida, ProgresoAventura progreso,
+                                           List<DefinicionEnemigo> catalogo) {
         PanelConsola panel = new PanelConsola(salida, "VIAJE A DRAGOS - EXPLORACIÓN");
         panel.linea(jugador.getNombre());
         panel.linea("Nivel: " + jugador.getNivel() + " | EXP: " + jugador.getExperiencia()
@@ -473,14 +529,41 @@ public class app {
         panel.linea("Vida: " + jugador.getVida() + "/" + jugador.getVidaMaxima() + " PS");
         panel.linea(PanelConsola.barraVida(jugador.getVida(), jugador.getVidaMaxima()));
         panel.linea("Oro: " + jugador.getOro() + " monedas");
+        panel.linea("Planta " + progreso.plantaActual().numero() + " - " + progreso.plantaActual().nombre());
+        panel.linea(progreso.resumenProgreso());
         panel.separador();
         panel.opcion(1, "Menú de personaje");
-        panel.opcion(2, "Usar objeto");
-        panel.opcion(3, "Continuar al siguiente encuentro");
-        panel.opcion(4, "Terminar aventura y volver al menú inicial");
-        panel.opcion(5, "Tienda");
+        panel.opcion(2, "Cambiar de planta");
+        panel.opcion(3, "Explorar");
+        panel.opcion(4, "Tienda");
+        panel.opcion(5, "Guardar");
+        if (progreso.plantaActual().numero() == 2 && !progreso.guardianDerrotado()
+                && catalogo.stream().anyMatch(DefinicionEnemigo::guardian)) panel.opcion(6, "Enfrentarse al guardián");
         panel.opcion(0, "Salir del juego");
         panel.cerrar();
+    }
+
+    static boolean cambiarPlanta(ProgresoAventura progreso, Scanner entrada, PrintStream salida) {
+        while (true) {
+            var planta = progreso.plantaActual();
+            var panel = new PanelConsola(salida, "CAMBIAR DE PLANTA");
+            panel.linea("Planta " + planta.numero() + " - " + planta.nombre());
+            panel.linea(planta.descripcion());
+            panel.linea(progreso.requisitoDescenso());
+            panel.opcion(1, "Subir una planta");
+            panel.opcion(2, "Bajar una planta");
+            panel.opcion(0, "Cancelar"); panel.cerrar();
+            int opcion = leerIndiceEquipo(entrada, salida, 2);
+            if (opcion == -1) return false;
+            if (opcion == 0) return true;
+            if (opcion == 1) {
+                if (progreso.subir()) return true;
+                salida.println("No puedes subir desde la planta 1.");
+            } else {
+                if (progreso.bajar()) return true;
+                salida.println(progreso.requisitoDescenso());
+            }
+        }
     }
     static boolean consultarPersonaje(Jugador jugador, Scanner entrada, PrintStream salida,
                                      TiempoAventura tiempo, boolean coloresAnsi) {
@@ -532,9 +615,25 @@ public class app {
     }
 
     static boolean consultarTienda(Jugador jugador, Scanner entrada, PrintStream salida, RepositorioTienda tienda) {
+        return consultarTienda(jugador, entrada, salida, tienda, tienda);
+    }
+
+    static boolean consultarTienda(Jugador jugador, Scanner entrada, PrintStream salida, RepositorioTienda tienda, int planta) {
+        RepositorioTienda compras;
+        try {
+            compras = tienda.paraPlanta(planta);
+        } catch (RuntimeException catalogoInvalido) {
+            salida.println("El catálogo de la tienda no es válido. No se ha realizado ninguna compra.");
+            return true;
+        }
+        return consultarTienda(jugador, entrada, salida, tienda, compras);
+    }
+
+    private static boolean consultarTienda(Jugador jugador, Scanner entrada, PrintStream salida,
+                                           RepositorioTienda tienda, RepositorioTienda compras) {
         List<org.viajedragos.modelo.ProductoTienda> productos;
         try {
-            productos = List.copyOf(tienda.obtenerTodos());
+            productos = List.copyOf(compras.obtenerTodos());
             var ids = new HashSet<String>();
             for (var producto : productos) {
                 if (!ids.add(producto.id())) throw new IllegalArgumentException("Producto repetido");
@@ -555,7 +654,7 @@ public class app {
             if (opcion == -1) return false;
             if (opcion == 0) return true;
             if (opcion == 1) {
-                if (!comprarObjetos(jugador, entrada, salida, tienda, productos)) return false;
+                if (!comprarObjetos(jugador, entrada, salida, compras, productos)) return false;
             } else if (!venderObjetos(jugador, entrada, salida, tienda)) return false;
         }
     }

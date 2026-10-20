@@ -39,11 +39,19 @@ class EncuentrosPorNivelTest {
                 }
             };
             Jugador j = jugador(nivel);
+            int dadosEsperados = j.getIniciativa() == elegibles.get(indice).iniciativa() ? 6 : 4;
             assertFalse(assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.jugarAventura(j,
-                    new Scanner(""), salida(), () -> { assertTrue(++llamadas[1] <= 4); return 4; },
-                    sinBotin(), repo, azar)));
+                    new Scanner("3\n"), salida(), () -> { assertTrue(++llamadas[1] <= dadosEsperados); return llamadas[1] % 2 == 1 ? 6 : 1; },
+                    sinBotin(), repo, azar,
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento())));
             assertEquals(1, llamadas[0]);
-            assertEquals(4, llamadas[1], "El filtro no consume dados de combate");
+            assertEquals(dadosEsperados, llamadas[1], "Solo se tiran dados de iniciativa y orden, incluido el desempate inicial");
             var esperado = elegibles.get(indice);
             String texto = TextoConsola.contenido(bytes.toString(StandardCharsets.UTF_8));
             assertTrue(texto.contains(esperado.nombre() + " — Nivel " + esperado.nivel()));
@@ -56,11 +64,11 @@ class EncuentrosPorNivelTest {
 
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 3, 4, 5, 6})
-    void desbloqueoProgresivoConservaTodosLosInferioresYSorteaCadaElegible(int nivel) {
+    void nivelDelJugadorNoExcluyeEnemigosDeLaPlantaInicial(int nivel) {
         var repo = new RepositorioEnemigosMemoria();
-        var esperados = repo.obtenerTodos().stream().filter(d -> d.nivel() <= nivel).toList();
-        assertEquals(nivel < 3 ? 4 : nivel == 3 ? 5 : nivel == 4 ? 6 : 7, esperados.size());
-        assertEquals(4, esperados.stream().filter(d -> d.nivel() == 1).count());
+        var esperados = repo.obtenerTodos().stream().filter(d -> d.planta() == 1 && !d.guardian()).toList();
+        assertEquals(5, esperados.size());
+        assertEquals(5, esperados.stream().filter(d -> d.nivel() == 1).count());
         comprobarSeleccion(repo, nivel, esperados);
     }
 
@@ -71,13 +79,12 @@ class EncuentrosPorNivelTest {
         var bajo = new DefinicionEnemigo("bajo_externo", "Bajo externo", "", 1, 0, 1, 0, 0, 1, 5, 1);
         var medio = new DefinicionEnemigo("medio_externo", "Medio externo", "", 1, 0, 1, 0, 0, 1, 15, 3);
         RepositorioEnemigos repo = () -> List.of(alto, bajo, medio);
-        List<DefinicionEnemigo> esperados = nivel < 3 ? List.of(bajo)
-                : nivel < 5 ? List.of(bajo, medio) : List.of(alto, bajo, medio);
+        List<DefinicionEnemigo> esperados = List.of(alto, bajo, medio);
         comprobarSeleccion(repo, nivel, esperados);
     }
 
     @Test
-    void subirDeNivelDesbloqueaElSiguienteEncuentroSinRecargarElRepositorio() {
+    void subirDeNivelNoRecargaNiCambiaLosElegiblesDeLaMismaPlanta() {
         var inicial = new DefinicionEnemigo("inicial", "Inicial externo", "", 1, 0, 1, 0, 0, 1, 50, 1);
         var avanzado = new DefinicionEnemigo("avanzado", "Avanzado externo", "", 1, 0, 1, 0, 0, 1, 15, 3);
         var bloqueado = new DefinicionEnemigo("bloqueado", "Bloqueado externo", "", 1, 0, 1, 0, 0, 1, 20, 4);
@@ -85,13 +92,20 @@ class EncuentrosPorNivelTest {
         RepositorioEnemigos repo = () -> { lecturas[0]++; return List.of(inicial, avanzado, bloqueado); };
         Random azar = new Random(0) {
             public int nextInt(int limite) {
-                assertEquals(selecciones[0] == 0 ? 1 : 2, limite);
+                assertEquals(3, limite);
                 return selecciones[0]++;
             }
         };
         Jugador j = jugador(1);
-        assertFalse(app.jugarAventura(j, new Scanner("1\n5\n5\n5\n5\n2\n3\n1\n2\n0\n"), salida(),
-                () -> { assertTrue(++dados[0] <= 12); return 4; }, sinBotin(), repo, azar));
+        assertFalse(app.jugarAventura(j, new Scanner("3\n1\n5\n5\n5\n5\n2\n3\n1\n2\n0\n"), salida(),
+                () -> { assertTrue(++dados[0] <= 12); return 4; }, sinBotin(), repo, azar,
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(1, lecturas[0]);
         assertEquals(2, selecciones[0]);
         assertEquals(12, dados[0]);
@@ -109,14 +123,21 @@ class EncuentrosPorNivelTest {
     @ValueSource(booleans = {false, true})
     void vacioOSinElegiblesNoConsumeEntradaDadosAzarNiConcedeRecompensas(boolean vacio) {
         RepositorioEnemigos repo = () -> vacio ? List.of()
-                : List.of(new DefinicionEnemigo("alto", "Alto", "", 1, 0, 1, 0, 0, 1, 15, 3));
-        Scanner entrada = new Scanner("pendiente\n");
+                : List.of(new DefinicionEnemigo("alto", "Alto", "", 1, 0, 1, 0, 0, 1, 15, 3, 2, false));
+        Scanner entrada = new Scanner(vacio ? "pendiente\n" : "3\n0\npendiente\n");
         Random prohibido = new Random(0) {
             public int nextInt(int limite) { fail("No hay tiradas sin enemigos elegibles"); return 0; }
         };
         Jugador j = jugador(1);
-        assertTrue(app.jugarAventura(j, entrada, salida(), () -> { fail("No hay combate"); return 1; },
-                prohibido, repo, prohibido));
+        assertEquals(vacio, app.jugarAventura(j, entrada, salida(), () -> { fail("No hay combate"); return 1; },
+                prohibido, repo, prohibido,
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals("pendiente", entrada.nextLine());
         assertEquals(15, j.getOro());
         assertEquals(0, j.getExperiencia());
@@ -124,21 +145,30 @@ class EncuentrosPorNivelTest {
         assertTrue(j.getInventarioEquipo().isEmpty());
         assertTrue(j.getInventarioPociones().isEmpty());
         assertFalse(bytes.toString(StandardCharsets.UTF_8).contains("Comienza el combate"));
-        assertTrue(bytes.toString(StandardCharsets.UTF_8).contains(vacio ? "No hay enemigos disponibles" : "No hay enemigos elegibles"));
+        assertTrue(bytes.toString(StandardCharsets.UTF_8).contains(vacio ? "No hay enemigos disponibles" : "No hay enemigos disponibles para ese encuentro"));
     }
 
     @ParameterizedTest
     @ValueSource(ints = {4, 5, 6})
     void variantesConcedenLaExpDeSusDatosConOroYOfertasExistentes(int indice) {
-        var definicion = new RepositorioEnemigosMemoria().obtenerTodos().get(indice);
+        var dato = new RepositorioEnemigosMemoria().obtenerTodos().get(indice);
+        var definicion = new DefinicionEnemigo(dato.id(), dato.nombre(), dato.descripcion(), dato.fuerza(),
+                dato.resistencia(), dato.iniciativa(), dato.agilidad(), dato.velocidad(), dato.vidaMaxima(), dato.experiencia(), dato.nivel());
         Jugador j = jugador(definicion.nivel());
         // Observador de prueba para finalizar sin acoplar la entrega de recompensas a dados concretos.
         j.aprenderHabilidad(new Habilidad("Victoria de prueba") {
             public void alInicioCombate(Combatiente p, Combatiente o, EstadoHabilidad e) { o.setVida(0); }
         }, 1);
-        assertFalse(app.jugarAventura(j, new Scanner("2\n0\n"), salida(),
+        assertFalse(app.jugarAventura(j, new Scanner("3\n2\n0\n"), salida(),
                 () -> { fail("Muerto antes de los turnos"); return 1; }, sinBotin(),
-                () -> List.of(definicion), new Random(0)));
+                () -> List.of(definicion), new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(definicion.experiencia(), j.getExperiencia());
         assertEquals(20, j.getOro());
         assertTrue(bytes.toString(StandardCharsets.UTF_8).contains("EXP obtenida: +" + definicion.experiencia()));

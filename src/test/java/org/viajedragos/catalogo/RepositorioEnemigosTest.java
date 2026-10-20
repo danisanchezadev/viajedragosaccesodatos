@@ -20,15 +20,21 @@ class RepositorioEnemigosTest {
     void catalogoContieneExactamenteLasDefinicionesAutorizadasEnOrdenEstable() {
         var repositorio = new RepositorioEnemigosMemoria();
         var catalogo = repositorio.obtenerTodos();
-        assertEquals(List.of(
-                new DefinicionEnemigo("lobo", "Lobo", "", 5, 2, 2, 1, 2, 18, 10),
-                new DefinicionEnemigo("goblin", "Goblin", "", 3, 1, 2, 2, 3, 12, 5),
-                new DefinicionEnemigo("bandido", "Bandido", "", 4, 1, 2, 1, 2, 14, 7),
-                new DefinicionEnemigo("esqueleto", "Esqueleto", "", 3, 2, 1, 1, 1, 14, 6),
-                new DefinicionEnemigo("goblin_guerrero", "Goblin guerrero", "", 5, 2, 3, 2, 3, 20, 15, 3),
-                new DefinicionEnemigo("esqueleto_veterano", "Esqueleto veterano", "", 6, 3, 2, 2, 2, 24, 20, 4),
-                new DefinicionEnemigo("bandido_elite", "Bandido de élite", "", 7, 3, 3, 2, 3, 28, 25, 5)), catalogo);
-        assertEquals(7, catalogo.stream().map(DefinicionEnemigo::id).distinct().count());
+        assertEquals(25, catalogo.size());
+        assertEquals(List.of("rata_cavernaria", "murcielago", "esqueleto", "slime", "goblin",
+                "soldado_corrupto", "arquero_espectral", "sabueso", "armadura_animada", "capitan_barracones",
+                "momia", "arana_cripta", "espectro", "necrofago", "sacerdote_oscuro",
+                "golem_hierro", "salamandra", "herrero_maldito", "centinela_igneo", "demonio_forja",
+                "caballero_abisal", "sombra_ancestral", "bestia_vacio", "hechicero_abisal", "guardian_abismo"),
+                catalogo.stream().map(DefinicionEnemigo::id).toList());
+        assertEquals(new DefinicionEnemigo("goblin", "Goblin", "", 3, 1, 2, 2, 3, 12, 5), catalogo.get(4));
+        assertEquals(new DefinicionEnemigo("esqueleto", "Esqueleto", "", 3, 2, 1, 1, 1, 14, 6), catalogo.get(2));
+        assertEquals(25, catalogo.stream().map(DefinicionEnemigo::id).distinct().count());
+        for (int planta = 1; planta <= 5; planta++) {
+            int numero = planta;
+            assertEquals(5, catalogo.stream().filter(d -> d.planta() == numero).count());
+        }
+        assertEquals(25, catalogo.stream().map(DefinicionEnemigo::id).distinct().count());
         assertEquals(catalogo, repositorio.obtenerTodos());
         assertThrows(UnsupportedOperationException.class, catalogo::clear);
         assertThrows(UnsupportedOperationException.class, () -> catalogo.set(0, catalogo.get(1)));

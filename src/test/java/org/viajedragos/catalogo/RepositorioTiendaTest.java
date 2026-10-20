@@ -19,9 +19,9 @@ class RepositorioTiendaTest {
         var objetos = new RepositorioObjetosMemoria();
         var tienda = new RepositorioTiendaMemoria(objetos);
         List<ProductoTienda> productos = tienda.obtenerTodos();
-        assertEquals(10, productos.size());
-        assertEquals(10, productos.stream().map(ProductoTienda::id).distinct().count());
-        assertEquals(List.of(5, 10, 12, 20, 8, 8, 10, 8, 10, 10), productos.stream().map(ProductoTienda::precio).toList());
+        assertEquals(24, productos.size());
+        assertEquals(24, productos.stream().map(ProductoTienda::id).distinct().count());
+        assertEquals(List.of(5, 10, 12, 20, 8, 8, 10, 8, 10, 10, 35, 35, 50), productos.subList(0, 13).stream().map(ProductoTienda::precio).toList());
         assertSame(objetos.obtenerPociones().get(0), productos.get(0).pocion());
         assertSame(objetos.obtenerPociones().get(1), productos.get(1).pocion());
         assertSame(objetos.obtenerArmas().get(0), productos.get(2).arma());

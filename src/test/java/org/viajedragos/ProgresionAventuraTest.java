@@ -26,9 +26,16 @@ class ProgresionAventuraTest {
     private boolean jugar(Jugador j, String entrada, int exp, int dadosEsperados) {
         int[] dados = {0};
         boolean resultado = assertTimeoutPreemptively(Duration.ofSeconds(3), () -> app.jugarAventura(j,
-                new Scanner(entrada), salida(), () -> { assertTrue(++dados[0] <= dadosEsperados); return 4; },
+                new Scanner((j.getPuntosPendientes() > 0 ? "" : "3\n") + entrada), salida(), () -> { assertTrue(++dados[0] <= dadosEsperados); return 4; },
                 new Random(0) { public int nextInt(int limite) { assertEquals(100, limite); return 0; } },
-                enemigos(exp), new Random(0)));
+                enemigos(exp), new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(dadosEsperados, dados[0]);
         return resultado;
     }
@@ -149,7 +156,7 @@ class ProgresionAventuraTest {
         assertEquals(22, j.getFuerza());
         assertFalse(jugar(j, "", 20, 0));
         assertEquals(1, j.getPuntosPendientes());
-        assertFalse(jugar(j, "2\n", 20, 4)); // Reparte el restante y llega al turno, sin acción.
+        assertFalse(jugar(j, "2\n3\n", 20, 4)); // Reparte el restante y llega al turno, sin acción.
         assertEquals(0, j.getPuntosPendientes());
         assertEquals(22, j.getFuerza());
         assertEquals(4, j.getResistencia());
@@ -177,10 +184,12 @@ class ProgresionAventuraTest {
             esperas.add(bytes.toString(StandardCharsets.UTF_8));
         });
         var objetos = new RepositorioObjetosMemoria();
-        assertFalse(app.jugarAventura(j, new Scanner("1\nx\n0\n1\n2\n2\n0\n"), salida(), () -> 4,
+        assertFalse(app.jugarAventura(j, new Scanner("3\n1\nx\n0\n1\n2\n2\n0\n"), salida(), () -> 4,
                 new Random(0) { public int nextInt(int limite) { return 99; } }, enemigos(20), new Random(0),
                 objetos, null, ritmo, new Random(0) { public int nextInt(int limite) { return 99; } },
-                new Random(0) { public int nextInt(int limite) { return 99; } }));
+                new Random(0) { public int nextInt(int limite) { return 99; } },
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(7, esperas.size()); // Encuentro, turno, ataque, victoria, oro/EXP, subida y espada.
         assertTrue(esperas.get(5).contains("SUBIDA DE NIVEL"));
         assertTrue(esperas.get(5).stripTrailing().endsWith("┘"), "Panel de subida cerrado antes de esperar");
@@ -191,8 +200,14 @@ class ProgresionAventuraTest {
     @Test
     void nuevaAventuraEmpiezaSinProgresionAnterior() {
         RepositorioEnemigos repo = enemigos(20);
-        app.ejecutar(new Scanner("1\nAventurero\n1\n1\n1\n2\n4\n1\nAventurero\n1\n1\n1\n2\n0\n"), salida(), () -> 4,
-                new Random(0), repo, new Random(0));
+        TextoConsola.ejecutarSesiones(new Scanner("1\nAventurero\n3\n1\n1\n1\n2\n0\n1\nAventurero\n3\n1\n1\n1\n2\n0\n"), entradaSesion -> app.ejecutar(entradaSesion, salida(), () -> 4,
+                new Random(0), repo, new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(2, texto().split("Nivel alcanzado: 2", -1).length - 1);
         assertFalse(texto().contains("Nivel alcanzado: 3"));
     }

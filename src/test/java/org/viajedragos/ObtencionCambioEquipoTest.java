@@ -40,10 +40,17 @@ class ObtencionCambioEquipoTest {
         Random botin = new Random(0) {
             @Override public int nextInt(int limite) { assertEquals(100,limite); return 99; }
         };
-        boolean resultado = app.jugarAventura(j,new Scanner(entrada),consola(),() -> {
+        boolean resultado = app.jugarAventura(j,new Scanner("3\n" + entrada),consola(),() -> {
             assertTrue(usadas[0] < valores.length,"No se permiten dados adicionales");
             return valores[usadas[0]++];
-        },botin,lobos,new Random(0));
+        },botin,lobos,new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento());
         assertEquals(valores.length,usadas[0]);
         return resultado;
     }
@@ -200,8 +207,13 @@ class ObtencionCambioEquipoTest {
             public List<DefinicionPocion> obtenerPociones() { return memoria.obtenerPociones(); }
         };
         int[] tiradas = {1,1,1,1,6,1,6, 1,1,1,1,6,1,6, 1,1,1,1,6,1,6};
-        app.ejecutar(new Scanner("1\nAventurero\n1\n2\n3\n1\n1\n4\n1\nAventurero\n1\n2\n1\n2\n0\n0\n0\n"),consola(),
-                () -> tiradas[inicios[0]++],new Random(0),lobos,new Random(0),repo);
+        TextoConsola.ejecutarSesiones(new Scanner("1\nAventurero\n3\n1\n2\n3\n1\n1\n0\n1\nAventurero\n3\n1\n2\n1\n2\n0\n0\n0\n"), entradaSesion -> app.ejecutar(entradaSesion,consola(),
+                () -> tiradas[inicios[0]++],new Random(0),lobos,new Random(0),repo,
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(tiradas.length,inicios[0]);
         assertEquals(2,consultasObjetos[0]);
         String segunda = texto().substring(texto().lastIndexOf("ENCUENTRO 1"));

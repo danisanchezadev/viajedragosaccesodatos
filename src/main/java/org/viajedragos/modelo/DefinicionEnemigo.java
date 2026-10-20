@@ -4,7 +4,14 @@ import java.util.Objects;
 
 public record DefinicionEnemigo(String id, String nombre, String descripcion,
                                int fuerza, int resistencia, int iniciativa,
-                               int agilidad, int velocidad, int vidaMaxima, int experiencia, int nivel) {
+                               int agilidad, int velocidad, int vidaMaxima, int experiencia, int nivel,
+                               int planta, boolean guardian) {
+    public DefinicionEnemigo(String id, String nombre, String descripcion,
+                             int fuerza, int resistencia, int iniciativa, int agilidad, int velocidad,
+                             int vidaMaxima, int experiencia, int nivel) {
+        this(id, nombre, descripcion, fuerza, resistencia, iniciativa, agilidad, velocidad,
+                vidaMaxima, experiencia, nivel, 1, false);
+    }
     // Compatibilidad con catálogos anteriores: recompensa mínima inicial.
     public DefinicionEnemigo(String id, String nombre, String descripcion,
                              int fuerza, int resistencia, int iniciativa,
@@ -32,6 +39,8 @@ public record DefinicionEnemigo(String id, String nombre, String descripcion,
         }
         if (experiencia <= 0) throw new IllegalArgumentException("La experiencia debe ser positiva");
         if (nivel < 1) throw new IllegalArgumentException("El nivel debe ser al menos 1");
+        Planta.porNumero(planta);
+        if (guardian && planta != 2) throw new IllegalArgumentException("Solo la planta 2 tiene un guardián especial");
     }
 
     public Enemigo crearEnemigo() {

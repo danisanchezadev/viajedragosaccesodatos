@@ -14,13 +14,13 @@ class CatalogoEquipoGeneralTest {
         var objetos = new RepositorioObjetosMemoria();
         var equipos = objetos.obtenerEquipamiento();
         assertEquals(List.of(TipoEquipo.ARMADURA, TipoEquipo.CASCO, TipoEquipo.GUANTES,
-                TipoEquipo.BOTAS, TipoEquipo.ANILLO, TipoEquipo.AMULETO), equipos.stream().map(DefinicionEquipo::tipo).toList());
+                TipoEquipo.BOTAS, TipoEquipo.ANILLO, TipoEquipo.AMULETO, TipoEquipo.ARMADURA), equipos.subList(0, 7).stream().map(DefinicionEquipo::tipo).toList());
         assertEquals(List.of(Map.of(Atributo.RESISTENCIA, 1), Map.of(Atributo.RESISTENCIA, 1),
                 Map.of(Atributo.FUERZA, 1), Map.of(Atributo.AGILIDAD, 1), Map.of(Atributo.INICIATIVA, 1),
-                Map.of(Atributo.VIDA, 2)), equipos.stream().map(DefinicionEquipo::bonificaciones).toList());
+                Map.of(Atributo.VIDA, 2), Map.of(Atributo.RESISTENCIA, 3)), equipos.subList(0, 7).stream().map(DefinicionEquipo::bonificaciones).toList());
         var tienda = new RepositorioTiendaMemoria(objetos);
-        assertEquals(10, tienda.obtenerTodos().size());
-        assertEquals(List.of(5, 10, 12, 20, 8, 8, 10, 8, 10, 10), tienda.obtenerTodos().stream().map(ProductoTienda::precio).toList());
+        assertEquals(24, tienda.obtenerTodos().size());
+        assertEquals(List.of(5, 10, 12, 20, 8, 8, 10, 8, 10, 10, 35, 35, 50), tienda.obtenerTodos().subList(0, 13).stream().map(ProductoTienda::precio).toList());
         for (int i = 0; i < 6; i++) assertSame(equipos.get(i), tienda.obtenerTodos().get(i + 4).equipo());
         assertThrows(UnsupportedOperationException.class, equipos::clear);
         assertThrows(UnsupportedOperationException.class, () -> equipos.getFirst().bonificaciones().clear());
@@ -34,8 +34,8 @@ class CatalogoEquipoGeneralTest {
             public List<DefinicionPocion> obtenerPociones() { return new RepositorioObjetosMemoria().obtenerPociones(); }
         };
         assertTrue(repo.obtenerEquipamiento().isEmpty());
-        assertEquals(4, new RepositorioTiendaMemoria(repo).obtenerTodos().size());
-        assertEquals(10, ConfiguracionRepositorios.tienda(repo.obtenerArmas(), repo.obtenerPociones(),
+        assertEquals(6, new RepositorioTiendaMemoria(repo).obtenerTodos().size());
+        assertEquals(24, ConfiguracionRepositorios.tienda(repo.obtenerArmas(), repo.obtenerPociones(),
                 new RepositorioObjetosMemoria().obtenerEquipamiento()).obtenerTodos().size());
     }
 

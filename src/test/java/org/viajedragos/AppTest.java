@@ -30,14 +30,20 @@ class AppTest {
             return valores[usadas[0]++];
         };
         assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.ejecutar(new Scanner(entrada), new PrintStream(salida, true, StandardCharsets.UTF_8), dados, new Random(0), soloLobo(), new Random(0)));
+                TextoConsola.ejecutarSesiones(new Scanner(entrada), entradaSesion -> app.ejecutar(entradaSesion, new PrintStream(salida, true, StandardCharsets.UTF_8), dados, new Random(0), soloLobo(), new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento())));
         assertEquals(valores.length, usadas[0]);
         return org.viajedragos.TextoConsola.contenido(salida.toString(StandardCharsets.UTF_8));
     }
 
     @Test
     void iniciarAtacarGanarYSalir() {
-        String texto = ejecutar("1\nAventurero\n1\n2\n0\n", 1, 1, 1, 1, 6, 1, 6);
+        String texto = ejecutar("1\nAventurero\n3\n1\n2\n0\n", 1, 1, 1, 1, 6, 1, 6);
         assertTrue(texto.contains("VIAJE A DRAGOS"));
         assertTrue(texto.contains("1. Atacar"));
         assertTrue(texto.contains("Aventurero Lobo PS 48/48 PS 18/18"));
@@ -50,7 +56,7 @@ class AppTest {
 
     @Test
     void entradasInvalidasNoConsumenDadosNiCancelanLaPartida() {
-        String texto = ejecutar("x\n\n1\nAventurero\n0\natacar\n\n 1 \nx\n2\n0\n", 1, 1, 1, 1, 6, 1, 6);
+        String texto = ejecutar("x\n\n1\nAventurero\n3\n0\natacar\n\n 1 \nx\n2\n0\n", 1, 1, 1, 1, 6, 1, 6);
         assertEquals(6, texto.split("Entrada inválida", -1).length - 1);
         assertTrue(texto.contains("Victoria."));
     }
@@ -58,7 +64,7 @@ class AppTest {
     @Test
     void nuevaAventuraCreaPersonajesConTodaSuVida() {
         // El mismo crítico causa 18 PS: con el equilibrio autorizado queda a 30/48.
-        String texto = ejecutar("1\nAventurero\n1\n2\n4\n1\nAventurero\n1\n2\n0\n",
+        String texto = ejecutar("1\nAventurero\n3\n1\n2\n0\n1\nAventurero\n3\n1\n2\n0\n",
                 1, 1, 1, 6, 6, 1, 6, 6, 1, 6,
                 1, 1, 1, 6, 6, 1, 6, 6, 1, 6);
         assertEquals(2, texto.split("Comienza el combate", -1).length - 1);
@@ -66,13 +72,13 @@ class AppTest {
         assertEquals(2, texto.split("Vida final: Aventurero 30/48", -1).length - 1);
         assertEquals(2, texto.split("Victoria\\.", -1).length - 1);
         assertTrue(texto.contains("1. Nueva aventura"));
-        assertTrue(texto.contains("3. Continuar al siguiente encuentro"));
+        assertTrue(texto.contains("3. Explorar"));
     }
 
     @Test
     void derrotaMuestraResultadoSinPedirAccionAlJugadorMuerto() {
         // Los 48 PS requieren dos críticos y dos contraataques antes del golpe letal.
-        String texto = ejecutar("1\nAventurero\n1\n1\n0\n", 1, 1, 1, 6, 6, 1, 6, 1, 6,
+        String texto = ejecutar("1\nAventurero\n3\n1\n1\n0\n", 1, 1, 1, 6, 6, 1, 6, 1, 6,
                 6, 1, 6, 1, 6, 1, 6, 1, 6, 4, 2);
         assertTrue(texto.contains("Derrota."));
         assertTrue(texto.contains("Lobo contraataca a Aventurero y causa 5 puntos de daño"));
@@ -94,7 +100,7 @@ class AppTest {
 
     @Test
     void cierreDeEntradaDuranteCombateNoInventaResultado() {
-        String texto = ejecutar("1\nAventurero\n", 1, 1, 1, 1);
+        String texto = ejecutar("1\nAventurero\n3\n", 1, 1, 1, 1);
         assertTrue(texto.contains("combate queda sin terminar"));
         assertFalse(texto.contains("Victoria."));
         assertFalse(texto.contains("Derrota."));
@@ -102,7 +108,7 @@ class AppTest {
 
     @Test
     void cierreDeEntradaDespuesDeCombateNoReinicia() {
-        String texto = ejecutar("1\nAventurero\n1\n2\n", 1, 1, 1, 1, 6, 1, 6);
+        String texto = ejecutar("1\nAventurero\n3\n1\n2\n", 1, 1, 1, 1, 6, 1, 6);
         assertTrue(texto.contains("Victoria."));
         assertTrue(texto.contains("Entrada finalizada. Hasta pronto."));
     }

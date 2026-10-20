@@ -32,7 +32,7 @@ class NivelesEnemigosTest {
     void crearEnemigoTransmiteNivelExpYEstadisticasSinEscalarlas(int indice) {
         var d = new RepositorioEnemigosMemoria().obtenerTodos().get(indice);
         var e = d.crearEnemigo();
-        assertEquals(indice < 4 ? 1 : indice - 1, e.getNivel());
+        assertEquals(indice < 5 ? 1 : 3, e.getNivel());
         assertEquals(d.nivel(), e.getNivel());
         assertEquals(d.experiencia(), e.getExperiencia());
         assertEquals(d.fuerza(), e.getFuerza());

@@ -25,7 +25,8 @@ Los modelos son records en `org.viajedragos.modelo`:
 
 - `DefinicionEnemigo`: ID, nombre, descripción, fuerza, resistencia, iniciativa,
   agilidad, velocidad, vida máxima, experiencia positiva de recompensa y nivel
-  (entero >= 1). `crearEnemigo()` crea un combatiente nuevo con esos mismos datos;
+  (entero >= 1), planta (1–5) y marca de guardián especial (solo planta 2).
+  `crearEnemigo()` crea un combatiente nuevo con esos mismos datos de combate;
   el repositorio no debe devolver ni conservar enemigos de partida mutables.
 - `DefinicionArma`: ID, nombre y `Map<Atributo, Integer>` de bonificaciones.
   Copia y protege el mapa. `crearArma()` devuelve una instancia nueva, sin habilidades.
@@ -115,7 +116,9 @@ Para objetos o tienda, seguir sus interfaces de la misma forma. Las pruebas
 pequeña 5, grande 10, espada desgastada 12 y espada de hierro 20. Resuelve las
 definiciones recibidas, sin duplicarlas. Añade las seis piezas de memoria si se
 proporcionan entre las adicionales: armadura/casco/botas a 8, guantes/anillo/amuleto
-a 10 monedas. No asigna precios a IDs desconocidos. `RepositorioTiendaMemoria` se ocupa de
+a 10 monedas. También conserva acero 35, forja 50 y armadura reforzada 35, y añade
+las once valoraciones de fase 3 descritas al final: 24 productos en total con el
+catálogo completo. No asigna precios a IDs desconocidos. `RepositorioTiendaMemoria` se ocupa de
 validar, copiar e indexar, sin fijar las ofertas en su lógica de construcción.
 
 Además de los constructores anteriores, admite:
@@ -152,8 +155,8 @@ de conjunto detectan nulos y duplicados. No se descartan silenciosamente registr
 erróneos, ni se sustituyen por objetos o enemigos de respaldo.
 
 - **Enemigos vacíos:** no se inicia la aventura y se vuelve al menú inicial.
-- **Sin enemigos elegibles:** si todos superan el nivel actual del jugador, se
-  informa y se vuelve al inicio sin combate, tiradas, lectura de acciones ni recompensas.
+- **Planta sin encuentros:** se informa y se vuelve a exploración sin combate,
+  tiradas ni recompensas. El nivel del jugador ya no excluye enemigos.
 - **Objetos vacíos o incompletos:** no se inicia. Se necesitan las armas con IDs
   `espada_desgastada` y `espada_hierro` por las recompensas existentes, y exactamente
   una definición para cada tipo de poción (`PEQUENA` y `GRANDE`).
@@ -169,23 +172,68 @@ erróneos, ni se sustituyen por objetos o enemigos de respaldo.
 
 Los IDs de enemigos forman un espacio separado del de objetos. Los productos
 comparten intencionadamente el ID de su objeto; no generan otro identificador.
-Los dos últimos campos de `DefinicionEnemigo` son `int experiencia, int nivel`:
-se cargan desde los datos y se transmiten al enemigo. Los constructores anteriores
-siguen disponibles con nivel 1 y, si no se indica experiencia, 5 EXP por compatibilidad;
-para nuevos orígenes deben usarse ambos campos explícitos.
+Los últimos campos de `DefinicionEnemigo` son `int experiencia, int nivel,
+int planta, boolean guardian`. Experiencia y nivel se transmiten al enemigo;
+planta y guardián se usan en la selección y el progreso de la aventura.
+Los constructores anteriores siguen disponibles con planta 1, `guardian=false`,
+nivel 1 cuando no se indica y 5 EXP cuando no se especifica recompensa.
+Para nuevos orígenes deben usarse los cuatro campos explícitos.
 Los enemigos iniciales tienen 5–10 EXP, pero otros datos pueden proporcionar
 recompensas mayores. El repositorio no calcula subidas de nivel ni entrega puntos:
 la aventura concede la EXP solo ante victoria y Jugador gestiona su progresión.
 
-`RepositorioEnemigos.obtenerTodos()` devuelve el catálogo completo. Al comenzar
-cada encuentro, la aventura filtra `definicion.nivel() <= jugador.getNivel()` y
-sortea uniformemente entre los elegibles, conservando el orden del listado.
-El filtrado se repite después de subir de nivel, sin volver a leer el repositorio.
-Los enemigos inferiores siguen disponibles; no se busca ningún ID concreto ni se
-impone una lista fija en el motor. Un repositorio alternativo puede devolver otros
-niveles, nombres, estadísticas y recompensas. El nivel no calcula ni escala atributos.
-Los cuatro enemigos iniciales son de nivel 1; las variantes predeterminadas se
-desbloquean en niveles 3, 4 y 5. ConfiguracionRepositorios sigue siendo el punto de selección.
+`RepositorioEnemigos.obtenerTodos()` devuelve el catálogo completo. La aventura
+sortea entre `definicion.planta() == plantaActual && !definicion.guardian()`, sin
+filtrar por nivel. Los enemigos pueden superar el nivel del jugador; no se escalan
+atributos. Se toma una instantánea por aventura y cada encuentro crea un enemigo
+independiente. El motor no conoce el repositorio ni las plantas.
+
+Planta debe estar entre 1 y 5. Solo planta 2 admite `guardian=true` y el catálogo
+admite como máximo uno: la opción contextual inicia su encuentro y no aparece en
+el sorteo. La marca, no el nombre, gobierna ese comportamiento. Un catálogo externo
+sin guardián permite combatir pero no completar el descenso de planta 2. No se
+exigen cinco enemigos por planta a un repositorio externo; esa distribución
+pertenece al catálogo predeterminado. IDs nulos/repetidos o campos inválidos
+rechazan el catálogo entero. Los IDs también identifican las especies del progreso.
+`ConfiguracionRepositorios` sigue siendo el punto de selección.
+
+Ejemplo de registro externo, sin persistencia:
+
+```java
+new DefinicionEnemigo("soldado_prueba", "Soldado de prueba", "",
+        6, 3, 3, 2, 3, 24, 15, 3, 2, false);
+```
+
+### Asociaciones de productos a plantas
+
+`RepositorioTienda.obtenerTodos()` sigue siendo el catálogo global y
+`buscarPorId()` conserva su contrato. `obtenerPorPlanta(int)` devuelve un subconjunto
+de esos mismos productos con el mismo precio. Por compatibilidad, su implementación
+predeterminada devuelve todos en cualquier planta válida. Se puede sobrescribir
+en un repositorio externo sin cambiar compras, ventas ni combate.
+
+`paraPlanta(int)` copia y valida las ofertas (sin nulos, IDs duplicados ni productos
+ajenos al catálogo global) y da el repositorio de selección para comprar.
+La aplicación usa siempre el catálogo global para vender, incluso objetos que no
+se compran en la planta actual. No filtrar ese catálogo para valorar ventas.
+La fórmula sigue siendo la división entera `precioCompra / 2`.
+
+En memoria se pueden pasar asociaciones independientes de las definiciones:
+
+```java
+new RepositorioTiendaMemoria(productos, armasCargadas, pocionesCargadas,
+        equiposCargados, Map.of(1, List.of("espada_desgastada"),
+                               3, List.of("espada_desgastada", "espada_hierro")));
+```
+
+Un mapa explícito deja vacías las plantas omitidas. Un mapa vacío conserva la
+compatibilidad de ofrecer el catálogo completo en todas; para cinco tiendas vacías
+con catálogo de valoración, asociar listas vacías a las cinco plantas. Las listas
+y el mapa se copian; planta fuera de 1–5, IDs desconocidos/repetidos o listas nulas
+se rechazan. Los constructores con ofertas explícitas anteriores siguen disponibles.
+El catálogo predeterminado usa asociaciones en `CatalogoTiendaMemoria`, separadas
+de la lógica de compra, y mantiene los precios anteriores. Añade acero FUERZA +3
+por 35, forja FUERZA +4 por 50 y armadura reforzada RESISTENCIA +3 por 35.
 
 ## Añadir equipamiento de cualquier ranura
 
@@ -290,19 +338,106 @@ vidaMaxima y su setter representan la base; consultar getVidaMaxima para el tota
   efecto requeriría otra fase. No se amplía el enum ni el inventario de consumibles.
 - DefinicionArma produce ARMA; DefinicionEquipo admite las siete ranuras actuales,
   sin habilidades desde datos. Las armas construidas con habilidades mediante el
-  API anterior conservan su funcionamiento. No hay niveles ni rarezas de equipo.
-- Las recompensas siguen usando los dos IDs obligatorios; no hay botín de armas
-  genérico ni múltiples tiendas.
+  API anterior conservan su funcionamiento. La calidad se define en los metadatos
+  de botín; no escala automáticamente los atributos de las piezas.
+- Las ofertas fijas siguen usando los dos IDs obligatorios. El botín aleatorio usa
+  metadatos del repositorio de objetos; las cinco tiendas conservan ofertas y valoración global.
 - Las piezas de catálogo conservan el ID para venderse, además de comprobar nombre,
   ranura, bonificaciones originales y ausencia de habilidades adicionales. Dos modelos iguales
   con IDs diferentes se distinguen correctamente. Los constructores antiguos sin
   ID conservan la búsqueda estructural única; no usarlos para contenido nuevo.
 - Los pergaminos y puntos de mejora están implementados solo en la partida, sin
-  cargarse ni guardarse en los repositorios. No hay rarezas, potencias mayores que
-  +1 ni más de tres mejoras por ejemplar. El inventario sigue siendo ilimitado.
+  cargarse ni guardarse en los repositorios. Solo existen las tres calidades de botín,
+  sin potencias mayores que +1 ni más de tres mejoras por ejemplar. El inventario sigue siendo ilimitado.
 - No hay persistencia de jugadores, inventarios, oro o partidas. Los repositorios
   describen contenido; no guardan el estado de una aventura. No hay cierre automático
   de conexiones ni contratos de recursos externos implementados.
+
+## Definiciones de botín de equipamiento
+
+`RepositorioObjetos` incorpora dos métodos predeterminados compatibles:
+
+```java
+List<DefinicionBotinEquipo> obtenerBotinEquipamiento();
+List<DefinicionBotinEquipo> obtenerBotinPorPlanta(int planta, CalidadEquipo calidad);
+```
+
+El primero devuelve metadatos de disponibilidad, no piezas mutables. Por defecto
+devuelve una lista vacía: un repositorio anterior sigue funcionando y avisa de las
+plantas sin botín. El segundo filtra la lista por rango/calidad y devuelve una
+lista no modificable. Para otro origen basta con implementar el primero junto a
+las definiciones normales; no hay otro repositorio ni un inventario paralelo.
+
+Ejemplo mínimo, usando una definición ya cargada en obtenerEquipamiento:
+
+```java
+@Override
+public List<DefinicionBotinEquipo> obtenerBotinEquipamiento() {
+    return List.of(new DefinicionBotinEquipo(cascoYaCargado,
+            CalidadEquipo.MEJORADO, 2, 4));
+}
+```
+
+Los campos son `DefinicionEquipo equipo`, `CalidadEquipo calidad`, planta mínima
+y máxima inclusivas. Para un arma se reutiliza `DefinicionArma.comoEquipo()`, que
+conserva ID y bonificaciones; no copiar estadísticas a otro catálogo. Los valores
+disponibles son BASICO, MEJORADO y SUPERIOR. Se valida rango 1–5 no invertido,
+calidad/equipo no nulos y que MEJORADO no comience antes de planta 2 ni SUPERIOR
+antes de planta 4. Un catálogo puede permitir calidad inferior en plantas profundas.
+
+`RepositorioObjetos.validarBotin` verifica IDs únicos y coincidencia completa con
+las armas/equipo ya cargados. No admite IDs ajenos, estadísticas contradictorias,
+nulos ni registros duplicados. La aventura valida una instantánea al arrancar, sin
+volver a consultar datos durante cada victoria. Catálogos vacíos o sin elegibles
+se avisan sin bloquear el juego y no se sustituyen por objetos de otra planta.
+
+`BotinEquipamiento` contiene las reglas de selección; README documenta la tabla
+PESOS por nivel enemigo (1–12, saturada desde 12), disponibilidad actual y rangos
+MEJORAS por planta. Se elige primero calidad entre las disponibles y luego una
+definición uniforme. El nivel del jugador no interviene. Si hay una sola calidad,
+su selección es obligada; no se desbloquean calidades externas al rango para variar.
+Probabilidad de aparición siempre 20 %. Los cuatro sorteos usan el Random inyectado,
+independiente de dados, pociones y pergaminos. Las sobrecargas completas de app.ejecutar
+y jugarAventura reciben un último `Random azarEquipo`; las entradas anteriores delegan.
+La entrada pública conserva ese generador durante la sesión.
+
+La instancia se crea con `equipo.crearEquipo(mejoras)` y se incorpora con
+`Jugador.agregarEquipo`. No usar el constructor sin número explícito ni crear piezas
+desde el repositorio, pues las mejoras y el estado pertenecen a cada ejemplar.
+La compra y el botín comparten definiciones; las ventas valoran el objeto por la
+definición global original, sin depender de planta, calidad o mejoras aplicadas.
+Una definición externa sin ProductoTienda válido no es vendible: no se inventa precio.
+
+El catálogo de memoria contiene 22 definiciones de equipo: las once anteriores
+intactas y once incorporaciones. Cada ranura tiene básico, mejorado y superior;
+hay dos armas mejoradas. README contiene sus IDs, bonificaciones y precios.
+La disponibilidad se asocia mediante IDs estables, sin depender de índices de listas.
+Los datos se editan en RepositorioObjetosMemoria y la valoración/asociación comercial
+en CatalogoTiendaMemoria; ninguna regla de combate conoce esos IDs.
+
+| Planta | Calidades | Definiciones elegibles |
+|---|---|---:|
+| 1 | Básico | 7 |
+| 2 | Básico / mejorado | 13 |
+| 3 | Mejorado | 8 |
+| 4 | Mejorado / superior | 15 |
+| 5 | Superior | 7 |
+
+Esta distribución es la configuración actual, no otra validación rígida del contrato
+de repositorios: un origen alternativo puede definir otros rangos válidos.
+El catálogo comercial global valora 24 productos (22 piezas y dos pociones).
+`guantes_reforzados` es botín exclusivo: tiene ProductoTienda con precio 24,
+pero no figura en ninguna asociación de compra por planta. Se vende por 12
+desde cualquier planta. No excluir del catálogo global los objetos no comprables:
+las ventas lo necesitan; únicamente las compras usan `paraPlanta`.
+Las demás ofertas y precios figuran en README. No se han cambiado los trece precios
+anteriores ni la división entera para vender; los orígenes externos conservan
+libertad para suministrar otras definiciones, metadatos, productos y asociaciones.
+
+Los datos y pesos son provisionales. [ANALISIS_EQUILIBRIO.md](ANALISIS_EQUILIBRIO.md)
+describe los cálculos, simulaciones y recomendaciones pendientes, separadas de los
+cambios aplicados. Se sustituye el origen mediante ConfiguracionRepositorios;
+los lectores de archivos y bases de datos siguen pendientes.
 
 ## Ejecutar las pruebas
 

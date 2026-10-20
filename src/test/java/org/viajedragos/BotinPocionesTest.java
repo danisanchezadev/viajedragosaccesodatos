@@ -55,7 +55,14 @@ class BotinPocionesTest {
 
     private boolean jugar(Jugador j, String entrada, Dados dados, AzarBotin azar) {
         boolean volver = assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
-                app.jugarAventura(j, new Scanner(entrada), consola(), dados, azar, soloLobo(), new Random(0)));
+                app.jugarAventura(j, new Scanner("3\n" + entrada), consola(), dados, azar, soloLobo(), new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         dados.comprobarConsumo();
         return volver;
     }
@@ -213,8 +220,13 @@ class BotinPocionesTest {
     void unaSesionConDosAventurasComparteElGeneradorDeBotinSinReiniciarlo() {
         AzarBotin azar = new AzarBotin(0, 99, 99, 0);
         Dados dados = new Dados(VICTORIA, VICTORIA);
-        assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.ejecutar(
-                new Scanner("1\nAventurero\n1\n2\n4\n1\nAventurero\n1\n2\n0\n"), consola(), dados, azar, soloLobo(), new Random(0)));
+        assertTimeoutPreemptively(Duration.ofSeconds(2), () -> TextoConsola.ejecutarSesiones(new Scanner("1\nAventurero\n3\n1\n2\n0\n1\nAventurero\n3\n1\n2\n0\n"), entradaSesion -> app.ejecutar(entradaSesion, consola(), dados, azar, soloLobo(), new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento())));
         dados.comprobarConsumo();
         azar.comprobarConsumo();
         String primera = texto().substring(0, texto().lastIndexOf("ENCUENTRO 1"));
@@ -232,7 +244,7 @@ class BotinPocionesTest {
         AzarBotin azar = new AzarBotin(0, 0, 99, 99);
         Dados previos = morir ? new Dados(VICTORIA_CON_VIDA_6, ENEMIGO_PRIMERO_LETAL)
                 : new Dados(VICTORIA_CON_VIDA_6);
-        assertTrue(jugar(anterior, morir ? "1\n2\n3\n" : "1\n2\n4\n", previos, azar));
+        assertEquals(morir, jugar(anterior, morir ? "1\n2\n3\n" : "1\n2\n0\n", previos, azar));
 
         // Igual que ejecutar: al volver al inicio, la siguiente aventura construye otro jugador.
         Jugador nuevo = jugador();
@@ -274,7 +286,7 @@ class BotinPocionesTest {
         assertEquals(1, veces("Botín: Poción pequeña (+1)."));
         assertEquals(1, veces("Botín: Poción grande (+1)."));
         assertEquals(1, veces("Comienza el combate"));
-        assertFalse(texto().contains("3. Continuar al siguiente encuentro"));
+        assertEquals(1, texto().split("3. Explorar", -1).length - 1);
     }
 
     private static class AzarBotin extends Random {

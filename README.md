@@ -10,33 +10,152 @@ Requiere JDK 23 y Maven. No utiliza persistencia ni servicios externos.
 3. Abre `src/main/java/org/viajedragos/app.java` y ejecuta su método `main`.
 4. En el menú inicial escribe `1` e introduce el nombre del personaje (1–30 caracteres).
    Se recortan los espacios exteriores; `0` cancela y vuelve al menú inicial.
-5. Cuando llegue la acción de tu personaje, escribe `1` para atacar, `2` para
+5. La aventura comienza en exploración, en **planta 1 — El vestíbulo**. Escribe
+   `3` para explorar y encontrar un enemigo de esa planta.
+6. Cuando llegue la acción de tu personaje, escribe `1` para atacar, `2` para
    utilizar una poción que hayas obtenido en encuentros anteriores o `3` para huir.
-6. Tras la primera victoria, encontrarás la **Espada desgastada**: `1` la equipa
+7. Tras la primera victoria, encontrarás la **Espada desgastada**: `1` la equipa
    y `2` la rechaza definitivamente. Aporta **Fuerza +1** y ninguna habilidad.
-7. Después del botín y de la oferta de espada aparece el menú de exploración:
-   `1` revisa el inventario, `2` permite usar una poción, `3` continúa al siguiente
-   encuentro, `4` termina la aventura y vuelve al inicio, `5` abre la tienda y `0` sale del juego.
-8. Tras la segunda victoria real se ofrece la **Espada de hierro**, FUERZA +2:
+8. Exploración ofrece `1` Menú de personaje, `2` Cambiar de planta, `3` Explorar,
+   `4` Tienda, `5` Guardar y `0` Salir del juego. Guardar solo informa de que no
+   está implementado y vuelve a exploración. Los consumibles y pergaminos siguen
+   accesibles en Menú de personaje → Inventario; no se guarda ningún archivo.
+9. Tras la segunda victoria real se ofrece la **Espada de hierro**, FUERZA +2:
    `1` la guarda y `2` la deja atrás. Para equiparla, entra en inventario y elige
    `2. Cambiar equipamiento`, selecciona ranura/pieza y confirma con `1`.
 
 El menú inicial ofrece `[1] Nueva aventura`, `[2] Velocidad de narración` y `[0] Salir del juego`. Cada aventura crea un
 Aventurero con 48/48 de vida, sin habilidades ni equipamiento. Cada encuentro crea
-un enemigo nuevo del catálogo elegible por nivel, sin escalado automático de atributos ni límite de
+un enemigo nuevo del catálogo de la planta, sin filtro por nivel del jugador,
+sin escalado automático de atributos ni límite de
 encuentros. Al continuar se conserva la vida restante del Aventurero, salvo los
 incrementos de una subida de nivel; no hay curación automática por continuar. La espada fija se ofrece
 después de la primera victoria real y no vuelve a ofrecerse durante esa aventura,
 aunque se rechace. Huir no cuenta como victoria. Además, cada
 enemigo derrotado definitivamente puede dejar pociones. El Aventurero empieza con
-15 monedas y recibe 5 por cada victoria definitiva; huir o perder no concede oro.
+15 monedas y recibe 5/8/15/24/35 por victoria definitiva según la planta 1–5
+del enemigo derrotado; huir o perder no concede oro. El Capitán recibe 8.
+
+## Botín aleatorio de equipamiento
+
+Cada victoria definitiva, incluido el Capitán de barracones, realiza **una tirada
+independiente del 20 %** (`nextInt(100) < 20`). Puede conceder como máximo una pieza
+aleatoria, además de las ofertas fijas y demás recompensas existentes. Huir, perder,
+morir ambos o interrumpir el combate no consulta ese generador. La victoria se
+procesa una sola vez; abrir menús o volver a mostrar datos no repite el botín.
+
+El catálogo contiene **22 definiciones de equipo**: conserva las 11 anteriores,
+sin modificar sus atributos ni precios, y añade 11. Cada ranura tiene las tres calidades:
+
+| Calidad | Definiciones | Plantas de botín |
+|---|---|---|
+| Básico | Espada desgastada; Armadura/Casco/Guantes de cuero; Botas ligeras; Anillo sencillo; Amuleto sencillo | 1–2 |
+| Mejorado | Espada de hierro | 2–4 |
+| Mejorado | Espada de acero; Armadura reforzada | 3–4 |
+| Mejorado | Casco de hierro; Guantes reforzados; Botas de marcha; Anillo de vigilancia; Amuleto de vigor | 2–4 |
+| Superior | Espada de la forja | 4–5 |
+| Superior | Armadura de acero; Casco de acero; Guantes de acero; Botas veloces; Anillo de reflejos; Amuleto vital | 4–5 |
+
+| Tipo | Básico | Mejorado | Superior |
+|---|---|---|---|
+| Arma | Espada desgastada | Espada de hierro / de acero | Espada de la forja |
+| Armadura | Armadura de cuero | Armadura reforzada | Armadura de acero |
+| Casco | Casco de cuero | Casco de hierro | Casco de acero |
+| Guantes | Guantes de cuero | Guantes reforzados | Guantes de acero |
+| Botas | Botas ligeras | Botas de marcha | Botas veloces |
+| Anillo | Anillo sencillo | Anillo de vigilancia | Anillo de reflejos |
+| Amuleto | Amuleto sencillo | Amuleto de vigor | Amuleto vital |
+
+Bonificaciones y valoraciones nuevas, provisionales y centralizadas en los catálogos:
+
+| ID | Bonificaciones | Compra de referencia | Venta |
+|---|---|---:|---:|
+| casco_hierro | RESISTENCIA +2 | 20 | 10 |
+| guantes_reforzados | FUERZA +2 | 24 (solo botín) | 12 |
+| botas_marcha | AGILIDAD +1, VELOCIDAD +1 | 22 | 11 |
+| anillo_vigilancia | INICIATIVA +2 | 24 | 12 |
+| amuleto_vigor | VIDA máxima +6 | 25 | 12 |
+| armadura_acero | RESISTENCIA +4 | 50 | 25 |
+| casco_acero | RESISTENCIA +3 | 40 | 20 |
+| guantes_acero | FUERZA +3 | 45 | 22 |
+| botas_veloces | AGILIDAD +2, VELOCIDAD +2 | 45 | 22 |
+| anillo_reflejos | INICIATIVA +3 | 45 | 22 |
+| amuleto_vital | VIDA máxima +10 | 50 | 25 |
+
+VIDA aumenta únicamente el máximo: equipar no cura. Los Guantes reforzados no se
+compran en ninguna planta, pero su valoración global permite venderlos en todas.
+No hay habilidades nuevas ni cambios en pergaminos, mejoras o fórmulas.
+El [análisis de equilibrio](ANALISIS_EQUILIBRIO.md) recoge perfiles, comparaciones
+antes/después, expediciones con desgaste, costes y limitaciones. Distingue los
+ajustes aplicados en fase 4 de las comprobaciones manuales todavía pendientes.
+
+Los siete tipos tienen oportunidades reales de aparición desde planta 1.
+`DefinicionBotinEquipo` enlaza una `DefinicionEquipo` existente con calidad y rango;
+no duplica estadísticas. `RepositorioObjetos` proporciona esos metadatos y una
+consulta por planta/calidad. El arranque valida IDs únicos y definiciones coincidentes.
+Datos inválidos rechazan el catálogo; plantas sin botín se avisan una vez sin bloquear
+los combates. Una tirada favorable sin definiciones elegibles no entrega sustitutos.
+
+`BotinEquipamiento` ejecuta por separado aparición, calidad ponderada, definición
+uniforme dentro de esa calidad y mejoras disponibles. Solo participan calidades
+con definiciones elegibles para la planta. Esta tabla centralizada contiene pesos,
+no porcentajes: se normalizan entre las calidades que estén disponibles.
+
+| Nivel enemigo | Básico | Mejorado | Superior |
+|---:|---:|---:|---:|
+| 1 | 10 | 2 | 1 |
+| 2 | 10 | 3 | 2 |
+| 3 | 10 | 4 | 3 |
+| 4 | 10 | 5 | 4 |
+| 5 | 10 | 6 | 5 |
+| 6 | 10 | 7 | 6 |
+| 7 | 10 | 8 | 7 |
+| 8 | 10 | 9 | 8 |
+| 9 | 10 | 10 | 9 |
+| 10 | 10 | 11 | 10 |
+| 11 | 10 | 12 | 11 |
+| 12 o más | 10 | 13 | 12 |
+
+Por ejemplo, en planta 2 la calidad mejorada pasa de 4/14 con enemigo de nivel 3
+a 5/15 con nivel 4. En planta 4 la superior pasa de 8/17 en nivel 8 a 9/19 en nivel 9.
+La aparición sigue siendo siempre 20 %. Un nivel alto no habilita calidad superior
+antes de planta 4 ni utiliza el nivel del jugador. Si solo hay una calidad disponible,
+no hay otra que ponderar: actualmente ocurre en plantas 1, 3 y 5. Planta 5 tiene
+siete definiciones superiores, una por ranura. Los conjuntos elegibles son 7, 13,
+8, 15 y 7 piezas respectivamente; las calidades son B, B/M, M, M/S y S.
+
+| Planta | Mejoras disponibles, uniformes e inclusivas |
+|---|---|
+| 1 | 0–1 |
+| 2 | 0–2 |
+| 3 | 1–2 |
+| 4 | 1–3 |
+| 5 | 2–3 |
+
+Se usa `crearEquipo(int mejoras)`, sin un segundo sorteo del constructor. Cada
+pieza conserva ID/nombre/tipo/bonos y tiene estado independiente. Las mejoras no
+se aplican ni consumen pergaminos al recibirla. `Jugador.agregarEquipo` la guarda
+sin equipar, sustituir ranuras ni agrupar nombres iguales. El panel RECOMPENSAS
+incluye su tipo, nombre, bonos y mejoras, aprovechando la pausa ya existente.
+Inventario, inspección, mejoras, equipar/desequipar y venta siguen sus flujos actuales.
+
+La venta usa el catálogo global de tienda y `precioCompra / 2`, incluso en otra
+planta o después de mejorar la pieza. Todos los objetos de botín actuales ya tienen
+valoración; no se han añadido precios ni ofertas comerciales. Un objeto externo
+sin valoración válida puede obtenerse y usarse, pero no venderse.
+
+El azar de equipo es un `Random` independiente, creado una vez por sesión y
+reutilizado entre aventuras/encuentros; las sobrecargas completas permiten inyectarlo.
+Las firmas anteriores siguen disponibles. Las pruebas antiguas proporcionan un
+generador que falla la aparición, conservando sus aserciones sin botín inesperado;
+las nuevas controlan cada sorteo. No se añaden archivos de datos ni persistencia.
 
 ## Experiencia y subida de nivel
 
 El Aventurero empieza en nivel 1, con 0 EXP y sin puntos pendientes. Cada victoria
 definitiva concede la EXP definida en los datos del enemigo, además de las cinco
-monedas, el botín y las ofertas de armas existentes. El catálogo inicial concede:
-Goblin 5, Esqueleto 6, Bandido 7 y Lobo 10 EXP. Sus estadísticas no cambian.
+monedas, el botín y las ofertas de armas existentes. En planta 1, Rata cavernaria,
+Murciélago, Slime y Goblin conceden 5 EXP; Esqueleto concede 6 EXP.
 Derrotas, muerte simultánea, huidas o combates interrumpidos no conceden EXP.
 
 Para alcanzar el nivel 2 se necesitan 20 EXP; desde el 2 al 3 otras 30; desde el
@@ -126,7 +245,12 @@ El saldo pertenece al mismo Jugador durante toda la aventura. `getOro`,
 las cantidades deben ser positivas, el gasto insuficiente falla y el desbordamiento
 al sumar se rechaza. Una aventura nueva comienza con 15 monedas, sin pertenencias.
 
-La opción `[5] Tienda` conserva las opciones anteriores de exploración. Su menú
+`Planta.oroVictoria()` centraliza 5/8/15/24/35 monedas para plantas 1–5.
+El panel de recompensas muestra el importe realmente sumado; no depende del nivel
+del jugador. La victoria definitiva se procesa una sola vez, incluido el Capitán.
+Los precios de las 22 piezas y dos pociones, las ventas y el botín no cambian.
+
+La opción `[4] Tienda` abre la tienda de la planta actual. Su menú
 ofrece `[1] Comprar objetos`, `[2] Vender objetos` y `[0] Volver a exploración`.
 El oro se consulta directamente en Jugador y aparece en tienda, compra, venta y
 confirmación; se actualiza inmediatamente tras cada operación. No hay stock limitado
@@ -144,6 +268,9 @@ ni pausas narrativas en estos menús.
 | Botas ligeras | 8 | 4 |
 | Anillo sencillo | 10 | 5 |
 | Amuleto sencillo | 10 | 5 |
+| Armadura reforzada | 35 | 17 |
+| Espada de acero | 35 | 17 |
+| Espada de la forja | 50 | 25 |
 
 `ProductoTienda` enlaza una definición existente con su precio; su identificador
 y nombre proceden de esa definición. `RepositorioTienda` permite listar y buscar
@@ -195,54 +322,118 @@ del catálogo de objetos, sin exigir las cuatro ofertas predeterminadas. Una tie
 vacía es válida; registros nulos, duplicados, desconocidos o incoherentes impiden
 iniciar la aventura. Los datos predeterminados permanecen intactos.
 
-## Catálogo de enemigos
+## Plantas, encuentros y enemigos
 
-Cada encuentro, incluido el primero, selecciona uniformemente una definición
-cuyo nivel sea menor o igual que el del jugador. Los inferiores siguen disponibles
-y se permiten repeticiones consecutivas. En niveles 1 y 2 participan los cuatro
-iniciales (25 % cada uno); en nivel 3 hay cinco elegibles, en nivel 4 seis y desde
-nivel 5 los siete actuales. No se escalan sus atributos automáticamente.
+La aventura empieza en exploración, en planta 1. Solo `[3] Explorar` inicia un
+encuentro normal: selección uniforme entre las definiciones de la planta actual,
+excluyendo guardianes especiales. No se filtra por nivel del jugador. `[6] Enfrentarse
+al guardián` aparece únicamente en planta 2 mientras no haya sido derrotado.
 
-| Enemigo | Nivel | Fuerza | Resistencia | Iniciativa | Agilidad | Velocidad | Vida | EXP |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Lobo | 1 | 5 | 2 | 2 | 1 | 2 | 18 | 10 |
-| Goblin | 1 | 3 | 1 | 2 | 2 | 3 | 12 | 5 |
-| Bandido | 1 | 4 | 1 | 2 | 1 | 2 | 14 | 7 |
-| Esqueleto | 1 | 3 | 2 | 1 | 1 | 1 | 14 | 6 |
-| Goblin guerrero | 3 | 5 | 2 | 3 | 2 | 3 | 20 | 15 |
-| Esqueleto veterano | 4 | 6 | 3 | 2 | 2 | 2 | 24 | 20 |
-| Bandido de élite | 5 | 7 | 3 | 3 | 2 | 3 | 28 | 25 |
+`Planta` define ID estable, número, nombre y descripción. `ProgresoAventura` guarda
+ubicación, desbloqueos, victorias, IDs de especies, guardián y fragmentos, solo en
+memoria y por aventura. Los desbloqueos se conservan al subir y bajar. No hay saltos:
+`[2] Cambiar de planta` permite subir una, bajar una o cancelar. Desde planta 1 no
+se sube y desde planta 5 no se baja: «Todavía no se han desarrollado más plantas».
 
-`RepositorioEnemigos.obtenerTodos()` devuelve `List<DefinicionEnemigo>` y no
-selecciona enemigos. `RepositorioEnemigosMemoria` contiene una lista inmutable
-de orden estable. El record DefinicionEnemigo guarda identificador, nombre,
-descripción, cinco atributos, vida máxima, EXP y nivel; crearEnemigo construye una instancia
-nueva con vida completa, mapas independientes y sin habilidades ni equipo.
+El panel de exploración muestra el progreso compacto: victorias 0–3/3, guardián
+pendiente/derrotado, especies 0–3/3, fragmentos 0–3/3 o última planta disponible.
+Consulta el mismo `ProgresoAventura`, sin pausas. La victoria que cumple un requisito
+anuncia la siguiente planta en RECOMPENSAS una sola vez, sin descender. Las visitas
+posteriores y victorias adicionales no repiten el aviso.
 
-La aventura carga una instantánea del catálogo una vez. La selección reside en
-app y utiliza un Random de encuentros independiente, conservado durante toda la
-sesión. No utiliza el Random de botín ni TiradorDado. Catálogos vacíos, entradas
-nulas, identificadores duplicados o definiciones inválidas impiden iniciar la
-aventura con un mensaje; no se inventa un enemigo de respaldo. Si no hay elegibles
-para el nivel actual, se informa y se vuelve al inicio sin tirar dados ni consumir
-acciones o conceder recompensas. El filtrado usa el nivel actualizado en cada
-encuentro, sin recargar el catálogo. El panel inicial muestra el nombre y nivel del enemigo.
+| Planta | Ubicación | Requisito para descender |
+|---|---|---|
+| 1 | El vestíbulo | Tres victorias; las especies pueden repetirse |
+| 2 | Los barracones | Derrotar al Capitán de barracones |
+| 3 | Las criptas | Tres IDs de especie diferentes |
+| 4 | La forja olvidada | Tres fragmentos: uno por victoria, máximo tres |
+| 5 | El abismo | No existe una sexta planta |
 
-Los constructores anteriores de DefinicionEnemigo y Enemigo se mantienen con nivel
-1. Los orígenes nuevos deben proporcionar `experiencia, nivel` explícitamente;
-nivel < 1 se rechaza. No cambian ConfiguracionRepositorios ni el contrato del repositorio.
+Solo la victoria definitiva registra progreso; huida, derrota o muerte simultánea
+no cuentan. El número de encuentro impide repetir un registro. Los fragmentos son
+progreso, no objetos. Encuentros normales y guardián comparten el bloque original
+de oro, EXP, pergaminos y pociones, así como las ofertas únicas en victorias 1 y 2.
+No cambian probabilidades ni reglas del motor de combate.
 
-Equilibrio de variantes: 18.000 combates de prueba con semillas fijas, al nivel
-mínimo de desbloqueo, vida completa, puntos en fuerza/resistencia/velocidad y
-arma +0/+2. Todas las muestras terminan en victoria sin pociones; medias entre
-2,128 y 3,222 turnos. Esto no garantiza supervivencia empezando herido. La simulación
-histórica de los cuatro iniciales conserva sus resultados y comprobaciones.
+El catálogo en memoria contiene exactamente estas 25 definiciones; Goblin y
+Esqueleto conservan sus datos. Cada fila indica FUERZA/RESISTENCIA/INICIATIVA/
+AGILIDAD/VELOCIDAD; los números son provisionales y están en el repositorio.
 
-Para sustituir el origen, otro desarrollador implementa RepositorioEnemigos y
-conecta su instancia mediante la sobrecarga pública de app.ejecutar que recibe
-entrada, salida, dados, azar de botín, repositorio y azar de encuentros. No necesita
-cambiar Combate ni la selección. Las firmas anteriores delegan en memoria.
-No hay lectura de archivos, JDBC, JPA, frameworks ni persistencia en esta versión.
+| Planta | ID | Enemigo | Nivel | F/R/I/A/V | PS | EXP |
+|---|---|---|---:|---|---:|---:|
+| 1 | rata_cavernaria | Rata cavernaria | 1 | 2/0/2/1/2 | 10 | 5 |
+| 1 | murcielago | Murciélago | 1 | 2/0/3/2/3 | 10 | 5 |
+| 1 | esqueleto | Esqueleto | 1 | 3/2/1/1/1 | 14 | 6 |
+| 1 | slime | Slime | 1 | 2/1/1/0/1 | 12 | 5 |
+| 1 | goblin | Goblin | 1 | 3/1/2/2/3 | 12 | 5 |
+| 2 | soldado_corrupto | Soldado corrupto | 3 | 6/3/3/2/3 | 24 | 15 |
+| 2 | arquero_espectral | Arquero espectral | 3 | 6/2/4/3/4 | 22 | 15 |
+| 2 | sabueso | Sabueso | 3 | 6/2/4/3/4 | 22 | 15 |
+| 2 | armadura_animada | Armadura animada | 4 | 6/4/2/1/2 | 28 | 18 |
+| 2 | capitan_barracones | Capitán de barracones | 4 | 11/7/5/5/3 | 35 | 25 |
+| 3 | momia | Momia | 5 | 18/9/4/6/2 | 32 | 18 |
+| 3 | arana_cripta | Araña de cripta | 5 | 18/8/6/7/5 | 28 | 18 |
+| 3 | espectro | Espectro | 6 | 19/9/6/7/4 | 30 | 20 |
+| 3 | necrofago | Necrófago | 6 | 20/10/5/6/3 | 34 | 22 |
+| 3 | sacerdote_oscuro | Sacerdote oscuro | 6 | 20/9/6/7/4 | 38 | 24 |
+| 4 | golem_hierro | Gólem de hierro | 8 | 26/14/5/7/2 | 48 | 26 |
+| 4 | salamandra | Salamandra | 8 | 25/12/8/9/5 | 36 | 24 |
+| 4 | herrero_maldito | Herrero maldito | 8 | 26/13/6/8/3 | 42 | 26 |
+| 4 | centinela_igneo | Centinela ígneo | 9 | 27/13/7/9/4 | 44 | 28 |
+| 4 | demonio_forja | Demonio de forja | 9 | 28/14/8/8/4 | 46 | 30 |
+| 5 | caballero_abisal | Caballero abisal | 11 | 32/17/8/11/4 | 54 | 36 |
+| 5 | sombra_ancestral | Sombra ancestral | 11 | 31/16/10/13/6 | 48 | 36 |
+| 5 | bestia_vacio | Bestia del vacío | 12 | 33/17/9/12/5 | 58 | 40 |
+| 5 | hechicero_abisal | Hechicero abisal | 12 | 32/16/10/13/5 | 52 | 40 |
+| 5 | guardian_abismo | Guardián del abismo | 12 | 34/18/10/12/5 | 60 | 45 |
+
+El Guardián del abismo es un encuentro normal en esta fase. Solo el Capitán tiene
+`guardian=true`. Las plantas profundas elevan fuerza, resistencia y PS sin inflar
+los combates mediante habilidades nuevas. Se puede descender con un jugador aún
+débil: entrenar en plantas anteriores sigue siendo útil. No hay escalado dinámico
+ni garantía de sobrevivir sin preparación. La fase 4 ajusta ataque/defensa/iniciativa
+de Capitán y plantas 3–5, conservando sus PS, velocidad y nivel; reduce la EXP
+profunda, sin cambiar la fórmula de subida. El motor interactivo se mide con tres
+perfiles por planta, pociones, habilidades existentes y expediciones. B gana
+78,8 %/73 %/62,6 % de aislados en plantas 3/4/5, pero solo sobrevive 39 %/31 %/14 %
+de cuatro encuentros consecutivos. Contra el Capitán, B de N2 gana 51 %; C puede
+dominar con entrenamiento. No son garantías para cualquier reparto o inventario.
+Las tablas y las semillas están en ANALISIS_EQUILIBRIO.md; falta validación manual
+en IntelliJ, especialmente duración del Capitán y rentabilidad por minuto.
+
+`RepositorioEnemigos.obtenerTodos()` devuelve definiciones inmutables; `app` carga
+una instantánea por aventura. Cada enemigo creado tiene vida completa y estado
+independiente. Los constructores anteriores conservan planta 1 y `guardian=false`;
+los nuevos orígenes deben indicar planta (1–5), guardián, EXP y nivel positivos.
+IDs nulos/repetidos, datos inválidos o varios guardianes especiales rechazan el
+catálogo. Un catálogo vacío impide iniciar; si una planta no tiene enemigos para
+la acción solicitada se avisa y se vuelve a exploración sin tirar dados ni premiar.
+`ConfiguracionRepositorios` sigue seleccionando las implementaciones externas.
+
+### Tiendas por planta
+
+El catálogo global conserva un precio por objeto. `CatalogoTiendaMemoria` asocia
+IDs a cada planta; no duplica definiciones ni la lógica de compra. Todos los
+precios anteriores permanecen iguales. Las dos pociones conservan 8 y 16 PS.
+
+| Planta | Compra disponible |
+|---|---|
+| 1 | Poción pequeña, Espada desgastada, Armadura de cuero, Casco de cuero |
+| 2 | Ambas pociones, Espada de hierro, Guantes de cuero, Botas ligeras, Casco de hierro, Botas de marcha |
+| 3 | Ambas pociones, Espada de acero, Armadura reforzada, Casco de hierro, Botas de marcha, Anillo de vigilancia, Amuleto de vigor |
+| 4 | Ambas pociones, Espada de acero, Armadura reforzada, Botas de marcha, Anillo de vigilancia, Amuleto de vigor, Armadura de acero, Casco de acero |
+| 5 | Ambas pociones, Espada de la forja, Armadura de acero, Casco de acero, Guantes de acero, Botas veloces, Anillo de reflejos, Amuleto vital |
+
+El catálogo global tiene 24 productos: dos pociones y las 22 piezas de equipo.
+Conserva los 13 precios anteriores; solo las 11 incorporaciones tienen precios nuevos.
+Las compras respetan la planta y la venta usa siempre la valoración global,
+también para botín exclusivo o piezas encontradas en otra planta.
+
+`obtenerPorPlanta(int)` amplía RepositorioTienda de forma compatible: sin sobrescribirlo,
+un repositorio anterior ofrece su lista en todas las plantas. `paraPlanta(int)`
+valida una selección sin duplicados ni productos ajenos al catálogo y proporciona
+la selección para comprar. La venta usa siempre el repositorio global y su precio
+entero `precioCompra / 2`, aunque el objeto se adquiriese en otra planta.
 
 ## Catálogo de objetos y equipamiento
 
@@ -327,13 +518,15 @@ del inventario. Cancelar/EOF no confirman ni retiran efectos. La selección para
 equipar conserva las siete ranuras; la lista principal muestra solo piezas poseídas.
 No se añaden pausas en estos menús.
 
-La tienda predeterminada tiene diez productos; conserva los cuatro anteriores y
-añade las seis piezas de la tabla. Pueden comprarse, equiparse, desequiparse y
+El catálogo comercial global tiene 24 productos; conserva los precios de las
+cuatro ofertas iniciales y de las seis piezas básicas de la tabla. Las ofertas
+por planta se detallan arriba. Pueden comprarse, equiparse, desequiparse y
 venderse, incluidas equipadas. La venta usa ID y contenido para no valorar una
-pieza desconocida o modificada como otra definición. No hay botín aleatorio nuevo.
+pieza desconocida o modificada como otra definición. El botín usa las mismas definiciones.
 Los intercambios y ventas reutilizan la recuperación segura de ranuras, atributos,
 vida y estados de habilidades. Los pergaminos y las mejoras individuales se
-describen a continuación; no hay rarezas ni habilidades desde definiciones generales.
+describen a continuación; la calidad pertenece a los metadatos de botín y no se
+conceden habilidades desde las definiciones generales.
 
 ## Pergaminos y mejoras individuales
 
@@ -446,7 +639,7 @@ EOF termina la sesión sin crear un jugador ni consultar catálogos o dados.
 El nombre elegido se conserva entre encuentros. Cada aventura puede usar otro.
 
 Exploración ofrece `[1] Menú de personaje`, que integra estado e inventario.
-Conserva Usar objeto, Continuar, Terminar aventura, Tienda y Salir. El menú general
+Exploración ofrece además Cambiar de planta, Explorar, Tienda, Guardar pendiente y Salir. El menú general
 usa 100 columnas interiores (102 contando bordes); las demás ventanas conservan
 48. Cabecera: nombre, nivel, oro y tiempo de aventura. Vida y EXP comparten fila
 con barras proporcionales; los puntos pendientes aparecen cuando existen. Los seis
@@ -518,7 +711,7 @@ Fuerza 6, resistencia 2, iniciativa 3, agilidad 2 y velocidad 2 permanecen igual
 La fuerza efectiva pasa a 7 únicamente si el jugador acepta la espada. Jugador
 conserva sus reglas de atributos y las fórmulas del motor no cambian; tampoco hay curación automática.
 
-EquilibrioAventuraTest utiliza el motor real, siempre Atacar, cuatro encuentros
+Como regresión histórica, EquilibrioAventuraTest utiliza el motor real con los cuatro enemigos anteriores en un catálogo exclusivo de pruebas, siempre Atacar, cuatro encuentros
 uniformes y espada FUERZA +1 desde el segundo. Sin pociones ni huida. Compara
 10.000 sesiones por candidato, con semillas reproducibles independientes: generadores
 de semillas 20261018 (dados) y 20261019 (encuentros), usando nextLong por sesión.
@@ -621,8 +814,8 @@ y reglas no cambian.
 
 ## Exploración e inventario
 
-El menú de exploración muestra nombre, vida actual/máxima, barra y oro en un panel Unicode.
-Continuar inicia directamente otro combate; no hay tiradas de mazmorra.
+El menú de exploración conserva nombre, vida actual/máxima, barra y oro en un panel Unicode; añade la planta actual.
+Explorar inicia un combate de la planta actual; la aventura comienza en este menú. No hay tiradas de mazmorra.
 
 Menú de personaje → `[2] Inventario` abre un panel con CONSUMIBLES, PERGAMINOS, EQUIPAMIENTO
 y ACCIONES, en ese orden. Muestra solo cantidades positivas y piezas reales.
@@ -681,9 +874,9 @@ de aventura solo aplica esa opción a System.out; una salida arbitraria no recib
 ANSI automáticamente. Las pruebas pueden habilitar/deshabilitar explícitamente
 el booleano de consultarInventario. No se detecta soporte ANSI ni se asume que exista.
 
-**Limitaciones:** solo la Espada de hierro tiene la nueva oferta para guardar.
-La Espada desgastada mantiene su oferta de equipar/rechazar. No hay tiendas,
-cofres, economía, botín aleatorio de equipo, nuevas armaduras ni habilidades.
+Las ofertas fijas se conservan: la Espada de hierro se guarda o rechaza y la
+Espada desgastada se equipa o rechaza. El botín aleatorio se guarda sin equiparse;
+las tiendas y la economía usan los catálogos descritos arriba. No hay cofres.
 
 Usar objeto conserva las opciones fijas `1. Poción pequeña`, `2. Poción grande`
 y `0. Cancelar`, incluso con cantidades cero. Un uso correcto recupera vida sin
@@ -753,8 +946,9 @@ si huyes del encuentro 1 y ganas el 2, entonces aparece su oferta. Aceptarla o
 rechazarla marca la oferta como realizada. Una aventura nueva tiene su propia oferta.
 
 Si muere el Aventurero, incluso si mueren ambos, se muestra el resultado y se
-regresa al menú inicial. Terminar voluntariamente la aventura también descarta
-el personaje junto con su equipo e inventario. Una nueva aventura comienza con
+regresa al menú inicial. `[0] Salir del juego` cierra la sesión y no guarda
+el personaje ni sus pertenencias. `[5] Guardar` solo avisa y mantiene la aventura.
+Una nueva aventura comienza con
 otro Aventurero a 48/48, sin espada ni pociones, y puede conseguir sus propias recompensas.
 
 Cada turno ordena las dos acciones mediante la iniciativa y los dados existentes.
@@ -1057,3 +1251,49 @@ seis habilidades en dos filas, exceso y consulta detallada, nombres largos,
 valores grandes, ancho compacto, ANSI y ausencia de mutaciones.
 `mvn clean test`: BUILD SUCCESS; **1281 pruebas**, 0 fallos, 0 errores y
 0 omitidas; 55 fuentes principales y 75 archivos de pruebas.
+
+Plantas y tiendas por ubicación: conserva los 1281 casos anteriores, adaptando
+entradas al menú inicial de exploración, tienda 4 y catálogo nuevo. Los escenarios
+de aventuras nuevas pasan a sesiones consecutivas al desaparecer la opción de
+terminar voluntariamente; mantienen generadores y comprobaciones de independencia.
+Las regresiones históricas de daño/equilibrio usan datos fijos exclusivos de pruebas.
+Se añaden 44 casos: PlantasTest (16), PlantasConsolaTest (10) y TiendasPorPlantaTest
+(18), incluidos recorrido completo, cuatro desbloqueos, guardián, huidas, muertes,
+EOF, Guardar sin persistencia, compras por planta, venta entre plantas y catálogos
+externos. Las 25 definiciones también se comprueban con el motor real y dados controlados.
+Verificación: `mvn clean test`, BUILD SUCCESS; **1325 pruebas**, 0 fallos, 0 errores
+y 0 omitidas; 57 fuentes principales y 79 archivos de pruebas. `git diff --check`
+sin errores. No se ha comprobado visualmente esta fase en IntelliJ.
+
+Botín aleatorio de equipo: las 1325 pruebas anteriores reciben un azar de equipo
+controlado, conservando sus aserciones. Se añaden 70 casos: BotinEquipamientoTest
+(33) y BotinEquipamientoConsolaTest (37). Cubren los 100 resultados de aparición,
+pesos y límites, siete tipos, rangos de mejoras, independencia de piezas y catálogo,
+repositorios alternativos/vacíos/inválidos, combinaciones con pergaminos y pociones,
+guardián, muerte/resurrección, continuidad, inspección, mejoras, equipamiento y venta.
+`mvn clean test`: BUILD SUCCESS; **1395 pruebas**, 0 fallos, 0 errores y 0 omitidas;
+60 fuentes principales y 81 archivos de pruebas. Sin esperas reales. `git diff --check`
+sin errores. No se ha realizado commit ni push.
+
+Equipamiento, equilibrio y progreso (fase 3): conserva las 1395 pruebas y añade
+53: CatalogoProgresivoTest (35), EquilibrioPlantasTest (6), siete selecciones
+exhaustivas por planta/calidad, independencia completa de dos botines, resumen
+de cinco objetivos, dos recorridos de consola y venta de botín exclusivo.
+Se adaptan únicamente expectativas de tamaño de catálogo, cantidades elegibles
+y presentación; los trece precios y once definiciones previos se comprueban
+explícitamente. No se eliminan casos ni se debilitan aserciones anteriores.
+`mvn clean test`: BUILD SUCCESS; **1448 pruebas**, 0 fallos, 0 errores y 0 omitidas;
+60 fuentes principales y 83 archivos de pruebas. `git diff --check` sin errores.
+Sin esperas reales ni cambios en combate, probabilidades o recompensas. No se ha
+realizado commit ni push. La comprobación visual en IntelliJ sigue pendiente.
+
+Equilibrio de fase 4: conserva las 1448 pruebas y añade 82 (BalanceProgresionTest 10,
+DatosBalanceTest 42, RecompensasPorPlantaTest 30). Incluye tres perfiles por planta,
+comparación del motor interactivo antes/después, expediciones sin restaurar vida,
+consumo/compra real de pociones, habilidades y limpieza, datos fijos de los 25
+enemigos, legalidad del equipo, resultados deterministas y recompensas en las cinco
+plantas. Solo dos casos anteriores adaptan importes/EXP autorizados, conservando
+sus comprobaciones; el recorrido completo verifica cada panel de recompensa.
+`mvn clean test`: BUILD SUCCESS; **1530 pruebas**, 0 fallos, 0 errores y 0 omitidas;
+60 fuentes principales y 88 archivos de pruebas. `git diff --check` sin errores.
+Sin esperas reales, commit ni push. Sigue pendiente la validación manual en IntelliJ.

@@ -10,6 +10,25 @@ import java.util.Optional;
 public interface RepositorioTienda {
     List<ProductoTienda> obtenerTodos();
 
+    /** Compatibilidad: un repositorio sin asociaciones ofrece su catálogo en todas las plantas. */
+    default List<ProductoTienda> obtenerPorPlanta(int planta) {
+        org.viajedragos.modelo.Planta.porNumero(planta);
+        return obtenerTodos();
+    }
+
+    /** Selección de compra; los productos deben pertenecer al catálogo global sin cambiar su precio. */
+    default RepositorioTienda paraPlanta(int planta) {
+        org.viajedragos.modelo.Planta.porNumero(planta);
+        var catalogo = List.copyOf(obtenerTodos());
+        var ofertas = List.copyOf(obtenerPorPlanta(planta));
+        var ids = new java.util.HashSet<String>();
+        for (var producto : ofertas) {
+            if (!ids.add(producto.id()) || !catalogo.contains(producto))
+                throw new IllegalArgumentException("Oferta de planta duplicada o ajena al catálogo");
+        }
+        return () -> ofertas;
+    }
+
     default Optional<ProductoTienda> buscarPorId(String id) {
         return obtenerTodos().stream().filter(producto -> producto.id().equals(id)).findFirst();
     }

@@ -18,11 +18,12 @@ class NombrePersonajeTest {
     private Random sinBotin() { return new Random(0) { public int nextInt(int limite) { return limite - 1; } }; }
     private void ejecutar(String entrada, int encuentros) {
         int[] tiradas = {0}, pausas = {0};
-        app.ejecutar(new Scanner(entrada), salida(), () -> { tiradas[0]++; return 4; }, sinBotin(),
+        TextoConsola.ejecutarSesiones(new Scanner(entrada), entradaSesion -> app.ejecutar(entradaSesion, salida(), () -> { tiradas[0]++; return 4; }, sinBotin(),
                 () -> { assertTrue(encuentros > 0, "Cancelar o EOF no consulta el catálogo");
                     return List.of(new DefinicionEnemigo("prueba", "Prueba", "", 1, 0, 1, 0, 0, 1)); },
                 new Random(0), new RepositorioObjetosMemoria(), null,
-                new RitmoConsola(RitmoConsola.Velocidad.NORMAL, ms -> pausas[0]++), sinBotin(), sinBotin());
+                new RitmoConsola(RitmoConsola.Velocidad.NORMAL, ms -> pausas[0]++), sinBotin(), sinBotin(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(encuentros * 6, tiradas[0]);
         // No hay esperas por nombre/estado: seis hitos narrativos por victoria.
         assertEquals(encuentros * 6, pausas[0]);
@@ -67,7 +68,7 @@ class NombrePersonajeTest {
     }
 
     @Test void nombreElegidoSeConservaEnCombateExploracionYConsultaRepetida() {
-        ejecutar("1\n  Lucía del Río  \n1\n2\n1\n1\n0\n1\n0\n0\n3\n1\n2\n0\n", 2);
+        ejecutar("1\n  Lucía del Río  \n3\n1\n2\n1\n1\n0\n1\n0\n0\n3\n1\n2\n0\n", 2);
         assertTrue(texto().contains("Lucía del Río golpea a Prueba"));
         assertTrue(texto().contains("Vida final: Lucía del Río"));
         assertEquals(2, texto().split("Nombre: Lucía del Río", -1).length - 1);
@@ -76,7 +77,7 @@ class NombrePersonajeTest {
     }
 
     @Test void unaAventuraNuevaPuedeTenerOtroNombreSinCambiarElRitmoDeLaSesion() {
-        ejecutar("1\nAna\n1\n2\n4\n1\nLuis\n1\n2\n0\n", 2);
+        ejecutar("1\nAna\n3\n1\n2\n0\n1\nLuis\n3\n1\n2\n0\n", 2);
         assertTrue(texto().contains("Ana golpea a Prueba"));
         assertTrue(texto().contains("Luis golpea a Prueba"));
         assertEquals(2, texto().split("NOMBRE DEL PERSONAJE", -1).length - 1);

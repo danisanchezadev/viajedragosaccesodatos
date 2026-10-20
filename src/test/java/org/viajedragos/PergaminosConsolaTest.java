@@ -113,7 +113,7 @@ class PergaminosConsolaTest {
         assertTrue(app.consultarTienda(j, new Scanner("2\n0\n0\n"), salida(), new RepositorioTiendaMemoria()));
         assertTrue(texto().contains("No tienes objetos vendibles"));
         assertEquals(1, j.getCantidadPergaminos(Atributo.FUERZA)); assertEquals(15, j.getOro());
-        assertEquals(10, new RepositorioTiendaMemoria().obtenerTodos().size());
+        assertEquals(24, new RepositorioTiendaMemoria().obtenerTodos().size());
         assertFalse(texto().contains("Pergamino de fuerza"));
     }
 
@@ -125,10 +125,12 @@ class PergaminosConsolaTest {
         var ritmo = new RitmoConsola(RitmoConsola.Velocidad.NORMAL, ms -> esperas.add(bytes.toString(StandardCharsets.UTF_8)));
         var pergaminos = new Random(0) { public int nextInt(int limite) { assertEquals(azar[0] == 0 ? 100 : 6, limite); azar[0]++; return 0; } };
         var objetos = new RepositorioObjetosMemoria();
-        assertFalse(app.jugarAventura(j, new Scanner("1\n2\n1\n2\n4\n1\n1\n1\n0\n0\n0\n"), salida(),
+        assertFalse(app.jugarAventura(j, new Scanner("3\n1\n2\n1\n2\n4\n1\n1\n1\n0\n0\n0\n"), salida(),
                 () -> { assertTrue(++dados[0] <= 6); return 4; }, new Random(0) { public int nextInt(int limite) { return 99; } },
                 () -> List.of(new DefinicionEnemigo("prueba", "Prueba", "", 1, 0, 1, 0, 0, 1)), new Random(0),
-                objetos, null, ritmo, pergaminos, new Random(0) { public int nextInt(int limite) { return 99; } }));
+                objetos, null, ritmo, pergaminos, new Random(0) { public int nextInt(int limite) { return 99; } },
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(6, dados[0]); assertEquals(2, azar[0]); assertEquals(7, esperas.size());
         assertTrue(esperas.stream().noneMatch(s -> s.contains("UTILIZAR PERGAMINOS")));
         assertEquals(2, pieza.getMejorasDisponibles()); assertEquals(1, pieza.getBonificaciones().get(Atributo.FUERZA));

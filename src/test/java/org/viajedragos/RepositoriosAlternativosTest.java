@@ -64,9 +64,14 @@ class RepositoriosAlternativosTest {
             public int nextInt(int limite) { assertEquals(2, limite); return indice; }
         };
         assertFalse(app.jugarAventura(jugador,
-                new Scanner("1\n2\n5\n1\n1\n2\n0\n2\n1\n1\n1\n1\n0\n0\n0\n"), salida(),
+                new Scanner("3\n1\n2\n4\n1\n1\n2\n0\n2\n1\n1\n1\n1\n0\n0\n0\n"), salida(),
                 () -> { assertTrue(++tiradas[0] <= 6); return 4; }, sinBotin(), enemigos,
-                seleccion, objetos, tienda));
+                seleccion, objetos, tienda,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(6, tiradas[0]);
         assertEquals(1, enemigos.lecturas);
         assertEquals(1, objetos.lecturasArmas);
@@ -123,7 +128,12 @@ class RepositoriosAlternativosTest {
         Jugador j = jugador();
         var definicionAnterior = j.getDefinicionPocion(TipoPocion.PEQUENA);
         assertTrue(app.jugarAventura(j, entrada, salida(), () -> { fail("No hay combate"); return 1; },
-                sinBotin(), enemigos, new Random(0), objetos, tienda));
+                sinBotin(), enemigos, new Random(0), objetos, tienda,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals("pendiente", entrada.nextLine());
         assertSame(definicionAnterior, j.getDefinicionPocion(TipoPocion.PEQUENA));
         assertEquals(15, j.getOro());
@@ -133,8 +143,13 @@ class RepositoriosAlternativosTest {
     @Test
     void tiendaVaciaEsValidaYPermiteCombatir() {
         Jugador j = jugador();
-        assertFalse(app.jugarAventura(j, new Scanner("1\n2\n5\n1\n0\n0\n0\n"), salida(), () -> 4,
-                sinBotin(), enemigos, new Random(0), objetos, List::of));
+        assertFalse(app.jugarAventura(j, new Scanner("3\n1\n2\n4\n1\n0\n0\n0\n"), salida(), () -> 4,
+                sinBotin(), enemigos, new Random(0), objetos, List::of,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(20, j.getOro());
         assertTrue(bytes.toString(StandardCharsets.UTF_8).contains("No hay productos disponibles."));
     }
@@ -150,7 +165,13 @@ class RepositoriosAlternativosTest {
         };
         Scanner entrada = new Scanner("pendiente\n");
         assertTrue(app.jugarAventura(jugador(), entrada, salida(), () -> { fail("No hay combate"); return 1; },
-                sinBotin(), repoEnemigos, new Random(0), repoObjetos));
+                sinBotin(), repoEnemigos, new Random(0), repoObjetos,
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals("pendiente", entrada.nextLine());
     }
 }

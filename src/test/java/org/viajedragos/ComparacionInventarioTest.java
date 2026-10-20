@@ -201,8 +201,15 @@ class ComparacionInventarioTest {
             int[] tiradas = {1,1,1,1,6,1,6};
             int[] usadas = {0};
             RepositorioEnemigos repo = () -> List.of(new DefinicionEnemigo("lobo", "Lobo", "",5,2,2,1,2,18));
-            assertFalse(app.jugarAventura(j, new Scanner("1\n2\n1\n2\n1\n1\n1\n0\n0\n0\n0\n0\n"), captura,
-                    () -> tiradas[usadas[0]++], new Random(0), repo, new Random(0)));
+            assertFalse(app.jugarAventura(j, new Scanner("3\n1\n2\n1\n2\n1\n1\n1\n0\n0\n0\n0\n0\n"), captura,
+                    () -> tiradas[usadas[0]++], new Random(0), repo, new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
             assertEquals(tiradas.length, usadas[0]);
             assertTrue(texto().contains("DIFERENCIA"));
             assertEquals(salidaEstandar, texto().contains("\u001B[32m+2\u001B[0m"));
@@ -231,8 +238,15 @@ class ComparacionInventarioTest {
         RepositorioEnemigos repo = () -> List.of(new DefinicionEnemigo("lobo", "Lobo", "",5,2,2,1,2,18));
         int[] tiradas = {1,1,1,1,6,1,6, 1,1,1,1,6,1,6};
         int[] usadas = {0};
-        assertFalse(app.jugarAventura(j, new Scanner("1\n1\n3\n1\n2\n0\n"), consola(),
-                () -> tiradas[usadas[0]++], new Random(0), repo, new Random(0)));
+        assertFalse(app.jugarAventura(j, new Scanner("3\n1\n1\n3\n1\n2\n0\n"), consola(),
+                () -> tiradas[usadas[0]++], new Random(0), repo, new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(tiradas.length, usadas[0]);
         assertEquals(2, encuentros[0]);
         assertEquals(1, j.getInventarioEquipo().size());

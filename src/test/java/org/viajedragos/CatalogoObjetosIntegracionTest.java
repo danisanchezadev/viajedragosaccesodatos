@@ -107,9 +107,15 @@ class CatalogoObjetosIntegracionTest {
         Jugador j = jugador(10);
         var anterior = j.getDefinicionPocion(TipoPocion.PEQUENA);
         j.agregarPocion(TipoPocion.PEQUENA);
-        assertTrue(app.jugarAventura(j, new Scanner(""), consola(), () -> {
+        assertTrue(app.jugarAventura(j, new Scanner("3\n"), consola(), () -> {
             fail("No debe empezar el combate"); return 1;
-        }, sinAzar(), enemigos, sinAzar(), objetos));
+        }, sinAzar(), enemigos, sinAzar(), objetos,
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertTrue(texto().contains("catálogo de objetos no es válido"));
         assertFalse(texto().contains("ENCUENTRO 1"));
         assertEquals(10, j.getVida());
@@ -122,7 +128,12 @@ class CatalogoObjetosIntegracionTest {
     void catalogoInvalidoRegresaAlMenuInicial() {
         app.ejecutar(new Scanner("1\nAventurero\n0\n"), consola(), () -> {
             fail("Sin combate"); return 1;
-        }, sinAzar(), enemigos, sinAzar(), repositorio(List.of(), pociones()));
+        }, sinAzar(), enemigos, sinAzar(), repositorio(List.of(), pociones()),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento());
         assertEquals(2, texto().split("1. Nueva aventura", -1).length - 1);
         assertTrue(texto().contains("Hasta pronto."));
     }
@@ -158,8 +169,14 @@ class CatalogoObjetosIntegracionTest {
                 return 0;
             }
         };
-        assertFalse(app.jugarAventura(j, new Scanner("1\n" + (aceptar ? "1" : "2") + "\n3\n1\n2\n0\n"), consola(),
-                dados(1,1,1,1,6,1,6, 1,1,1,1,6,1,6), botin, enemigos, new Random(0), repo));
+        assertFalse(app.jugarAventura(j, new Scanner("3\n1\n" + (aceptar ? "1" : "2") + "\n3\n1\n2\n0\n"), consola(),
+                dados(1,1,1,1,6,1,6, 1,1,1,1,6,1,6), botin, enemigos, new Random(0), repo,
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertArrayEquals(new int[]{1,1}, consultas);
         assertEquals(2, encuentros[0]);
         assertEquals(1, texto().split("Has encontrado una Espada del catálogo", -1).length - 1);
@@ -267,8 +284,13 @@ class CatalogoObjetosIntegracionTest {
         Random botin = new Random(0) {
             @Override public int nextInt(int limite) { return 0; }
         };
-        app.ejecutar(new Scanner("1\nAventurero\n1\n1\n4\n1\nAventurero\n1\n2\n1\n2\n0\n0\n0\n"), consola(),
-                dados(1,1,1,1,6,1,6, 1,1,1,1,6,1,6), botin, enemigos, new Random(0), repo);
+        TextoConsola.ejecutarSesiones(new Scanner("1\nAventurero\n3\n1\n1\n0\n1\nAventurero\n3\n1\n2\n1\n2\n0\n0\n0\n"), entradaSesion -> app.ejecutar(entradaSesion, consola(),
+                dados(1,1,1,1,6,1,6, 1,1,1,1,6,1,6), botin, enemigos, new Random(0), repo,
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento()));
         assertArrayEquals(new int[]{2,2}, consultas);
         assertEquals(4, texto().split("PS 48/48", -1).length - 1);
         assertTrue(texto().contains("Sin equipamiento"));
@@ -283,7 +305,12 @@ class CatalogoObjetosIntegracionTest {
             public List<DefinicionPocion> obtenerPociones() { fail("Sin consulta"); return null; }
         };
         app.ejecutar(new Scanner("0\n"), consola(), () -> { fail("Sin dados"); return 1; },
-                sinAzar(), enemigos, sinAzar(), repo);
+                sinAzar(), enemigos, sinAzar(), repo,
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento());
         assertTrue(texto().contains("Hasta pronto."));
     }
 

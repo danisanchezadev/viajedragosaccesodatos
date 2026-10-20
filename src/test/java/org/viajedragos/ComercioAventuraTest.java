@@ -52,22 +52,29 @@ class ComercioAventuraTest {
     }
     private boolean aventura(Jugador jugador, String entrada, int tiradas) {
         return assertTimeoutPreemptively(Duration.ofSeconds(3), () -> app.jugarAventura(jugador,
-                new Scanner(entrada), consola(), dados(tiradas), sinBotin(), enemigos(), new Random(0)));
+                new Scanner("3\n" + entrada), consola(), dados(tiradas), sinBotin(), enemigos(), new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
     }
 
     @Test
     void victoriaConcedeCincoYLaTiendaMuestraElSaldoYLosCuatroProductos() {
         Jugador jugador = jugador();
-        assertFalse(aventura(jugador, "1\n2\n5\n1\n0\n0\n0\n", 6));
+        assertFalse(aventura(jugador, "1\n2\n4\n1\n0\n0\n0\n", 6));
         assertEquals(20, jugador.getOro());
         assertTrue(texto().contains("Oro obtenido: +5 monedas Oro total: 20 monedas"));
-        assertTrue(texto().contains("5. Tienda"));
+        assertTrue(texto().contains("4. Tienda"));
         assertTrue(texto().contains("Oro disponible: 20 monedas"));
         assertTrue(texto().contains("1. Poción pequeña - 5 monedas"));
-        assertTrue(texto().contains("2. Poción grande - 10 monedas"));
-        assertTrue(texto().contains("3. Espada desgastada - 12 monedas"));
-        assertTrue(texto().contains("4. Espada de hierro - 20 monedas"));
-        assertTrue(texto().contains("4. Terminar aventura"));
+        assertTrue(texto().contains("2. Espada desgastada - 12 monedas"));
+        assertTrue(texto().contains("3. Armadura de cuero - 8 monedas"));
+        assertTrue(texto().contains("4. Casco de cuero - 8 monedas"));
+        assertTrue(texto().contains("5. Guardar"));
         assertTrue(texto().contains("0. Salir del juego"));
         assertTrue(jugador.getInventarioEquipo().isEmpty());
         assertTrue(jugador.getInventarioPociones().isEmpty());
@@ -88,7 +95,7 @@ class ComercioAventuraTest {
                 }
             }
         }, 1);
-        String entrada = "1\n2\n5\n1\n1\n3\n0\n0\n2\n1\n1\n2\n2\n1\n1\n1\n0\n0\n3\n1\n2\n0\n";
+        String entrada = "1\n2\n4\n1\n1\n2\n0\n0\n1\n3\n1\n0\n1\n2\n2\n1\n1\n1\n0\n0\n3\n1\n2\n0\n";
         assertFalse(aventura(jugador, entrada, 12));
         assertEquals(2, inicios[0]);
         assertEquals(8, jugador.getOro());
@@ -108,8 +115,15 @@ class ComercioAventuraTest {
         Random prohibido = new Random(0) {
             @Override public int nextInt(int limite) { fail("No hay botín por huida"); return 0; }
         };
-        assertFalse(app.jugarAventura(jugador, new Scanner("3\n5\n0\n0\n"), consola(), dados(6),
-                prohibido, enemigos(), new Random(0)));
+        assertFalse(app.jugarAventura(jugador, new Scanner("3\n3\n4\n0\n0\n"), consola(), dados(6),
+                prohibido, enemigos(), new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(15, jugador.getOro());
         assertTrue(texto().contains("Oro disponible: 15 monedas"));
         assertFalse(texto().contains("Oro obtenido: +5"));
@@ -137,8 +151,14 @@ class ComercioAventuraTest {
 
     @Test
     void volverAlMenuInicialYNuevaAventuraReiniciaSaldoYPertenencias() {
-        app.ejecutar(new Scanner("1\nAventurero\n1\n2\n5\n1\n1\n0\n0\n4\n1\nAventurero\n1\n2\n5\n0\n0\n"), consola(),
-                dados(12), sinBotin(), enemigos(), new Random(0));
+        TextoConsola.ejecutarSesiones(new Scanner("1\nAventurero\n3\n1\n2\n4\n1\n1\n0\n0\n0\n1\nAventurero\n3\n1\n2\n4\n0\n0\n"), entradaSesion -> app.ejecutar(entradaSesion, consola(),
+                dados(12), sinBotin(), enemigos(), new Random(0),
+                org.viajedragos.catalogo.ConfiguracionRepositorios.objetos(),
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(2, texto().split("Oro obtenido: \\+5 monedas Oro total: 20 monedas", -1).length - 1);
         assertEquals(1, texto().split("Has comprado", -1).length - 1);
         assertEquals(2, texto().split("Has encontrado una Espada desgastada", -1).length - 1);
@@ -206,13 +226,17 @@ class ComercioAventuraTest {
         var objetos = new RepositorioObjetosMemoria();
         ProductoTienda oferta = new ProductoTienda(objetos.obtenerArmas().get(1), 7);
         RepositorioTienda alternativo = () -> List.of(oferta);
-        app.ejecutar(new Scanner("1\nAventurero\n1\n2\n5\n1\n1\n0\n0\n1\n2\n8\n1\n0\n0\n0\n0\n0\n"), consola(), dados(6), sinBotin(),
-                enemigos(), new Random(0), objetos, alternativo);
+        app.ejecutar(new Scanner("1\nAventurero\n3\n1\n2\n4\n1\n1\n0\n0\n1\n2\n8\n1\n0\n0\n0\n0\n0\n"), consola(), dados(6), sinBotin(),
+                enemigos(), new Random(0), objetos, alternativo,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento());
         assertTrue(texto().contains("1. Espada de hierro - 7 monedas"));
         assertTrue(texto().contains("Oro disponible: 13 monedas"));
         assertTrue(texto().contains("EQUIPAMIENTO"));
         assertTrue(texto().contains("FUERZA +2"));
-        assertFalse(texto().contains("2. Poción grande - 10 monedas"));
+        assertFalse(texto().contains("2. Espada desgastada - 12 monedas"));
     }
 
     @Test
@@ -232,8 +256,14 @@ class ComercioAventuraTest {
             }
         };
         Jugador jugador = jugador();
-        assertFalse(app.jugarAventura(jugador, new Scanner("1\n2\n5\n1\n1\n0\n0\n2\n1\n5\n0\n0\n"), consola(),
-                dados(6), sinBotin(), enemigos(), new Random(0), objetos));
+        assertFalse(app.jugarAventura(jugador, new Scanner("3\n1\n2\n4\n1\n1\n0\n0\n1\n3\n1\n0\n4\n0\n0\n"), consola(),
+                dados(6), sinBotin(), enemigos(), new Random(0), objetos,
+                null,
+                new org.viajedragos.consola.RitmoConsola(org.viajedragos.consola.RitmoConsola.Velocidad.INSTANTANEA),
+                TextoConsola.sinBotinEquipamiento(),
+                TextoConsola.sinBotinEquipamiento(),
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertEquals(1, lecturas[0]);
         assertEquals(1, lecturas[1]);
         assertSame(pequena, jugador.getDefinicionPocion(TipoPocion.PEQUENA));

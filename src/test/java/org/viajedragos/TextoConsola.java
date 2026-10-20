@@ -5,6 +5,20 @@ package org.viajedragos;
 public final class TextoConsola {
     private TextoConsola() { }
 
+    static java.util.Random sinBotinEquipamiento() {
+        return new java.util.Random(0) {
+            @Override public int nextInt(int limite) {
+                org.junit.jupiter.api.Assertions.assertEquals(100, limite, "Solo la comprobación de aparición");
+                return 99;
+            }
+        };
+    }
+
+    /** Ejecuta sesiones consecutivas con los mismos generadores de prueba; 0 cierra cada sesión. */
+    static void ejecutarSesiones(java.util.Scanner entrada, java.util.function.Consumer<java.util.Scanner> sesion) {
+        do { sesion.accept(entrada); } while (entrada.hasNextLine());
+    }
+
     public static void comprobarPaneles(String salida) {
         int ancho = 0;
         for (String original : salida.split("\\R")) {

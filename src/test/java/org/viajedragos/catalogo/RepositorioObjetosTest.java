@@ -20,7 +20,7 @@ class RepositorioObjetosTest {
     @Test
     void catalogoInicialExactoSinEstadoDeJugadores() {
         var repo = new RepositorioObjetosMemoria();
-        assertEquals(2, repo.obtenerArmas().size());
+        assertEquals(4, repo.obtenerArmas().size());
         var espada = repo.obtenerArmas().getFirst();
         assertEquals("espada_desgastada", espada.id());
         assertEquals("Espada desgastada", espada.nombre());

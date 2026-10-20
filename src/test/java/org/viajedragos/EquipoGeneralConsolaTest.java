@@ -68,7 +68,7 @@ class EquipoGeneralConsolaTest {
     @ValueSource(strings = {"3\n0\n0\n", "3\n1\n0\n0\n0\n", "3\nx\n9\n0\n0\n"})
     void volverCancelarEInvalidosNoRetiranLaPieza(String entrada) {
         Jugador j = jugador();
-        Equipo pieza = new RepositorioObjetosMemoria().obtenerEquipamiento().getLast().crearEquipo();
+        Equipo pieza = new RepositorioObjetosMemoria().obtenerEquipamiento().get(5).crearEquipo();
         j.equipar(pieza);
         assertTrue(assertTimeoutPreemptively(Duration.ofSeconds(2), () -> app.consultarInventario(j, new Scanner(entrada), salida())));
         assertSame(pieza, j.getEquipoEquipado().get(TipoEquipo.AMULETO));
@@ -80,7 +80,7 @@ class EquipoGeneralConsolaTest {
     @ValueSource(strings = {"3\n", "3\n1\n", "3\n1\nx\n"})
     void finDeEntradaNoConfirmaDesequipado(String entrada) {
         Jugador j = jugador();
-        Equipo pieza = new RepositorioObjetosMemoria().obtenerEquipamiento().getLast().crearEquipo();
+        Equipo pieza = new RepositorioObjetosMemoria().obtenerEquipamiento().get(5).crearEquipo();
         j.equipar(pieza);
         assertFalse(app.consultarInventario(j, new Scanner(entrada), salida()));
         assertSame(pieza, j.getEquipoEquipado().get(TipoEquipo.AMULETO));
@@ -117,11 +117,13 @@ class EquipoGeneralConsolaTest {
         RepositorioEnemigos enemigos = () -> List.of(new DefinicionEnemigo("prueba", "Prueba", "", 1, 0, 1, 0, 0, 1));
         Jugador j = new Jugador("Prueba", "", 20, 2, 3, 2, 2, 20, 30);
         var ritmo = new RitmoConsola(RitmoConsola.Velocidad.NORMAL, ms -> esperas[0]++);
-        String entrada = "1\n2\n5\n1\n1\n0\n0\n1\n2\n2\n7\n1\n1\n0\n0\n5\n2\n1\n1\n0\n0\n0\n";
-        assertFalse(app.jugarAventura(j, new Scanner(entrada), salida(), () -> { assertTrue(++dados[0] <= 6); return 4; },
+        String entrada = "1\n2\n4\n1\n1\n0\n0\n1\n2\n2\n7\n1\n1\n0\n0\n4\n2\n1\n1\n0\n0\n0\n";
+        assertFalse(app.jugarAventura(j, new Scanner("3\n" + entrada), salida(), () -> { assertTrue(++dados[0] <= 6); return 4; },
                 new Random(0) { public int nextInt(int limite) { return 99; } }, enemigos, new Random(0), objetos, tienda, ritmo,
                 new Random(0) { public int nextInt(int limite) { return 99; } },
-                new Random(0) { public int nextInt(int limite) { return 99; } }));
+                new Random(0) { public int nextInt(int limite) { return 99; } },
+                new org.viajedragos.consola.TiempoAventura(),
+                TextoConsola.sinBotinEquipamiento()));
         assertArrayEquals(new int[]{1, 1, 1}, lecturas);
         assertEquals(6, dados[0]); assertEquals(6, esperas[0]);
         assertEquals(13, j.getOro()); assertEquals(20, j.getVida()); assertEquals(30, j.getVidaMaxima());
